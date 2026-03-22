@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F5F0EB;
+  --foreground: #2D2D2D;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F0EB;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CCCCCC;
+  border-radius: 3px;
+}
+
+/* ReactFlow overrides */
+.react-flow__background {
+  background-color: #F5F0EB;
+}
+
+.react-flow__edge-path {
+  stroke: #818CF8;
+  stroke-width: 2;
+}
+
+/* Mindmap node styles */
+.mindmap-root-node {
+  background: #EEF2FF;
+  border: 2px solid #A5B4FC;
+  border-radius: 16px;
+  padding: 12px 20px;
+  font-weight: 600;
+  color: #2D2D2D;
+  font-size: 14px;
+}
+
+.mindmap-child-node {
+  background: #A7F3D0;
+  border: 2px solid #7CE6BB;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 500;
+  color: #2D2D2D;
+  font-size: 13px;
+}
+
+.mindmap-child-node.selected {
+  background: #6EE7B7;
+  border-color: #34D399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
+}
