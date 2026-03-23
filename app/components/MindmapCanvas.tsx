@@ -33,13 +33,13 @@ const ROOT_H = 56;
 const CHILD_X = 370;
 const CHILD_W = 200;
 const CHILD_H = 44;
-const CHILD_SPACING = 76;
+const CHILD_SPACING = 72;
 const CHILD_START_Y = ROOT_Y - ((mindmapNodes.length - 1) / 2) * CHILD_SPACING;
 
 const CONTENT_X = 620;
 const CONTENT_W = 200;
 const CONTENT_H = 38;
-const CONTENT_SPACING = 52;
+const CONTENT_SPACING = 48;
 
 // ─── Bezier path helper ───────────────────────────────────────
 
@@ -134,7 +134,7 @@ export default function MindmapCanvas({
     <div
       ref={containerRef}
       className="relative flex-1 mindmap-bg overflow-hidden rounded-2xl border-2 border-[#333333] select-none"
-      style={{ cursor: isPanningState ? 'grabbing' : 'grab' }}
+      style={{ cursor: isPanningState ? 'grabbing' : 'grab', minHeight: '500px' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
@@ -164,14 +164,11 @@ export default function MindmapCanvas({
       <div
         style={{
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-          transformOrigin: 'center center',
+          transformOrigin: '0 0',
           width: canvasW,
           height: canvasH,
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          marginTop: -canvasH / 2,
-          marginLeft: -canvasW / 2,
+          position: 'relative',
+          margin: '0 auto',
           willChange: 'transform',
         }}
       >

@@ -142,7 +142,7 @@ function LearnContent() {
       </div>
 
       {/* ── Main Content ─────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 135px)' }}>
+      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 190px)' }}>
         {/* Mindmap — grows to fill space */}
         <div className="flex-1 p-4 min-w-0">
           <MindmapCanvas
