@@ -10,6 +10,7 @@ interface Props {
   edges: RoadmapEdge[];
   onNodesChange?: (nodes: RoadmapNode[]) => void;
   onEdgesChange?: (edges: RoadmapEdge[]) => void;
+  onNodeClick?: (nodeId: string) => void;
 }
 
 interface ContextMenu {
@@ -21,7 +22,7 @@ interface ContextMenu {
 const NODE_WIDTH = 170;
 const NODE_HEIGHT = 44;
 
-export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges, onNodesChange, onEdgesChange }: Props) {
+export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges, onNodesChange, onEdgesChange, onNodeClick }: Props) {
   const [nodes, setNodes] = useState<RoadmapNode[]>(initialNodes);
   const [edges, setEdges] = useState<RoadmapEdge[]>(initialEdges);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
@@ -210,9 +211,13 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
             />
           ) : (
             <div
-              className="px-4 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full text-sm font-semibold text-[#2D2D2D] text-center shadow-sm hover:border-[#6B2D3E] hover:shadow-md transition-all"
+              className="px-4 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full text-sm font-semibold text-[#2D2D2D] text-center shadow-sm hover:border-[#6B2D3E] hover:shadow-md hover:bg-[#E8E4DF] transition-all cursor-pointer"
               style={{ height: NODE_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Kéo để di chuyển | Chuột phải để chỉnh sửa"
+              title="Click để học • Kéo để di chuyển • Chuột phải để chỉnh sửa"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNodeClick?.(node.id);
+              }}
             >
               {node.label}
             </div>

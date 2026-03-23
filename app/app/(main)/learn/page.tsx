@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import MindmapCanvas from '@/components/MindmapCanvas';
 import DocumentSidebar from '@/components/DocumentSidebar';
 import NodeTextViewer from '@/components/NodeTextViewer';
@@ -9,6 +11,7 @@ import NodeVideoViewer from '@/components/NodeVideoViewer';
 import ChatBox from '@/components/ChatBox';
 import FloatingNote from '@/components/FloatingNote';
 import { mindmapNodes } from '@/lib/learning-data';
+import { useOmiLearnStore } from '@/lib/store';
 
 interface ContentNodeUI {
   id: string;
@@ -19,9 +22,25 @@ interface ContentNodeUI {
   docId: string;
 }
 
-export default function LearnPage() {
+function LearnContent() {
+  const searchParams = useSearchParams();
+  const nodeParam = searchParams.get('node');
+  const projectParam = searchParams.get('project');
+
+  const { projects } = useOmiLearnStore();
+  const project = projects.find((p) => p.id === projectParam);
+  const projectTitle = project?.title ?? 'Hệ Điều Hành và Linux';
+  const projectId = projectParam ?? 'os-linux';
+
+  // Map node param from roadmap (roadmap uses different IDs) to mindmap node IDs
+  // Roadmap nodes are from data.ts, mindmap nodes from learning-data.ts
+  // Try to match by ID or pick first
+  const resolvedNodeId = nodeParam && mindmapNodes.find((n) => n.id === nodeParam)
+    ? nodeParam
+    : mindmapNodes[0]?.id ?? 'giao-dien';
+
   // ─── State ───────────────────────────────────────────────────
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>('giao-dien');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(resolvedNodeId);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Active content nodes per mindmap node
@@ -30,6 +49,14 @@ export default function LearnPage() {
   // Current open document
   const [openDocId, setOpenDocId] = useState<string | null>(null);
   const [openDocNodeId, setOpenDocNodeId] = useState<string | null>(null);
+
+  // Update selected node if URL param changes
+  useEffect(() => {
+    if (nodeParam && mindmapNodes.find((n) => n.id === nodeParam)) {
+      setSelectedNodeId(nodeParam);
+      setSidebarOpen(true);
+    }
+  }, [nodeParam]);
 
   // ─── Handlers ────────────────────────────────────────────────
 
@@ -80,18 +107,30 @@ export default function LearnPage() {
       {/* ── Breadcrumb ──────────────────────────────────────── */}
       <div className="px-6 py-4 border-b border-[#333333]/10">
         <nav className="flex items-center gap-1.5 text-[12px] text-[#5A5C58]">
-          <a href="/" className="hover:text-[#2D2D2D] transition-colors font-medium">
+          <Link href="/" className="hover:text-[#2D2D2D] transition-colors font-medium">
             Dự án
-          </a>
+          </Link>
           <ChevronRight size={12} />
-          <span className="text-[#2D2D2D] font-medium">Hệ Điều Hành</span>
+          <Link
+            href={`/dashboard/${projectId}`}
+            className="hover:text-[#2D2D2D] transition-colors font-medium"
+          >
+            {projectTitle}
+          </Link>
+          <ChevronRight size={12} />
+          <Link
+            href={`/roadmap?project=${projectId}`}
+            className="hover:text-[#6B2D3E] transition-colors font-medium"
+          >
+            Roadmap
+          </Link>
           <ChevronRight size={12} />
           <span className="text-[#6B2D3E] font-bold">Học tập</span>
         </nav>
       </div>
 
       {/* ── Main Content ─────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 57px)' }}>
+      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 135px)' }}>
         {/* Mindmap — grows to fill space */}
         <div className="flex-1 p-4 min-w-0">
           <MindmapCanvas
@@ -135,5 +174,13 @@ export default function LearnPage() {
       <FloatingNote />
       <ChatBox />
     </div>
+  );
+}
+
+export default function LearnPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-[#5A5C58]">Đang tải...</div>}>
+      <LearnContent />
+    </Suspense>
   );
 }

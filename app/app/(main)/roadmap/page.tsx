@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
 import { defaultRoadmapNodes, defaultRoadmapEdges, RoadmapNode, RoadmapEdge } from '@/lib/data';
 import { useOmiLearnStore } from '@/lib/store';
 import dynamic from 'next/dynamic';
@@ -14,6 +15,7 @@ const RoadmapGraph = dynamic(() => import('@/components/RoadmapGraph'), { ssr: f
 const PlanSurveyModal = dynamic(() => import('@/components/PlanSurveyModal'), { ssr: false });
 
 function RoadmapContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('project') ?? 'os-linux';
   const { projects, isPlanModalOpen, hasPlan, openPlanModal, closePlanModal } = useOmiLearnStore();
@@ -23,6 +25,13 @@ function RoadmapContent() {
 
   const [nodes, setNodes] = useState<RoadmapNode[]>(defaultRoadmapNodes);
   const [edges, setEdges] = useState<RoadmapEdge[]>(defaultRoadmapEdges);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const handleNodeClick = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    // Navigate to learn page with node context
+    router.push(`/learn?node=${nodeId}&project=${projectId}`);
+  };
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
@@ -30,7 +39,9 @@ function RoadmapContent() {
       <div className="flex items-center gap-1.5 text-sm text-[#5A5C58] mb-6">
         <Link href="/" className="hover:text-[#2D2D2D] transition-colors">Dự án</Link>
         <ChevronRight size={14} />
-        <span className="text-[#2D2D2D] font-medium">{projectTitle}</span>
+        <Link href={`/dashboard/${projectId}`} className="text-[#2D2D2D] font-medium hover:text-[#6B2D3E] transition-colors">
+          {projectTitle}
+        </Link>
         <ChevronRight size={14} />
         <span className="text-[#6B2D3E] font-semibold">Roadmap</span>
       </div>
@@ -39,12 +50,20 @@ function RoadmapContent() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[#2D2D2D]">{projectTitle}</h1>
-          <p className="text-[#5A5C58] mt-1">Kéo các nút để sắp xếp lộ trình học tập của bạn</p>
+          <p className="text-[#5A5C58] mt-1">
+            Click vào nút để học • Kéo để sắp xếp lộ trình • Chuột phải để chỉnh sửa
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="text-sm text-[#5A5C58]">{nodes.length} chủ đề</span>
           <div className="w-2 h-2 rounded-full bg-[#4CD964]" />
         </div>
+      </div>
+
+      {/* Node click hint */}
+      <div className="mb-4 flex items-center gap-2 text-sm text-[#5A5C58] bg-[#F1F1EC] border border-[#CCCCCC] rounded-xl px-4 py-2.5">
+        <BookOpen size={14} className="text-[#6B2D3E]" />
+        <span>Nhấn vào chủ đề bất kỳ để bắt đầu học • Hoặc kéo thả để sắp xếp thứ tự</span>
       </div>
 
       {/* Graph container */}
@@ -63,6 +82,7 @@ function RoadmapContent() {
             edges={edges}
             onNodesChange={setNodes}
             onEdgesChange={setEdges}
+            onNodeClick={handleNodeClick}
           />
         </div>
       </div>

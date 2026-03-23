@@ -167,24 +167,40 @@ export default function ProjectDashboardPage({ params }: PageProps) {
         {/* Sessions list */}
         <div className="space-y-3">
           {upcomingStudySessions.map((session) => (
-            <div
+            <Link
               key={session.id}
-              className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl"
+              href={`/learn?project=${projectId}`}
+              className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl hover:border-[#6B2D3E] hover:bg-[#FFF8F9] transition-all group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#818CF8]/20 flex items-center justify-center">
                   <span className="text-xs font-bold text-[#818CF8]">{session.day}</span>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#2D2D2D]">{session.title}</p>
+                  <p className="text-sm font-semibold text-[#2D2D2D] group-hover:text-[#6B2D3E] transition-colors">{session.title}</p>
                   <p className="text-xs text-[#5A5C58]">{session.date}</p>
                 </div>
               </div>
-              <span className="text-xs font-medium text-[#5A5C58] bg-[#F1F1EC] px-2 py-1 rounded-full">
-                {session.duration}
-              </span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-[#5A5C58] bg-[#F1F1EC] px-2 py-1 rounded-full">
+                  {session.duration}
+                </span>
+                <span className="text-xs text-[#6B2D3E] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                  Học →
+                </span>
+              </div>
+            </Link>
           ))}
+        </div>
+
+        {/* Quick action: Tiếp tục học */}
+        <div className="mt-4 pt-4 border-t border-dashed border-[#CCCCCC]">
+          <Link
+            href={`/learn?project=${projectId}`}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors"
+          >
+            📖 Tiếp tục học
+          </Link>
         </div>
       </div>
 

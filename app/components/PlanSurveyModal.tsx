@@ -39,7 +39,7 @@ Tuần 13-14: Khởi Động và Debug
 • Lab: Debug boot issues (3 giờ)
 • Dự án cuối: Tùy chỉnh Linux hoàn chỉnh (6 giờ)`;
 
-type Step = 'q1' | 'q2' | 'q3' | 'q4' | 'generating' | 'done';
+type Step = 'q1' | 'q2' | 'q3' | 'q4' | 'calendar' | 'generating' | 'done';
 
 export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -51,6 +51,8 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
   const [modifyInput, setModifyInput] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [streamKey, setStreamKey] = useState(0);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarConnecting, setCalendarConnecting] = useState(false);
 
   const handleNext = (currentStep: Step, nextStep: Step) => {
     setStep(nextStep);
@@ -58,6 +60,15 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
       // Simulate AI generation
       setTimeout(() => setStep('done'), 500);
     }
+  };
+
+  const handleConnectCalendar = () => {
+    setCalendarConnecting(true);
+    // Fake API call
+    setTimeout(() => {
+      setCalendarConnected(true);
+      setCalendarConnecting(false);
+    }, 1200);
   };
 
   const handleModify = () => {
@@ -218,11 +229,71 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                   className="w-full px-4 py-3 rounded-xl border-2 border-[#333333] bg-white text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors resize-none"
                 />
                 <button
-                  onClick={() => handleNext('q4', 'generating')}
+                  onClick={() => handleNext('q4', 'calendar')}
                   disabled={!answers.q4.trim()}
                   className="w-full py-3 rounded-full bg-[#6B2D3E] text-white font-semibold hover:bg-[#5a2535] transition-colors disabled:opacity-40"
                 >
                   Tạo kế hoạch học tập 🚀
+                </button>
+              </motion.div>
+            )}
+
+            {/* Calendar connect step */}
+            {step === 'calendar' && (
+              <motion.div key="calendar" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }} className="p-6 space-y-5">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white border-2 border-[#333333] flex items-center justify-center mx-auto mb-4 text-3xl">
+                    📅
+                  </div>
+                  <h3 className="text-lg font-bold text-[#2D2D2D] mb-2">Kết nối Google Calendar</h3>
+                  <p className="text-sm text-[#5A5C58]">
+                    Đồng bộ lịch học với Google Calendar để nhận nhắc nhở và quản lý thời gian hiệu quả hơn.
+                  </p>
+                </div>
+
+                {calendarConnected ? (
+                  <div className="flex items-center gap-3 p-4 bg-[#ECFDF5] border-2 border-[#4CD964] rounded-xl">
+                    <span className="text-2xl">✅</span>
+                    <div>
+                      <p className="font-semibold text-[#065F46]">Đã kết nối thành công!</p>
+                      <p className="text-sm text-[#047857]">Google Calendar đã được liên kết với tài khoản của bạn.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectCalendar}
+                    disabled={calendarConnecting}
+                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl border-2 border-[#333333] bg-white hover:bg-[#F8F8F8] transition-colors font-semibold text-[#2D2D2D] disabled:opacity-60"
+                  >
+                    {calendarConnecting ? (
+                      <>
+                        <div className="w-5 h-5 rounded-full border-2 border-[#6B2D3E] border-t-transparent animate-spin" />
+                        Đang kết nối...
+                      </>
+                    ) : (
+                      <>
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-label="Google Calendar">
+                          <rect x="3" y="3" width="18" height="18" rx="2" fill="#4285F4" />
+                          <rect x="3" y="3" width="18" height="6" rx="1" fill="#1A73E8" />
+                          <circle cx="8" cy="4.5" r="1.5" fill="white" />
+                          <circle cx="16" cy="4.5" r="1.5" fill="white" />
+                          <text x="12" y="16" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">G</text>
+                        </svg>
+                        Kết nối Google Calendar
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleNext('calendar', 'generating')}
+                  className={`w-full py-3 rounded-full font-semibold transition-colors ${
+                    calendarConnected
+                      ? 'bg-[#4CD964] text-[#2D2D2D] hover:bg-[#3bc453]'
+                      : 'bg-[#2D2D2D] text-white hover:bg-[#1a1a1a]'
+                  }`}
+                >
+                  {calendarConnected ? 'Tiếp tục tạo kế hoạch ✓' : 'Bỏ qua, tiếp tục →'}
                 </button>
               </motion.div>
             )}
