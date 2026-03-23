@@ -1,6 +1,6 @@
-import TopNavBar from "@/components/TopNavBar";
-import Footer from "@/components/Footer";
-import PageTransition from "@/components/PageTransition";
+import TopNavBar from "@/shared/components/TopNavBar";
+import Footer from "@/shared/components/Footer";
+import PageTransition from "@/shared/components/PageTransition";
 
 export default function MainLayout({
   children,

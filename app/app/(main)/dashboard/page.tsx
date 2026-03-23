@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useOmiLearnStore } from '@/lib/store';
-import { projects } from '@/lib/data';
+import { useOmiLearnStore } from '@/shared/lib/store';
+import { projects } from '@/features/projects/data/projects-data';
 import { ChevronRight } from 'lucide-react';
 
 export default function DashboardIndexPage() {

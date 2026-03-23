@@ -4,10 +4,10 @@ import { Suspense } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import InfiniteCanvas from '@/components/InfiniteCanvas';
-import ChatBox from '@/components/ChatBox';
-import FloatingNote from '@/components/FloatingNote';
-import { useOmiLearnStore } from '@/lib/store';
+import InfiniteCanvas from '@/features/learn/components/InfiniteCanvas';
+import ChatBox from '@/features/chat/components/ChatBox';
+import FloatingNote from '@/shared/components/FloatingNote';
+import { useOmiLearnStore } from '@/shared/lib/store';
 
 function LearnContent() {
   const searchParams = useSearchParams();

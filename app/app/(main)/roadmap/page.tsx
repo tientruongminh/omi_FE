@@ -6,13 +6,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { defaultRoadmapNodes, defaultRoadmapEdges, RoadmapNode, RoadmapEdge } from '@/lib/data';
-import { useOmiLearnStore } from '@/lib/store';
+import { defaultRoadmapNodes, defaultRoadmapEdges, RoadmapNode, RoadmapEdge } from '@/features/roadmap/data/roadmap-data';
+import { useOmiLearnStore } from '@/shared/lib/store';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 
-const RoadmapGraph = dynamic(() => import('@/components/RoadmapGraph'), { ssr: false });
-const PlanSurveyModal = dynamic(() => import('@/components/PlanSurveyModal'), { ssr: false });
+const RoadmapGraph = dynamic(() => import('@/features/roadmap/components/RoadmapGraph'), { ssr: false });
+const PlanSurveyModal = dynamic(() => import('@/features/projects/components/PlanSurveyModal'), { ssr: false });
 
 function RoadmapContent() {
   const router = useRouter();
