@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Send, Check, FileText, Youtube, Globe, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AIStreamText from './AIStreamText';
 import { useOmiLearnStore } from '@/lib/store';
@@ -17,7 +17,7 @@ interface ChatMessage {
   streaming?: boolean;
 }
 
-type ResourceType = 'file' | 'youtube' | 'website' | 'link';
+type ResourceType = 'youtube' | 'website';
 
 interface Resource {
   id: string;
@@ -32,21 +32,18 @@ const SUGGESTED_DOCS = [
   { id: 'd3', title: 'Operating System Concepts — Silberschatz (PDF, 8.1MB)' },
 ];
 
-const AI_SEARCH_RESPONSE = `Tôi tìm thấy 3 tài liệu liên quan:\n\n📄 Giới thiệu về Hệ Điều Hành — Tanenbaum\n🎥 Linux Command Line Basics — Video Series\n📚 Operating System Concepts — Silberschatz\n\nBạn có muốn thêm tài liệu nào khác không?`;
+const AI_SEARCH_RESPONSE = `Tôi tìm thấy 3 tài liệu liên quan:\n\nGiới thiệu về Hệ Điều Hành — Tanenbaum\nLinux Command Line Basics — Video Series\nOperating System Concepts — Silberschatz\n\nBạn có muốn thêm tài liệu nào khác không?`;
 
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: 'file', label: 'File', icon: <FileText size={13} />, color: '#7C3AED' },
   { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
   { value: 'website', label: 'Website', icon: <Globe size={13} />, color: '#0891B2' },
-  { value: 'link', label: 'Link', icon: <LinkIcon size={13} />, color: '#059669' },
 ];
 
 function resourceIcon(type: ResourceType) {
   switch (type) {
-    case 'youtube': return '🎬';
-    case 'website': return '🌐';
-    case 'link': return '🔗';
-    default: return '📄';
+    case 'youtube': return <Youtube size={14} />;
+    case 'website': return <Globe size={14} />;
+    default: return <Globe size={14} />;
   }
 }
 
@@ -71,10 +68,23 @@ export default function CreateProjectModal({ onClose }: Props) {
 
   // URL resources
   const [resources, setResources] = useState<Resource[]>([]);
-  const [newResourceType, setNewResourceType] = useState<ResourceType>('youtube');
-  const [newResourceUrl, setNewResourceUrl] = useState('');
-  const [newResourceTitle, setNewResourceTitle] = useState('');
-  const [showAddResource, setShowAddResource] = useState(false);
+
+  const addEmptyResource = () => {
+    setResources((prev) => [
+      ...prev,
+      { id: `res-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, type: 'youtube' as ResourceType, url: '', title: '' },
+    ]);
+  };
+
+  const updateResource = (id: string, field: keyof Resource, value: string) => {
+    setResources((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const removeResource = (id: string) => {
+    setResources((prev) => prev.filter((r) => r.id !== id));
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -121,23 +131,8 @@ export default function CreateProjectModal({ onClose }: Props) {
     });
   };
 
-  const addResource = () => {
-    if (!newResourceUrl.trim()) return;
-    const newRes: Resource = {
-      id: `res-${Date.now()}`,
-      type: newResourceType,
-      url: newResourceUrl.trim(),
-      title: newResourceTitle.trim() || newResourceUrl.trim(),
-    };
-    setResources((prev) => [...prev, newRes]);
-    setNewResourceUrl('');
-    setNewResourceTitle('');
-    setShowAddResource(false);
-  };
 
-  const removeResource = (id: string) => {
-    setResources((prev) => prev.filter((r) => r.id !== id));
-  };
+  const totalResourceCount = selectedDocs.size + uploadedFiles.length + resources.filter(r => r.url.trim()).length;
 
   const handleCreateProject = () => {
     const id = createProject(projectName || 'Hệ Điều Hành và Linux', projectDesc);
@@ -147,14 +142,12 @@ export default function CreateProjectModal({ onClose }: Props) {
 
   const fileTypeIcon = (name: string) => {
     const ext = name.split('.').pop()?.toLowerCase() ?? '';
-    if (['xlsx', 'xls', 'csv'].includes(ext)) return '📊';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼️';
-    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return '🎬';
-    if (['mp3', 'wav', 'ogg'].includes(ext)) return '🎵';
-    return '📄';
+    if (['xlsx', 'xls', 'csv'].includes(ext)) return '▦';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '▣';
+    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return '▶';
+    if (['mp3', 'wav', 'ogg'].includes(ext)) return '♫';
+    return '◎';
   };
-
-  const totalResourceCount = selectedDocs.size + uploadedFiles.length + resources.length;
 
   const stepVariants = {
     enter: { opacity: 0, x: 30 },
@@ -294,10 +287,10 @@ export default function CreateProjectModal({ onClose }: Props) {
 
                 {/* URL Resources */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-[#2D2D2D]">Liên kết & URLs</label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-[#2D2D2D]">Liên kết</label>
                     <button
-                      onClick={() => setShowAddResource((v) => !v)}
+                      onClick={addEmptyResource}
                       className="flex items-center gap-1 text-xs text-[#6B2D3E] font-semibold hover:opacity-80 transition-opacity cursor-pointer"
                     >
                       <Plus size={12} />
@@ -305,106 +298,73 @@ export default function CreateProjectModal({ onClose }: Props) {
                     </button>
                   </div>
 
-                  {/* Add resource form */}
+                  {/* Resource entries — each one is an inline editable row */}
                   <AnimatePresence>
-                    {showAddResource && (
+                    {resources.map((res) => (
                       <motion.div
+                        key={res.id}
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden mb-2"
                       >
-                        <div className="bg-white border-2 border-[#CCCCCC] rounded-xl p-4 space-y-3 mb-3">
+                        <div className="bg-white border-2 border-[#E5E5DF] rounded-xl p-3 space-y-2.5">
                           {/* Type selector */}
-                          <div className="flex gap-2">
-                            {RESOURCE_TYPE_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                onClick={() => setNewResourceType(opt.value)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all cursor-pointer"
-                                style={{
-                                  borderColor: newResourceType === opt.value ? opt.color : '#E5E5DF',
-                                  backgroundColor: newResourceType === opt.value ? opt.color + '15' : 'white',
-                                  color: newResourceType === opt.value ? opt.color : '#5A5C58',
-                                }}
-                              >
-                                {opt.icon}
-                                {opt.label}
-                              </button>
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1.5 flex-1">
+                              {RESOURCE_TYPE_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => updateResource(res.id, 'type', opt.value)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all cursor-pointer"
+                                  style={{
+                                    borderColor: res.type === opt.value ? opt.color : '#E5E5DF',
+                                    backgroundColor: res.type === opt.value ? opt.color + '15' : 'white',
+                                    color: res.type === opt.value ? opt.color : '#5A5C58',
+                                  }}
+                                >
+                                  {opt.icon}
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => removeResource(res.id)}
+                              className="w-7 h-7 rounded-full bg-[#FEE2E2] flex items-center justify-center hover:bg-[#FECACA] transition-all cursor-pointer flex-shrink-0"
+                            >
+                              <Trash2 size={11} className="text-red-500" />
+                            </button>
                           </div>
 
                           {/* URL input */}
                           <input
                             type="url"
-                            value={newResourceUrl}
-                            onChange={(e) => setNewResourceUrl(e.target.value)}
+                            value={res.url}
+                            onChange={(e) => updateResource(res.id, 'url', e.target.value)}
                             placeholder={
-                              newResourceType === 'youtube'
+                              res.type === 'youtube'
                                 ? 'https://youtube.com/watch?v=...'
-                                : newResourceType === 'website'
-                                ? 'https://example.com/article'
-                                : 'https://...'
+                                : 'https://example.com/article'
                             }
-                            className="w-full px-3 py-2.5 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
+                            className="w-full px-3 py-2 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
                           />
 
                           {/* Title input */}
                           <input
                             type="text"
-                            value={newResourceTitle}
-                            onChange={(e) => setNewResourceTitle(e.target.value)}
+                            value={res.title}
+                            onChange={(e) => updateResource(res.id, 'title', e.target.value)}
                             placeholder="Tiêu đề (tùy chọn)"
-                            className="w-full px-3 py-2.5 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
+                            className="w-full px-3 py-2 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
                           />
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={addResource}
-                              disabled={!newResourceUrl.trim()}
-                              className="flex-1 py-2 rounded-lg bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer"
-                            >
-                              Thêm
-                            </button>
-                            <button
-                              onClick={() => { setShowAddResource(false); setNewResourceUrl(''); setNewResourceTitle(''); }}
-                              className="px-4 py-2 rounded-lg bg-[#F1F1EC] text-[#5A5C58] text-sm font-semibold hover:bg-[#E5E5DF] transition-colors cursor-pointer"
-                            >
-                              Hủy
-                            </button>
-                          </div>
                         </div>
                       </motion.div>
-                    )}
+                    ))}
                   </AnimatePresence>
 
-                  {/* Added resources list */}
-                  {resources.length > 0 && (
-                    <div className="space-y-2">
-                      {resources.map((res) => (
-                        <div key={res.id} className="flex items-center gap-2.5 px-3 py-2.5 bg-white border-2 border-[#E5E5DF] rounded-xl group">
-                          <span className="text-base">{resourceIcon(res.type)}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-[#2D2D2D] truncate">{res.title}</p>
-                            <p className="text-xs text-[#9CA3AF] truncate">{res.url}</p>
-                          </div>
-                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: RESOURCE_TYPE_OPTIONS.find(o => o.value === res.type)?.color + '15', color: RESOURCE_TYPE_OPTIONS.find(o => o.value === res.type)?.color }}>
-                            {res.type}
-                          </span>
-                          <button
-                            onClick={() => removeResource(res.id)}
-                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full bg-[#FEE2E2] flex items-center justify-center transition-all cursor-pointer"
-                          >
-                            <Trash2 size={10} className="text-red-500" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {resources.length === 0 && !showAddResource && (
-                    <p className="text-xs text-[#9CA3AF] text-center py-2">
-                      YouTube, website, bất kỳ URL nào...
+                  {resources.length === 0 && (
+                    <p className="text-xs text-[#9CA3AF] text-center py-3">
+                      Thêm YouTube, website hoặc bất kỳ URL nào
                     </p>
                   )}
                 </div>
@@ -575,7 +535,7 @@ export default function CreateProjectModal({ onClose }: Props) {
                   </div>
                   <div>
                     <AIStreamText
-                      text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục! 🚀`}
+                      text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục!`}
                       speed={18}
                       className="text-sm text-[#2D2D2D] leading-relaxed"
                     />
