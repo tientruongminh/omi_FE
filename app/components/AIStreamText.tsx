@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 interface Props {
   text: string;
@@ -15,21 +15,25 @@ export default function AIStreamText({ text, speed = 20, onComplete, className =
   const [isDone, setIsDone] = useState(false);
   const indexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startedRef = useRef(false);
+  // Store onComplete in a ref to avoid stale closure / re-render loops
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     // Reset when text changes
     setDisplayed('');
     setIsDone(false);
     indexRef.current = 0;
-    startedRef.current = false;
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
 
     const start = () => {
       const type = () => {
         if (indexRef.current >= text.length) {
           setIsDone(true);
-          onComplete?.();
+          onCompleteRef.current?.();
           return;
         }
 
@@ -37,8 +41,8 @@ export default function AIStreamText({ text, speed = 20, onComplete, className =
         setDisplayed((prev) => prev + char);
         indexRef.current++;
 
-        // Vary speed slightly for realism, pause longer at newlines
-        let delay = speed;
+        // Vary speed slightly for realism; pause longer at punctuation
+        let delay: number;
         if (char === '\n') delay = speed * 8;
         else if (char === '.' || char === '!' || char === '?') delay = speed * 5;
         else if (char === ',') delay = speed * 3;
@@ -56,14 +60,16 @@ export default function AIStreamText({ text, speed = 20, onComplete, className =
     }
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [text, speed, startDelay]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [text, speed, startDelay]);
 
-  // Render with simple markdown-like formatting
-  const renderText = (raw: string) => {
-    return raw.split('\n').map((line, i) => {
-      // Bold: **text**
+  // Render with simple markdown-like bold formatting
+  const renderText = useCallback((raw: string) => {
+    return raw.split('\n').map((line, i, lines) => {
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
       const rendered = parts.map((part, j) => {
         if (part.startsWith('**') && part.endsWith('**')) {
@@ -74,17 +80,17 @@ export default function AIStreamText({ text, speed = 20, onComplete, className =
       return (
         <span key={i}>
           {rendered}
-          {i < raw.split('\n').length - 1 && <br />}
+          {i < lines.length - 1 && <br />}
         </span>
       );
     });
-  };
+  }, []);
 
   return (
     <span className={className}>
       {renderText(displayed)}
       {!isDone && (
-        <span className="inline-block w-[2px] h-[1em] bg-current ml-[1px] animate-pulse align-middle">▋</span>
+        <span className="inline-block w-[2px] h-[1em] bg-current ml-[1px] animate-pulse align-middle opacity-70">▋</span>
       )}
     </span>
   );

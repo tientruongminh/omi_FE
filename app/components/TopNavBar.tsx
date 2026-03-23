@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Moon, User } from 'lucide-react';
+import { Search, Moon, User, Menu } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const NAV_LINKS = [
   { href: '/',           label: 'Dự án'    },
@@ -14,20 +16,21 @@ const NAV_LINKS = [
 
 export default function TopNavBar() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#F7F7F2]/90 backdrop-blur-sm border-b border-[#2D2D2D]/10">
-      <div className="max-w-[1280px] mx-auto px-6 h-[78px] flex items-center gap-6">
+      <div className="max-w-[1280px] mx-auto px-4 md:px-6 h-[62px] md:h-[72px] flex items-center gap-4 md:gap-6">
         {/* Logo */}
         <Link
           href="/"
-          className="text-[#6B2D3E] text-2xl font-medium tracking-tight lowercase flex-shrink-0"
+          className="text-[#6B2D3E] text-xl md:text-2xl font-medium tracking-tight lowercase flex-shrink-0 hover:opacity-80 transition-opacity"
           style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
         >
           omilearn
         </Link>
 
-        {/* Nav links */}
+        {/* Nav links — hidden on mobile */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
           {NAV_LINKS.map(({ href, label }) => {
             const isActive = pathname === href;
@@ -35,10 +38,10 @@ export default function TopNavBar() {
               <Link
                 key={href}
                 href={href}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                   isActive
                     ? 'bg-[#2D2D2D] text-white'
-                    : 'text-[#5A5C58] hover:text-[#2D2D2D] hover:bg-[#2D2D2D]/5'
+                    : 'text-[#5A5C58] hover:text-[#2D2D2D] hover:bg-[#2D2D2D]/8 active:scale-95'
                 }`}
               >
                 {label}
@@ -48,10 +51,10 @@ export default function TopNavBar() {
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-3 ml-auto">
-          {/* Search bar */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] min-w-[200px]">
-            <Search size={16} className="text-[#6B7280] flex-shrink-0" />
+        <div className="flex items-center gap-2 md:gap-3 ml-auto">
+          {/* Search bar — hidden on small mobile */}
+          <div className="hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] min-w-[140px] md:min-w-[200px] focus-within:border-[#6B2D3E] transition-colors">
+            <Search size={14} className="text-[#6B7280] flex-shrink-0" />
             <input
               type="text"
               placeholder="Tìm kiếm..."
@@ -60,16 +63,55 @@ export default function TopNavBar() {
           </div>
 
           {/* Dark mode toggle */}
-          <button className="w-[38px] h-[38px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 transition-colors">
-            <Moon size={16} className="text-[#5A5C58]" />
+          <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 hover:bg-[#E8E8E2] active:scale-90 transition-all">
+            <Moon size={14} className="text-[#5A5C58]" />
           </button>
 
           {/* Avatar */}
-          <button className="w-[38px] h-[38px] rounded-full border-2 border-[#2D2D2D] bg-[#DCDDD7] flex items-center justify-center hover:border-[#2D2D2D]/70 transition-colors overflow-hidden">
-            <User size={18} className="text-[#5A5C58]" />
+          <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D] bg-[#DCDDD7] flex items-center justify-center hover:border-[#6B2D3E] hover:bg-[#D0CECA] active:scale-90 transition-all overflow-hidden">
+            <User size={16} className="text-[#5A5C58]" />
+          </button>
+
+          {/* Hamburger — mobile only */}
+          <button
+            className="md:hidden w-[34px] h-[34px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 transition-colors"
+            onClick={() => setMobileOpen((o) => !o)}
+          >
+            <Menu size={14} className="text-[#5A5C58]" />
           </button>
         </div>
       </div>
+
+      {/* Mobile nav drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="md:hidden border-t border-[#2D2D2D]/10 bg-[#F7F7F2]/95 backdrop-blur-sm px-4 py-3 flex flex-col gap-1"
+          >
+            {NAV_LINKS.map(({ href, label }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-[#2D2D2D] text-white'
+                      : 'text-[#5A5C58] hover:text-[#2D2D2D] hover:bg-[#2D2D2D]/8'
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

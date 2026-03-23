@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 type SubjectKey = 'kinhTe' | 'xacSuat' | 'baiTap' | 'marketing' | 'lapTrinh';
 
@@ -8,14 +9,15 @@ interface SubjectInfo {
   label: string;
   color: string;
   dot: string;
+  bg: string;
 }
 
 const SUBJECTS: Record<SubjectKey, SubjectInfo> = {
-  kinhTe:    { label: 'Kinh tế vi mô', color: '#4CD964', dot: '#4CD964' },
-  xacSuat:   { label: 'Xác suất TK',   color: '#818CF8', dot: '#818CF8' },
-  baiTap:    { label: 'Bài tập lớn',   color: '#F08080', dot: '#F08080' },
-  marketing: { label: 'Marketing',     color: '#F5A623', dot: '#F5A623' },
-  lapTrinh:  { label: 'Lập trình',     color: '#A855F7', dot: '#A855F7' },
+  kinhTe:    { label: 'Kinh tế vi mô', color: '#16A34A', dot: '#4CD964', bg: '#DCFCE7' },
+  xacSuat:   { label: 'Xác suất TK',   color: '#4338CA', dot: '#818CF8', bg: '#EEF2FF' },
+  baiTap:    { label: 'Bài tập lớn',   color: '#DC2626', dot: '#F08080', bg: '#FEE2E2' },
+  marketing: { label: 'Marketing',     color: '#C2410C', dot: '#F5A623', bg: '#FEF3C7' },
+  lapTrinh:  { label: 'Lập trình',     color: '#7E22CE', dot: '#A855F7', bg: '#F3E8FF' },
 };
 
 type ScheduleCell = SubjectKey | null;
@@ -34,24 +36,24 @@ const TIME_SLOTS = ['08–10h', '10–12h', '14–16h', '19–21h'];
 
 // [timeSlot][dayIndex]
 const SCHEDULE: ScheduleCell[][] = [
-  // 08–10h: T2  T3    T4        T5    T6        T7    CN
-  [  'kinhTe', null, 'baiTap',   null, 'kinhTe', null, null ],
+  // 08–10h: T2        T3        T4          T5          T6          T7          CN
+  [  'kinhTe',   null,     'baiTap',   null,       'kinhTe',   null,       null ],
   // 10–12h
-  [  null, 'xacSuat', null, 'marketing', null, 'xacSuat', null ],
+  [  null,       'xacSuat', null,      'marketing', null,      'xacSuat',  null ],
   // 14–16h
-  [  'lapTrinh', null, 'marketing', null, 'lapTrinh', null, null ],
+  [  'lapTrinh', null,     'marketing', null,       'lapTrinh', null,       null ],
   // 19–21h
-  [  null, null, null, null, null, null, null ],
+  [  null,       null,     null,        null,        null,       null,       null ],
 ];
 
 export default function SchedulePage() {
   const [weekOffset, setWeekOffset] = useState(0);
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-8">
+    <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
       {/* Header Banner */}
       <div className="relative mb-8">
-        <div className="bg-[#2D2D2D] rounded-2xl px-8 py-6 flex items-center justify-between overflow-hidden">
+        <div className="bg-[#2D2D2D] rounded-2xl px-6 md:px-8 py-6 flex items-center justify-between overflow-hidden">
           {/* Gold decorative rect - top-left overlap */}
           <div
             className="absolute -top-3 left-4 w-16 h-10 bg-[#F5C542] rounded-lg z-0"
@@ -61,25 +63,25 @@ export default function SchedulePage() {
           {/* Title */}
           <div className="flex items-center gap-3 z-10 relative">
             <div className="w-5 h-5 bg-[#F5C542] rounded-sm flex-shrink-0" />
-            <h1 className="text-white text-2xl font-black uppercase tracking-widest">
+            <h1 className="text-white text-lg md:text-2xl font-black uppercase tracking-widest">
               LỊCH HỌC TUẦN NÀY
             </h1>
           </div>
 
           {/* Week indicator + nav buttons */}
-          <div className="flex items-center gap-3 z-10 relative">
-            <span className="text-[#9CA3AF] text-sm mr-2 font-medium">
+          <div className="flex items-center gap-2 md:gap-3 z-10 relative">
+            <span className="hidden md:block text-[#9CA3AF] text-sm mr-2 font-medium">
               Tuần {weekOffset === 0 ? 'hiện tại' : weekOffset > 0 ? `+${weekOffset}` : weekOffset}
             </span>
             <button
               onClick={() => setWeekOffset((w) => w - 1)}
-              className="px-5 py-2 rounded-full border-2 border-white/40 text-white text-sm font-bold hover:bg-white/10 transition-colors"
+              className="px-3 md:px-5 py-2 rounded-full border-2 border-white/40 text-white text-sm font-bold hover:bg-white/10 active:scale-95 transition-all"
             >
               ← Trước
             </button>
             <button
               onClick={() => setWeekOffset((w) => w + 1)}
-              className="px-5 py-2 rounded-full bg-[#F5C542] text-[#2D2D2D] text-sm font-bold hover:bg-[#E6B830] transition-colors"
+              className="px-3 md:px-5 py-2 rounded-full bg-[#F5C542] text-[#2D2D2D] text-sm font-bold hover:bg-[#E6B830] active:scale-95 transition-all"
             >
               Sau →
             </button>
@@ -90,13 +92,13 @@ export default function SchedulePage() {
       {/* Calendar card */}
       <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl overflow-hidden mb-6">
         {/* Day headers */}
-        <div className="grid border-b-2 border-[#333333]" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
+        <div className="grid border-b-2 border-[#333333]" style={{ gridTemplateColumns: '64px repeat(7, 1fr)' }}>
           {/* Time spine label */}
-          <div className="px-3 py-4 text-center border-r-2 border-[#333333]" />
+          <div className="px-2 py-4 text-center border-r-2 border-[#333333]" />
           {DAYS.map((day) => (
             <div
               key={day.key}
-              className={`px-2 py-4 text-center border-r-2 border-[#333333] last:border-r-0 ${
+              className={`px-1 py-3 text-center border-r-2 border-[#333333] last:border-r-0 ${
                 day.weekend ? 'bg-[#FEE2E2]' : day.today ? 'bg-[#FFF9E6]' : ''
               }`}
             >
@@ -115,8 +117,14 @@ export default function SchedulePage() {
                 {day.date}
               </div>
               {day.today && (
-                <div className="mt-1 inline-block bg-[#F5C542] text-[#2D2D2D] text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
-                  HÔM NAY
+                <div className="mt-1.5 flex items-center justify-center gap-1">
+                  {/* Pulsing dot */}
+                  <span
+                    className="w-2 h-2 rounded-full bg-[#F5A623] today-pulse flex-shrink-0"
+                  />
+                  <div className="inline-block bg-[#F5C542] text-[#2D2D2D] text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full tracking-wider">
+                    HÔM NAY
+                  </div>
                 </div>
               )}
             </div>
@@ -128,11 +136,11 @@ export default function SchedulePage() {
           <div
             key={slot}
             className="grid border-b-2 border-[#CCCCCC] last:border-b-0"
-            style={{ gridTemplateColumns: '72px repeat(7, 1fr)', minHeight: '80px' }}
+            style={{ gridTemplateColumns: '64px repeat(7, 1fr)', minHeight: '80px' }}
           >
-            {/* Time label with spine line */}
-            <div className="flex items-center justify-end pr-3 border-r-2 border-[#2D2D2D] relative">
-              <span className="text-xs font-bold text-[#5A5C58] text-right leading-tight">
+            {/* Time label */}
+            <div className="flex items-center justify-end pr-2 border-r-2 border-[#2D2D2D]">
+              <span className="text-[10px] md:text-xs font-bold text-[#5A5C58] text-right leading-tight">
                 {slot}
               </span>
             </div>
@@ -143,22 +151,25 @@ export default function SchedulePage() {
               return (
                 <div
                   key={day.key}
-                  className={`flex items-center justify-center p-2 border-r-2 last:border-r-0 ${
+                  className={`flex items-center justify-center p-1.5 border-r-2 last:border-r-0 transition-colors ${
                     day.today ? 'bg-[#FFFBEB]/60' : ''
                   }`}
                   style={{ borderColor: '#E5E7EB' }}
                 >
                   {info && (
-                    <div
-                      className="px-3 py-1.5 rounded-full border-2 border-[#2D2D2D] bg-white text-center cursor-pointer hover:scale-105 transition-transform"
+                    <motion.div
+                      whileHover={{ scale: 1.06 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="px-2 py-1.5 rounded-xl border-2 border-[#2D2D2D]/20 text-center cursor-pointer w-full"
+                      style={{ backgroundColor: info.bg }}
                     >
                       <span
-                        className="text-xs font-black uppercase tracking-wide"
+                        className="text-[10px] md:text-xs font-black uppercase tracking-wide leading-tight block"
                         style={{ color: info.color }}
                       >
                         {info.label}
                       </span>
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               );
@@ -168,9 +179,9 @@ export default function SchedulePage() {
       </div>
 
       {/* Legend */}
-      <div className="border-2 border-[#333333] rounded-2xl px-6 py-4 bg-[#F1F1EC]">
-        <div className="flex items-center gap-6 flex-wrap">
-          <span className="text-xs font-black uppercase tracking-widest text-[#5A5C58] mr-2">
+      <div className="border-2 border-[#333333] rounded-2xl px-5 py-4 bg-[#F1F1EC]">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-xs font-black uppercase tracking-widest text-[#5A5C58] mr-1">
             Chú thích:
           </span>
           {(Object.entries(SUBJECTS) as [SubjectKey, SubjectInfo][]).map(([key, info]) => (
@@ -179,7 +190,7 @@ export default function SchedulePage() {
                 className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: info.dot }}
               />
-              <span className="text-sm font-semibold text-[#2D2D2D]">{info.label}</span>
+              <span className="text-sm font-semibold" style={{ color: info.color }}>{info.label}</span>
             </div>
           ))}
         </div>

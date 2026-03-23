@@ -96,6 +96,16 @@ export default function CreateProjectModal({ onClose }: Props) {
     onClose();
   };
 
+  // File type icon helper
+  const fileTypeIcon = (name: string) => {
+    const ext = name.split('.').pop()?.toLowerCase() ?? '';
+    if (['xlsx', 'xls', 'csv'].includes(ext)) return '📊';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼️';
+    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return '🎬';
+    if (['mp3', 'wav', 'ogg'].includes(ext)) return '🎵';
+    return '📄';
+  };
+
   const stepVariants = {
     enter: { opacity: 0, x: 30 },
     center: { opacity: 1, x: 0 },
@@ -221,7 +231,7 @@ export default function CreateProjectModal({ onClose }: Props) {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {uploadedFiles.map((f, i) => (
                         <span key={i} className="flex items-center gap-1.5 px-3 py-1 bg-[#2D2D2D] text-white text-xs rounded-full">
-                          <FileText size={10} />
+                          <span>{fileTypeIcon(f)}</span>
                           {f}
                           <button onClick={() => setUploadedFiles((prev) => prev.filter((_, j) => j !== i))}>
                             <X size={10} />

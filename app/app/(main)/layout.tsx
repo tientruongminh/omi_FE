@@ -9,7 +9,7 @@ export default function MainLayout({
   return (
     <>
       <TopNavBar />
-      <main className="flex-1 pt-[78px]">
+      <main className="flex-1 pt-[62px] md:pt-[72px]">
         {children}
       </main>
       <Footer />

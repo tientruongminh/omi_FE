@@ -130,7 +130,7 @@ export default function MindmapCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 bg-[#F5F0EB] overflow-hidden rounded-2xl border-2 border-[#333333] select-none"
+      className="relative flex-1 mindmap-bg overflow-hidden rounded-2xl border-2 border-[#333333] select-none"
       style={{ cursor: isPanning.current ? 'grabbing' : 'grab' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
@@ -260,7 +260,7 @@ export default function MindmapCanvas({
                 backgroundColor: isSelected ? '#6EE7B7' : '#A7F3D0',
                 borderColor: isSelected ? '#059669' : '#7CE6BB',
                 boxShadow: isSelected
-                  ? '0 0 0 3px rgba(5,150,105,0.25), 0 4px 12px rgba(0,0,0,0.1)'
+                  ? '0 0 0 4px rgba(5,150,105,0.3), 0 0 16px rgba(5,150,105,0.2), 0 4px 12px rgba(0,0,0,0.1)'
                   : '0 2px 6px rgba(0,0,0,0.06)',
                 paddingLeft: 14,
                 paddingRight: 8,

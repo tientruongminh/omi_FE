@@ -2,7 +2,7 @@
 
 import { useState, use } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Map, TrendingUp } from 'lucide-react';
 import { dashboardStats, upcomingStudySessions } from '@/lib/data';
 import { useOmiLearnStore } from '@/lib/store';
@@ -14,28 +14,30 @@ const ANALYSIS_TEXT = `📊 Phân tích tiến độ — Hệ Điều Hành và 
 
 ⚠️ Cần cải thiện: Phần Lập Trình Shell cần thêm thực hành
 
-📈 Dự kiến hoàn thành: 15 Tháng 12, 2024
+📈 Dự kiến hoàn thành: 15 Tháng 12, 2025
 
-💡 Gợi ý: Tăng thời gian thực hành lên 2 giờ/tuần`;
+💡 Gợi ý: Tăng thời gian thực hành lên 2 giờ/tuần để đạt mục tiêu đúng hạn`;
 
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
+// Accent stripe colors for stat cards
+const STAT_ACCENTS = ['#4CD964', '#818CF8', '#F08080', '#F5A623'];
+
 // Circular progress SVG
 function CircularProgress({ percentage, units, total }: { percentage: number; units: number; total: number }) {
-  const radius = 80;
+  const radius = 78;
   const circumference = 2 * Math.PI * radius;
-
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 200, height: 200 }}>
-      <svg width="200" height="200" className="-rotate-90">
-        {/* Background circle */}
-        <circle cx="100" cy="100" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="14" />
-        {/* Progress circle */}
+    <div className="relative flex items-center justify-center" style={{ width: 196, height: 196 }}>
+      <svg width="196" height="196" className="-rotate-90">
+        {/* Track */}
+        <circle cx="98" cy="98" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="14" />
+        {/* Progress */}
         <motion.circle
-          cx="100"
-          cy="100"
+          cx="98"
+          cy="98"
           r={radius}
           fill="none"
           stroke="#4CD964"
@@ -44,7 +46,7 @@ function CircularProgress({ percentage, units, total }: { percentage: number; un
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+          transition={{ duration: 1.4, ease: 'easeOut', delay: 0.3 }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -77,9 +79,9 @@ export default function ProjectDashboardPage({ params }: PageProps) {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-8">
+    <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-[#5A5C58] mb-6">
+      <div className="flex items-center gap-1.5 text-sm text-[#5A5C58] mb-6 flex-wrap">
         <Link href="/" className="hover:text-[#2D2D2D] transition-colors">Dự án</Link>
         <ChevronRight size={14} />
         <span className="text-[#2D2D2D] font-semibold">{projectTitle}</span>
@@ -88,14 +90,14 @@ export default function ProjectDashboardPage({ params }: PageProps) {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#2D2D2D]">{projectTitle}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#2D2D2D]">{projectTitle}</h1>
           <p className="text-[#5A5C58] mt-1">Theo dõi tiến độ học tập của bạn</p>
         </div>
         <Link
           href={`/roadmap?project=${projectId}`}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full hover:border-[#6B2D3E] hover:text-[#6B2D3E] transition-all text-sm font-semibold text-[#2D2D2D]"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full hover:border-[#6B2D3E] hover:text-[#6B2D3E] active:scale-95 transition-all text-sm font-semibold text-[#2D2D2D] self-start"
         >
           <Map size={16} />
           Xem Roadmap
@@ -105,7 +107,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
       {/* Progress + Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         {/* Circular progress */}
-        <div className="md:col-span-2 bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6 flex flex-col items-center justify-center">
+        <div className="md:col-span-2 bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6 flex flex-col items-center justify-center hover:border-[#6B2D3E]/40 transition-colors">
           <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-4">Tiến độ tổng thể</p>
           <CircularProgress percentage={progress} units={12} total={20} />
         </div>
@@ -118,9 +120,14 @@ export default function ProjectDashboardPage({ params }: PageProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1, duration: 0.4 }}
-              className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3"
+              className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3 overflow-hidden relative hover:border-[#6B2D3E]/40 hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between">
+              {/* Accent stripe at top */}
+              <div
+                className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
+                style={{ backgroundColor: STAT_ACCENTS[i] ?? stat.color }}
+              />
+              <div className="flex items-center justify-between mt-1">
                 <span className="text-sm font-semibold text-[#2D2D2D]">{stat.label}</span>
                 <span className="text-lg font-bold" style={{ color: stat.color }}>{stat.percentage}%</span>
               </div>
@@ -130,7 +137,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
                   style={{ backgroundColor: stat.color }}
                   initial={{ width: 0 }}
                   animate={{ width: `${stat.percentage}%` }}
-                  transition={{ duration: 0.8, delay: 0.4 + i * 0.1, ease: 'easeOut' }}
+                  transition={{ duration: 0.9, delay: 0.5 + i * 0.1, ease: 'easeOut' }}
                 />
               </div>
             </motion.div>
@@ -139,17 +146,21 @@ export default function ProjectDashboardPage({ params }: PageProps) {
       </div>
 
       {/* Calendar + Sessions */}
-      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6 mb-8">
+      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 md:p-6 mb-8">
         <h2 className="font-bold text-[#2D2D2D] text-lg mb-4">📅 Lịch học sắp tới</h2>
         
         {/* Mini week view */}
-        <div className="grid grid-cols-7 gap-2 mb-6">
-          {DAYS.map((day, i) => {
+        <div className="grid grid-cols-7 gap-1.5 mb-6">
+          {DAYS.map((day) => {
             const hasSession = upcomingStudySessions.some((s) => s.day === day);
             return (
               <div
                 key={day}
-                className={`rounded-xl p-2 text-center ${hasSession ? 'bg-[#2D2D2D]' : 'bg-white border border-[#CCCCCC]'}`}
+                className={`rounded-xl p-2 text-center transition-all ${
+                  hasSession
+                    ? 'bg-[#2D2D2D] hover:bg-[#1a1a1a]'
+                    : 'bg-white border border-[#CCCCCC] hover:border-[#6B2D3E]/40'
+                }`}
               >
                 <p className={`text-xs font-semibold ${hasSession ? 'text-white' : 'text-[#5A5C58]'}`}>{day}</p>
                 {hasSession && <div className="w-1.5 h-1.5 rounded-full bg-[#4CD964] mx-auto mt-1" />}
@@ -164,7 +175,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
             <Link
               key={session.id}
               href={`/learn?project=${projectId}`}
-              className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl hover:border-[#6B2D3E] hover:bg-[#FFF8F9] transition-all group"
+              className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl hover:border-[#6B2D3E] hover:bg-[#FFF8F9] hover:shadow-sm active:scale-[0.99] transition-all group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#818CF8]/20 flex items-center justify-center">
@@ -191,46 +202,61 @@ export default function ProjectDashboardPage({ params }: PageProps) {
         <div className="mt-4 pt-4 border-t border-dashed border-[#CCCCCC]">
           <Link
             href={`/learn?project=${projectId}`}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] active:scale-[0.99] transition-all"
           >
             📖 Tiếp tục học
           </Link>
         </div>
       </div>
 
-      {/* Deep analysis */}
-      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Deep analysis — smooth accordion */}
+      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 md:p-6">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="font-bold text-[#2D2D2D] text-lg flex items-center gap-2">
             <TrendingUp size={20} className="text-[#6B2D3E]" />
             Phân tích sâu
           </h2>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={handleAnalysis}
             className="flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors"
           >
             {showAnalysis ? '🔄 Phân tích lại' : '🔍 Phân tích sâu'}
-          </button>
+          </motion.button>
         </div>
 
-        {showAnalysis ? (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="bg-white border-2 border-[#CCCCCC] rounded-xl p-5"
-          >
-            <AIStreamText
-              key={analysisKey}
-              text={ANALYSIS_TEXT}
-              speed={18}
-              className="text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-line"
-            />
-          </motion.div>
-        ) : (
-          <p className="text-sm text-[#5A5C58]">
-            Nhấn "Phân tích sâu" để AI đánh giá tiến độ học tập của bạn và đưa ra gợi ý cá nhân hoá.
-          </p>
-        )}
+        <AnimatePresence initial={false}>
+          {showAnalysis ? (
+            <motion.div
+              key="analysis"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 bg-white border-2 border-[#CCCCCC] rounded-xl p-5">
+                <AIStreamText
+                  key={analysisKey}
+                  text={ANALYSIS_TEXT}
+                  speed={18}
+                  className="text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-line"
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.p
+              key="placeholder"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-sm text-[#5A5C58] mt-2"
+            >
+              Nhấn "Phân tích sâu" để AI đánh giá tiến độ học tập và đưa ra gợi ý cá nhân hóa.
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

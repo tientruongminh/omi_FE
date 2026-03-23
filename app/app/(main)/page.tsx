@@ -59,7 +59,7 @@ export default function HomePage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full hover:bg-[#1a1a1a] transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full hover:bg-[#1a1a1a] active:scale-95 transition-all"
         >
           <span className="w-5 h-5 rounded-full bg-[#4CD964] flex items-center justify-center flex-shrink-0">
             <Plus size={12} className="text-[#2D2D2D]" strokeWidth={3} />
@@ -74,7 +74,7 @@ export default function HomePage() {
           <Link
             key={project.id}
             href={`/dashboard/${project.id}`}
-            className="block bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 flex flex-col gap-4 hover:border-[#6B2D3E] transition-colors cursor-pointer group"
+            className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 flex flex-col gap-4 hover:border-[#6B2D3E] hover:shadow-md active:scale-[0.99] transition-all cursor-pointer group"
           >
             {/* Card header */}
             <div>

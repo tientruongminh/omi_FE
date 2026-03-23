@@ -97,7 +97,7 @@ function RoadmapContent() {
           >
             <Link
               href="/schedule"
-              className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-lg shadow-lg hover:bg-[#3bc453] transition-all ring-4 ring-[#4CD964]/30"
+              className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-lg shadow-lg hover:bg-[#3bc453] hover:scale-105 active:scale-95 transition-all ring-4 ring-[#4CD964]/30"
             >
               📅 Xem lịch học
             </Link>
@@ -105,17 +105,11 @@ function RoadmapContent() {
         ) : (
           <motion.button
             onClick={openPlanModal}
-            animate={{
-              boxShadow: [
-                '0 0 0 0 rgba(76,217,100,0)',
-                '0 0 0 12px rgba(76,217,100,0.3)',
-                '0 0 0 24px rgba(76,217,100,0)',
-              ],
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-            className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#2D2D2D] text-white font-bold text-lg ring-2 ring-[#4CD964] hover:bg-[#1a1a1a] transition-all shadow-xl"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.96 }}
+            className="btn-glow flex items-center gap-3 px-12 py-5 rounded-full bg-[#2D2D2D] text-white font-black text-xl ring-2 ring-[#4CD964] hover:bg-[#1a1a1a] transition-colors shadow-2xl"
           >
-            <Sparkles size={20} className="text-[#4CD964]" />
+            <Sparkles size={22} className="text-[#4CD964]" />
             Lập Plan
           </motion.button>
         )}
