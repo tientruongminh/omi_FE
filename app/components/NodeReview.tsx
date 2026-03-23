@@ -206,8 +206,8 @@ function FlashcardTab() {
 
       {/* Card */}
       <div
-        className="w-full flex-1 cursor-pointer"
-        style={{ perspective: 1000, maxHeight: 200 }}
+        className="w-full cursor-pointer"
+        style={{ perspective: '1000px', height: 200 }}
         onClick={() => setFlipped((f) => !f)}
       >
         <motion.div

@@ -90,12 +90,18 @@ function RoadmapContent() {
       {/* Lập Plan button */}
       <div className="flex justify-center">
         {hasPlan ? (
-          <Link
-            href="/schedule"
-            className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-lg shadow-lg hover:bg-[#3bc453] transition-all"
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
-            📅 Xem lịch học
-          </Link>
+            <Link
+              href="/schedule"
+              className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-lg shadow-lg hover:bg-[#3bc453] transition-all ring-4 ring-[#4CD964]/30"
+            >
+              📅 Xem lịch học
+            </Link>
+          </motion.div>
         ) : (
           <motion.button
             onClick={openPlanModal}

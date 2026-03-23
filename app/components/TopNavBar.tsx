@@ -7,9 +7,9 @@ import { Search, Moon, User } from 'lucide-react';
 const NAV_LINKS = [
   { href: '/',           label: 'Dự án'    },
   { href: '/roadmap',    label: 'Roadmap'  },
-  { href: '/learn',      label: 'Mindmap'  },
+  { href: '/learn',      label: 'Học tập'  },
   { href: '/schedule',   label: 'Lịch học' },
-  { href: '/workspace',  label: 'Workspace'},
+  { href: '/workspace',  label: 'Tài liệu' },
 ];
 
 export default function TopNavBar() {

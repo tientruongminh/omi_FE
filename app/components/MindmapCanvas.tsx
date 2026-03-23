@@ -306,38 +306,42 @@ export default function MindmapCanvas({
           const contentStartY =
             parentCy - ((totalContent - 1) / 2) * CONTENT_SPACING;
 
-          return contentNodes.map((cn, ci) => {
-            const cy = contentStartY + ci * CONTENT_SPACING;
-            return (
-              <motion.div
-                key={cn.id}
-                data-content-node={cn.id}
-                className="absolute flex items-center gap-2 rounded-xl border-2 cursor-pointer"
-                style={{
-                  left: CONTENT_X,
-                  top: cy,
-                  width: CONTENT_W,
-                  height: CONTENT_H,
-                  backgroundColor: cn.color,
-                  borderColor: cn.border,
-                  paddingLeft: 10,
-                  paddingRight: 10,
-                  zIndex: 3,
-                }}
-                initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -10, scale: 0.8 }}
-                transition={{ delay: ci * 0.08, duration: 0.25, ease: 'easeOut' }}
-                whileHover={{ scale: 1.04, boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
-                onClick={() => onOpenDocument(cn.docId, node.id)}
-              >
-                <span className="text-sm">{cn.icon}</span>
-                <span className="flex-1 text-[11px] font-medium text-[#2D2D2D] leading-tight truncate">
-                  {cn.label}
-                </span>
-              </motion.div>
-            );
-          });
+          return (
+            <AnimatePresence key={`content-group-${node.id}`}>
+              {contentNodes.map((cn, ci) => {
+                const cy = contentStartY + ci * CONTENT_SPACING;
+                return (
+                  <motion.div
+                    key={cn.id}
+                    data-content-node={cn.id}
+                    className="absolute flex items-center gap-2 rounded-xl border-2 cursor-pointer"
+                    style={{
+                      left: CONTENT_X,
+                      top: cy,
+                      width: CONTENT_W,
+                      height: CONTENT_H,
+                      backgroundColor: cn.color,
+                      borderColor: cn.border,
+                      paddingLeft: 10,
+                      paddingRight: 10,
+                      zIndex: 3,
+                    }}
+                    initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -10, scale: 0.8 }}
+                    transition={{ delay: ci * 0.08, duration: 0.25, ease: 'easeOut' }}
+                    whileHover={{ scale: 1.04, boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
+                    onClick={() => onOpenDocument(cn.docId, node.id)}
+                  >
+                    <span className="text-sm">{cn.icon}</span>
+                    <span className="flex-1 text-[11px] font-medium text-[#2D2D2D] leading-tight truncate">
+                      {cn.label}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          );
         })}
       </div>
 

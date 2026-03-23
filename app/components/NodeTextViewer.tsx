@@ -64,7 +64,9 @@ export default function NodeTextViewer({ docId, nodeId, onClose }: Props) {
               <h2 className="font-bold text-[#2D2D2D] text-[15px] leading-tight truncate">
                 {doc.title}
               </h2>
-              <p className="text-[11px] text-[#5A5C58]">PDF • {doc.size}</p>
+              <p className="text-[11px] text-[#5A5C58]">
+                {doc.type === 'worksheet' ? `Worksheet • ${doc.size}` : `PDF • ${doc.size}`}
+              </p>
             </div>
             <button
               onClick={onClose}

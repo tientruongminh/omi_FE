@@ -129,7 +129,7 @@ export default function WorkspacePage() {
               )}
               <button className="flex items-center gap-1.5 px-4 py-2 bg-[#4CD964] text-[#2D2D2D] text-sm font-bold rounded-full border-2 border-[#2D2D2D] hover:bg-[#3DC954] transition-colors">
                 <Upload size={14} />
-                Upload
+                Tải lên
               </button>
             </div>
           </div>

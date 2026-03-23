@@ -24,14 +24,8 @@ const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 function CircularProgress({ percentage, units, total }: { percentage: number; units: number; total: number }) {
   const radius = 80;
   const circumference = 2 * Math.PI * radius;
-  const [animated, setAnimated] = useState(0);
 
-  // Animate on mount
-  useState(() => {
-    setTimeout(() => setAnimated(percentage), 100);
-  });
-
-  const offset = circumference - (animated / 100) * circumference;
+  const offset = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: 200, height: 200 }}>

@@ -32,12 +32,21 @@ function LearnContent() {
   const projectTitle = project?.title ?? 'Hệ Điều Hành và Linux';
   const projectId = projectParam ?? 'os-linux';
 
-  // Map node param from roadmap (roadmap uses different IDs) to mindmap node IDs
-  // Roadmap nodes are from data.ts, mindmap nodes from learning-data.ts
-  // Try to match by ID or pick first
-  const resolvedNodeId = nodeParam && mindmapNodes.find((n) => n.id === nodeParam)
-    ? nodeParam
-    : mindmapNodes[0]?.id ?? 'giao-dien';
+  // Map node param from roadmap (roadmap uses n1-n7) to mindmap node IDs (learning-data)
+  // Roadmap node index → mindmap node ID mapping
+  const ROADMAP_TO_MINDMAP: Record<string, string> = {
+    'n1': 'khai-niem',
+    'n2': 'kien-truc',
+    'n3': 'quan-ly',
+    'n4': 'giao-dien',
+    'n5': 'he-dieu-hanh',
+    'n6': 'lap-trinh-shell',
+    'n7': 'khoi-dong',
+  };
+
+  const resolvedNodeId = nodeParam
+    ? (ROADMAP_TO_MINDMAP[nodeParam] ?? (mindmapNodes.find((n) => n.id === nodeParam) ? nodeParam : mindmapNodes[0]?.id ?? 'giao-dien'))
+    : (mindmapNodes[0]?.id ?? 'giao-dien');
 
   // ─── State ───────────────────────────────────────────────────
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(resolvedNodeId);

@@ -30,6 +30,9 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
   const [editValue, setEditValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Track drag start positions
+  const dragStartPos = useRef<Record<string, { x: number; y: number }>>({});
+
   // Close context menu on click outside
   useEffect(() => {
     const handler = () => setContextMenu(null);
@@ -105,7 +108,7 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
 
   return (
     <div ref={containerRef} className="relative w-full overflow-auto" style={{ minHeight: svgHeight + 40 }}>
-      {/* SVG for edges */}
+      {/* SVG for edges — updates as nodes move */}
       <svg
         className="absolute inset-0 pointer-events-none"
         width={svgWidth}
@@ -167,21 +170,36 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
           drag
           dragMomentum={false}
           dragConstraints={{ left: 0, top: 0, right: svgWidth - NODE_WIDTH, bottom: svgHeight - NODE_HEIGHT }}
+          onDragStart={() => {
+            // Record the node's initial position at drag start
+            dragStartPos.current[node.id] = { x: node.x, y: node.y };
+          }}
           onDrag={(_, info) => {
-            // Update position on drag
-            updateNode(node.id, {
-              x: node.x + info.offset.x,
-              y: node.y + info.offset.y,
+            // During drag: update state so SVG edges follow in real-time
+            const start = dragStartPos.current[node.id];
+            if (!start) return;
+            const newX = Math.max(0, start.x + info.offset.x);
+            const newY = Math.max(0, start.y + info.offset.y);
+            setNodes((prev) => {
+              const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
+              return next;
             });
           }}
           onDragEnd={(_, info) => {
-            updateNode(node.id, {
-              x: Math.max(0, node.x + info.offset.x),
-              y: Math.max(0, node.y + info.offset.y),
+            // Finalize position and notify parent
+            const start = dragStartPos.current[node.id];
+            if (!start) return;
+            const newX = Math.max(0, start.x + info.offset.x);
+            const newY = Math.max(0, start.y + info.offset.y);
+            delete dragStartPos.current[node.id];
+            setNodes((prev) => {
+              const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
+              onNodesChange?.(next);
+              return next;
             });
           }}
           initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
           transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 25 }}
           className="absolute z-20 cursor-grab active:cursor-grabbing select-none"
           style={{ left: node.x, top: node.y, width: NODE_WIDTH }}
@@ -245,6 +263,12 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#2D2D2D] hover:bg-[#F1F1EC] w-full text-left transition-colors"
             >
               ✏️ Sửa tên
+            </button>
+            <button
+              onClick={() => addNodeAfter(contextMenu.nodeId)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#2D2D2D] hover:bg-[#F1F1EC] w-full text-left transition-colors"
+            >
+              ➕ Thêm chủ đề sau
             </button>
             <div className="border-t border-[#CCCCCC]" />
             <button
