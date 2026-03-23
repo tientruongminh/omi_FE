@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Folder, Users, ChevronRight, Plus, CheckCircle2 } from 'lucide-react';
+import { Folder, Users, ChevronRight, Plus } from 'lucide-react';
 import { sharedCourses } from '@/lib/data';
 import { useOmiLearnStore } from '@/lib/store';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
@@ -133,11 +133,10 @@ export default function HomePage() {
                 </span>
                 {project.isComplete ? (
                   <span
-                    className="text-[#6B2D3E] text-base flex items-center gap-1"
+                    className="text-[#2D2D2D] text-sm line-through"
                     style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
                   >
-                    <CheckCircle2 size={14} className="text-[#6B2D3E] flex-shrink-0" style={{ fontStyle: 'normal' }} />
-                    hoàn thành
+                    complete
                   </span>
                 ) : (
                   <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Moon, User, Menu } from 'lucide-react';
+import { Search, Sun, User, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -20,7 +20,7 @@ export default function TopNavBar() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#F7F7F2]/90 backdrop-blur-sm border-b border-[#2D2D2D]/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#F5F0EB]/95 backdrop-blur-sm border-b-2 border-[#2D2D2D]">
       <div className="max-w-[1280px] mx-auto px-4 md:px-6 h-[62px] md:h-[72px] flex items-center gap-4 md:gap-6">
         {/* Logo */}
         <Link
@@ -59,8 +59,8 @@ export default function TopNavBar() {
         <div className="flex items-center gap-2 md:gap-3 ml-auto">
           {/* Search bar — hidden on small mobile */}
           <div
-            className={`hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 bg-[#F1F1EC] min-w-[140px] md:min-w-[200px] transition-all duration-200 ${
-              searchFocused ? 'border-[#6B2D3E] shadow-sm' : 'border-[#2D2D2D]/10'
+            className={`hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 bg-transparent min-w-[140px] md:min-w-[220px] transition-all duration-200 ${
+              searchFocused ? 'border-[#6B2D3E]' : 'border-[#2D2D2D]'
             }`}
           >
             <Search size={14} className="text-[#6B7280] flex-shrink-0" />
@@ -75,16 +75,16 @@ export default function TopNavBar() {
 
           {/* Dark mode toggle with tooltip */}
           <div className="tooltip-wrapper">
-            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 hover:bg-[#E8E8E2] active:scale-90 transition-all">
-              <Moon size={14} className="text-[#5A5C58]" />
+            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border border-[#2D2D2D]/20 bg-transparent flex items-center justify-center hover:border-[#6B2D3E] hover:text-[#6B2D3E] active:scale-90 transition-all">
+              <Sun size={16} className="text-[#6B2D3E]" />
             </button>
             <span className="tooltip-label">Chế độ tối</span>
           </div>
 
           {/* Avatar with tooltip */}
           <div className="tooltip-wrapper">
-            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D] bg-[#DCDDD7] flex items-center justify-center hover:border-[#6B2D3E] hover:bg-[#D0CECA] active:scale-90 transition-all overflow-hidden">
-              <User size={16} className="text-[#5A5C58]" />
+            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D] bg-transparent flex items-center justify-center hover:border-[#6B2D3E] active:scale-90 transition-all overflow-hidden">
+              <User size={16} className="text-[#2D2D2D]" />
             </button>
             <span className="tooltip-label">Tài khoản</span>
           </div>

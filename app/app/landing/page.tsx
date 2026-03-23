@@ -80,21 +80,21 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <a
               href="#features"
-              className="text-[#2D2D2D] text-sm font-semibold border-b-2 border-[#2D2D2D] pb-0.5 hover:text-[#6B2D3E] hover:border-[#6B2D3E] transition-colors"
+              className="text-[#2D2D2D] text-sm font-semibold border-b-2 border-[#6B2D3E] pb-0.5 hover:text-[#6B2D3E] transition-colors"
             >
-              Tính năng
+              Features
             </a>
             <a
               href="#how"
               className="text-[#5A5C58] text-sm font-medium hover:text-[#2D2D2D] transition-colors"
             >
-              Cách hoạt động
+              How it Works
             </a>
             <a
               href="#pricing"
               className="text-[#5A5C58] text-sm font-medium hover:text-[#2D2D2D] transition-colors"
             >
-              Bảng giá
+              Pricing
             </a>
           </div>
 
@@ -104,13 +104,13 @@ export default function LandingPage() {
               href="/"
               className="text-sm font-black text-[#2D2D2D] hover:text-[#6B2D3E] transition-colors"
             >
-              Đăng nhập
+              Sign In
             </Link>
             <Link
               href="/"
-              className="px-5 py-2 rounded-full border-2 border-[#2D2D2D] text-sm font-bold text-[#2D2D2D] hover:bg-[#2D2D2D] hover:text-white transition-all hover:scale-105 active:scale-95"
+              className="px-5 py-2 rounded-md border-2 border-[#2D2D2D] text-sm font-bold text-[#2D2D2D] hover:bg-[#2D2D2D] hover:text-white transition-all hover:scale-105 active:scale-95"
             >
-              Bắt đầu
+              Get Started
             </Link>
           </div>
         </div>

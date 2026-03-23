@@ -188,9 +188,9 @@ export default function WorkspacePage() {
                   </motion.span>
                 )}
               </AnimatePresence>
-              <button className="flex items-center gap-1.5 px-4 py-2 bg-[#4CD964] text-[#2D2D2D] text-sm font-bold rounded-full border-2 border-[#2D2D2D] hover:bg-[#3DC954] transition-colors cursor-pointer">
+              <button className="flex items-center gap-1.5 px-4 py-2 bg-[#6B2D3E] text-white text-sm font-bold rounded-full border-2 border-[#6B2D3E] hover:bg-[#5A2233] transition-colors cursor-pointer">
                 <Upload size={14} />
-                Tải lên
+                Upload
               </button>
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function WorkspacePage() {
               onDragLeave={() => setIsDragging(false)}
               onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}
               className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-colors ${
-                isDragging ? 'border-[#6B2D3E] bg-[#FFF5F7]' : 'border-[#CCCCCC]'
+                isDragging ? 'border-[#6B2D3E] bg-[#FFF5F7]' : 'border-[#333333]'
               }`}
             >
               <Cloud size={28} className="text-[#9CA3AF]" />
@@ -285,7 +285,7 @@ export default function WorkspacePage() {
 
         {/* ── Right Panel: AI Chat ── */}
         <div
-          className="flex flex-col bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl overflow-hidden"
+          className="flex flex-col bg-[#FFF8E7] border-2 border-[#333333] rounded-2xl overflow-hidden"
           style={{ flex: '1' }}
         >
           {/* Chat header */}
@@ -324,8 +324,8 @@ export default function WorkspacePage() {
                   <div
                     className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#6B2D3E] text-white rounded-tr-none'
-                        : 'bg-white border-2 border-[#CCCCCC] text-[#2D2D2D] rounded-tl-none'
+                        ? 'bg-[#FADDE1] text-[#2D2D2D] rounded-tr-none'
+                        : 'bg-white border border-[#E5E7EB] text-[#2D2D2D] rounded-tl-none'
                     }`}
                   >
                     {msg.content}

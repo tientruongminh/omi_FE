@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
-type SubjectKey = 'heDieuHanh' | 'cauTrucDL' | 'mangMayTinh' | 'toanRoiRac' | 'lapTrinhWeb';
+type SubjectKey = 'kinhTeViMo' | 'xacSuatTK' | 'baiTapLon' | 'marketing' | 'lapTrinh';
 
 interface SubjectInfo {
   label: string;
@@ -13,11 +13,11 @@ interface SubjectInfo {
 }
 
 const SUBJECTS: Record<SubjectKey, SubjectInfo> = {
-  heDieuHanh:  { label: 'Hệ Điều Hành',     color: '#16A34A', dot: '#4CD964', bg: '#DCFCE7' },
-  cauTrucDL:   { label: 'Cấu Trúc DL',       color: '#4338CA', dot: '#818CF8', bg: '#EEF2FF' },
-  mangMayTinh: { label: 'Mạng Máy Tính',     color: '#DC2626', dot: '#F08080', bg: '#FEE2E2' },
-  toanRoiRac:  { label: 'Toán Rời Rạc',      color: '#C2410C', dot: '#F5A623', bg: '#FEF3C7' },
-  lapTrinhWeb: { label: 'Lập Trình Web',      color: '#7E22CE', dot: '#A855F7', bg: '#F3E8FF' },
+  kinhTeViMo:  { label: 'KINH TẾ VI MÔ', color: '#16A34A', dot: '#4CD964', bg: '#DCFCE7' },
+  xacSuatTK:   { label: 'XÁC SUẤT TK',   color: '#4338CA', dot: '#818CF8', bg: '#EEF2FF' },
+  baiTapLon:   { label: 'BÀI TẬP LỚN',   color: '#DC2626', dot: '#F08080', bg: '#FEE2E2' },
+  marketing:   { label: 'MARKETING',      color: '#C2410C', dot: '#F5A623', bg: '#FEF3C7' },
+  lapTrinh:    { label: 'LẬP TRÌNH',      color: '#7E22CE', dot: '#A855F7', bg: '#F3E8FF' },
 };
 
 type ScheduleCell = SubjectKey | null;
@@ -36,14 +36,14 @@ const TIME_SLOTS = ['08–10h', '10–12h', '14–16h', '19–21h'];
 
 // [timeSlot][dayIndex]
 const SCHEDULE: ScheduleCell[][] = [
-  // 08–10h: T2             T3            T4              T5              T6              T7    CN
-  [ 'heDieuHanh',   null,         'cauTrucDL',    null,           'heDieuHanh',   null, null ],
+  // 08–10h: T2            T3           T4            T5           T6            T7    CN
+  [ 'kinhTeViMo', null,        'baiTapLon', null,        'kinhTeViMo', null, null ],
   // 10–12h
-  [ null,            'toanRoiRac', null,           'mangMayTinh',  null,           'toanRoiRac', null ],
+  [ null,         'xacSuatTK', null,        'marketing', null,         'xacSuatTK', null ],
   // 14–16h
-  [ 'lapTrinhWeb',   null,         'mangMayTinh',  null,           'lapTrinhWeb',  null, null ],
+  [ 'lapTrinh',   null,        'marketing', null,        'lapTrinh',   null, null ],
   // 19–21h
-  [ null,            null,         null,           null,           null,           null, null ],
+  [ null,         null,        null,        null,        null,         null, null ],
 ];
 
 export default function SchedulePage() {
@@ -70,20 +70,17 @@ export default function SchedulePage() {
 
           {/* Week indicator + nav buttons */}
           <div className="flex items-center gap-2 md:gap-3 z-10 relative">
-            <span className="hidden md:block text-[#9CA3AF] text-sm mr-2 font-medium">
-              Tuần {weekOffset === 0 ? 'hiện tại' : weekOffset > 0 ? `+${weekOffset}` : weekOffset}
-            </span>
             <button
               onClick={() => setWeekOffset((w) => w - 1)}
-              className="px-3 md:px-5 py-2 rounded-full border-2 border-white/40 text-white text-sm font-bold hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              className="px-4 md:px-6 py-2 rounded-full border-2 border-white text-white text-sm font-black uppercase tracking-wider hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
             >
-              ← Trước
+              PREV
             </button>
             <button
               onClick={() => setWeekOffset((w) => w + 1)}
-              className="px-3 md:px-5 py-2 rounded-full bg-[#F5C542] text-[#2D2D2D] text-sm font-bold hover:bg-[#E6B830] active:scale-95 transition-all cursor-pointer"
+              className="px-4 md:px-6 py-2 rounded-full border-2 border-[#2D2D2D] bg-[#F5C542] text-[#2D2D2D] text-sm font-black uppercase tracking-wider hover:bg-[#E6B830] active:scale-95 transition-all cursor-pointer"
             >
-              Sau →
+              NEXT
             </button>
           </div>
         </div>
@@ -160,12 +157,10 @@ export default function SchedulePage() {
                     <motion.div
                       whileHover={{ scale: 1.06 }}
                       whileTap={{ scale: 0.97 }}
-                      className="px-2 py-1.5 rounded-xl border-2 border-[#2D2D2D]/20 text-center cursor-pointer w-full"
-                      style={{ backgroundColor: info.bg }}
+                      className="px-2 py-1.5 rounded-full border-2 border-[#2D2D2D] text-center cursor-pointer w-full bg-white"
                     >
                       <span
-                        className="text-[10px] md:text-xs font-black uppercase tracking-wide leading-tight block"
-                        style={{ color: info.color }}
+                        className="text-[10px] md:text-xs font-black uppercase tracking-wide leading-tight block text-[#2D2D2D]"
                       >
                         {info.label}
                       </span>
