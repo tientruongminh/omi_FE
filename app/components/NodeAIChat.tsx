@@ -127,7 +127,7 @@ export default function NodeAIChat({ docId, paragraphs, docTitle, onBack, title,
           {!isStandalone && onBack && (
             <button
               onClick={onBack}
-              className="ml-auto text-[11px] text-[#5A5C58] hover:text-[#2D2D2D] transition-colors font-medium"
+              className="ml-auto text-[11px] text-[#5A5C58] hover:text-[#2D2D2D] transition-colors font-medium cursor-pointer"
             >
               ← Quay lại
             </button>
@@ -209,7 +209,7 @@ export default function NodeAIChat({ docId, paragraphs, docTitle, onBack, title,
             <button
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || streaming}
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+              className="w-7 h-7 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer disabled:cursor-not-allowed"
               style={{
                 backgroundColor: input.trim() && !streaming ? '#6B2D3E' : '#E5E5DF',
               }}

@@ -60,6 +60,7 @@ export default function MindmapCanvas({
 
   // Pan + Zoom state
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPanningState, setIsPanningState] = useState(false);
   const isPanning = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
 
@@ -73,6 +74,7 @@ export default function MindmapCanvas({
     if (target.closest('[data-node]') || target.closest('[data-content-node]')) return;
     if (e.button !== 0) return;
     isPanning.current = true;
+    setIsPanningState(true);
     lastMouse.current = { x: e.clientX, y: e.clientY };
   }, []);
 
@@ -86,6 +88,7 @@ export default function MindmapCanvas({
 
   const onMouseUp = useCallback(() => {
     isPanning.current = false;
+    setIsPanningState(false);
   }, []);
 
   // ── Scroll to zoom ─────────────────────────────────────────
@@ -131,7 +134,7 @@ export default function MindmapCanvas({
     <div
       ref={containerRef}
       className="relative flex-1 mindmap-bg overflow-hidden rounded-2xl border-2 border-[#333333] select-none"
-      style={{ cursor: isPanning.current ? 'grabbing' : 'grab' }}
+      style={{ cursor: isPanningState ? 'grabbing' : 'grab' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
@@ -150,7 +153,7 @@ export default function MindmapCanvas({
             key={title}
             title={title}
             onClick={action}
-            className="w-8 h-8 rounded-lg bg-white border-2 border-[#333333] flex items-center justify-center text-[#333333] hover:bg-[#F1F1EC] transition-colors shadow-sm"
+            className="w-8 h-8 rounded-lg bg-white border-2 border-[#333333] flex items-center justify-center text-[#333333] hover:bg-[#F1F1EC] transition-colors shadow-sm cursor-pointer"
           >
             {icon}
           </button>

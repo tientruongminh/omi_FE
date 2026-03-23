@@ -70,7 +70,7 @@ export default function NodeTextViewer({ docId, nodeId, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white border-2 border-[#333333]/30 flex items-center justify-center hover:border-[#333333] transition-colors"
+              className="w-8 h-8 rounded-full bg-white border-2 border-[#333333]/30 flex items-center justify-center hover:border-[#333333] transition-colors cursor-pointer"
             >
               <X size={14} />
             </button>
@@ -131,7 +131,7 @@ export default function NodeTextViewer({ docId, nodeId, onClose }: Props) {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setView('ai')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] text-[#065F46] font-bold text-sm hover:bg-[#A7F3D0] transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] text-[#065F46] font-bold text-sm hover:bg-[#A7F3D0] transition-colors cursor-pointer"
               >
                 <MessageCircle size={14} />
                 AI hỏi đáp
@@ -140,7 +140,7 @@ export default function NodeTextViewer({ docId, nodeId, onClose }: Props) {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setView('review')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#FEE2E2] border-2 border-[#FCA5A5] text-[#991B1B] font-bold text-sm hover:bg-[#FECACA] transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#FEE2E2] border-2 border-[#FCA5A5] text-[#991B1B] font-bold text-sm hover:bg-[#FECACA] transition-colors cursor-pointer"
               >
                 <ClipboardList size={14} />
                 Ôn tập

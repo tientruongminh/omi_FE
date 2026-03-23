@@ -220,7 +220,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             onClick={handleAnalysis}
-            className="flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors"
+            className="flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors cursor-pointer"
           >
             {showAnalysis ? '🔄 Phân tích lại' : '🔍 Phân tích sâu'}
           </motion.button>

@@ -127,7 +127,7 @@ export default function WorkspacePage() {
                   {checkedCount} đã chọn
                 </span>
               )}
-              <button className="flex items-center gap-1.5 px-4 py-2 bg-[#4CD964] text-[#2D2D2D] text-sm font-bold rounded-full border-2 border-[#2D2D2D] hover:bg-[#3DC954] transition-colors">
+              <button className="flex items-center gap-1.5 px-4 py-2 bg-[#4CD964] text-[#2D2D2D] text-sm font-bold rounded-full border-2 border-[#2D2D2D] hover:bg-[#3DC954] transition-colors cursor-pointer">
                 <Upload size={14} />
                 Tải lên
               </button>
@@ -267,7 +267,7 @@ export default function WorkspacePage() {
                 }}
               />
               <button
-                className="w-8 h-8 rounded-full bg-[#6B2D3E] flex items-center justify-center hover:bg-[#5A2233] transition-colors flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-[#6B2D3E] flex items-center justify-center hover:bg-[#5A2233] transition-colors flex-shrink-0 cursor-pointer"
                 onClick={() => setInputValue('')}
               >
                 <Send size={14} className="text-white" />
@@ -298,9 +298,9 @@ export default function WorkspacePage() {
           </div>
           <button
             onClick={() => setShowNote(false)}
-            className="w-5 h-5 rounded-full bg-[#2D2D2D]/10 flex items-center justify-center hover:bg-[#2D2D2D]/20 transition-colors flex-shrink-0 text-[#5A5C58]"
+            className="w-8 h-8 rounded-full bg-[#2D2D2D]/10 flex items-center justify-center hover:bg-[#2D2D2D]/20 transition-colors flex-shrink-0 text-[#5A5C58] cursor-pointer"
           >
-            <X size={10} />
+            <X size={12} />
           </button>
         </div>
       </div>

@@ -56,7 +56,7 @@ function QuizTab() {
         </p>
         <button
           onClick={() => { setCurrent(0); setSelected(null); setScore(0); setDone(false); }}
-          className="px-6 py-2.5 rounded-xl bg-[#6B2D3E] text-white font-bold text-sm hover:bg-[#5a2434] transition-colors"
+          className="px-6 py-2.5 rounded-xl bg-[#6B2D3E] text-white font-bold text-sm hover:bg-[#5a2434] transition-colors cursor-pointer"
         >
           Làm lại
         </button>
@@ -112,7 +112,7 @@ function QuizTab() {
                 <button
                   key={opt.label}
                   onClick={() => handleSelect(opt.label, opt.correct)}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${bg}`}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${bg} cursor-pointer disabled:cursor-not-allowed`}
                   disabled={!!selected}
                 >
                   <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold border-2 flex-shrink-0 ${
@@ -148,7 +148,7 @@ function QuizTab() {
           {selected && (
             <button
               onClick={handleNext}
-              className="mt-auto self-end px-5 py-2.5 rounded-xl bg-[#2D2D2D] text-white font-bold text-sm hover:bg-[#1a1a1a] transition-colors"
+              className="mt-auto self-end px-5 py-2.5 rounded-xl bg-[#2D2D2D] text-white font-bold text-sm hover:bg-[#1a1a1a] transition-colors cursor-pointer"
             >
               {current < quizQuestions.length - 1 ? 'Câu tiếp theo →' : 'Xem kết quả'}
             </button>
@@ -249,13 +249,13 @@ function FlashcardTab() {
       <div className="flex gap-3 w-full">
         <button
           onClick={() => handleAction(false)}
-          className="flex-1 py-2.5 rounded-xl border-2 border-[#FCA5A5] bg-[#FEE2E2] text-[#991B1B] font-bold text-sm hover:bg-[#FECACA] transition-colors"
+          className="flex-1 py-2.5 rounded-xl border-2 border-[#FCA5A5] bg-[#FEE2E2] text-[#991B1B] font-bold text-sm hover:bg-[#FECACA] transition-colors cursor-pointer"
         >
           ❌ Chưa nhớ
         </button>
         <button
           onClick={() => handleAction(true)}
-          className="flex-1 py-2.5 rounded-xl border-2 border-[#6EE7B7] bg-[#D1FAE5] text-[#065F46] font-bold text-sm hover:bg-[#A7F3D0] transition-colors"
+          className="flex-1 py-2.5 rounded-xl border-2 border-[#6EE7B7] bg-[#D1FAE5] text-[#065F46] font-bold text-sm hover:bg-[#A7F3D0] transition-colors cursor-pointer"
         >
           ✅ Đã nhớ
         </button>
@@ -292,7 +292,7 @@ function EssayTab() {
         <button
           onClick={() => { if (answer.trim()) setSubmitted(true); }}
           disabled={!answer.trim()}
-          className="py-2.5 rounded-xl font-bold text-sm transition-colors"
+          className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
           style={{
             backgroundColor: answer.trim() ? '#6B2D3E' : '#E5E5DF',
             color: answer.trim() ? 'white' : '#9CA3AF',
@@ -359,7 +359,7 @@ function TeachAITab() {
         <button
           onClick={() => { if (explanation.trim()) setSubmitted(true); }}
           disabled={!explanation.trim()}
-          className="py-2.5 rounded-xl font-bold text-sm transition-colors"
+          className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed"
           style={{
             backgroundColor: explanation.trim() ? '#6B2D3E' : '#E5E5DF',
             color: explanation.trim() ? 'white' : '#9CA3AF',
@@ -431,7 +431,7 @@ export default function NodeReview({ onBack, title, onClose, standalone }: Props
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className="flex-1 py-1.5 rounded-full text-[12px] font-bold transition-all"
+            className="flex-1 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer"
             style={{
               backgroundColor: activeTab === tab.key ? '#2D2D2D' : 'transparent',
               color: activeTab === tab.key ? 'white' : '#5A5C58',
@@ -466,7 +466,7 @@ export default function NodeReview({ onBack, title, onClose, standalone }: Props
         <div className="px-5 pb-4 flex-shrink-0">
           <button
             onClick={onBack}
-            className="text-[13px] text-[#5A5C58] hover:text-[#2D2D2D] transition-colors font-medium"
+            className="text-[13px] text-[#5A5C58] hover:text-[#2D2D2D] transition-colors font-medium cursor-pointer"
           >
             ← Quay lại tài liệu
           </button>

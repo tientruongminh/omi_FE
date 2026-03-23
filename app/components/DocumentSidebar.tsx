@@ -113,7 +113,7 @@ export default function DocumentSidebar({ nodeId, onClose, onApply, onOpenDocume
                   setApplied(false);
                   onClose();
                 }}
-                className="w-8 h-8 rounded-full bg-white border-2 border-[#333333]/30 flex items-center justify-center hover:border-[#333333] transition-colors flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-white border-2 border-[#333333]/30 flex items-center justify-center hover:border-[#333333] transition-colors flex-shrink-0 cursor-pointer"
               >
                 <X size={14} className="text-[#2D2D2D]" />
               </button>

@@ -59,7 +59,7 @@ export default function HomePage() {
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full hover:bg-[#1a1a1a] active:scale-95 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full hover:bg-[#1a1a1a] active:scale-95 transition-all cursor-pointer"
         >
           <span className="w-5 h-5 rounded-full bg-[#4CD964] flex items-center justify-center flex-shrink-0">
             <Plus size={12} className="text-[#2D2D2D]" strokeWidth={3} />

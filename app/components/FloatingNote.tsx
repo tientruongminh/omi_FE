@@ -32,10 +32,10 @@ export default function FloatingNote() {
             border: '1.5px solid rgba(51,51,51,0.12)',
           }}
         >
-          <div className="relative px-4 py-3.5 pr-10">
+          <div className="relative px-4 py-3.5 pr-12">
             <button
               onClick={() => setDismissed(true)}
-              className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[#E5E5DF] flex items-center justify-center text-[10px] text-[#5A5C58] hover:bg-[#CCCCCC] transition-colors leading-none"
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#E5E5DF] flex items-center justify-center text-[12px] text-[#5A5C58] hover:bg-[#CCCCCC] transition-colors leading-none cursor-pointer"
             >
               ×
             </button>

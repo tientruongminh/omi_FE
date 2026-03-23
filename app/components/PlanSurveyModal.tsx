@@ -126,7 +126,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -149,7 +149,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                 <button
                   onClick={() => handleNext('q1', 'q2')}
                   disabled={!answers.q1.trim()}
-                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Tiếp tục →
                 </button>
@@ -166,7 +166,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                     <button
                       key={opt}
                       onClick={() => setAnswers({ ...answers, q2: opt })}
-                      className={`w-full px-4 py-3 rounded-xl border-2 text-left font-medium transition-all ${
+                      className={`w-full px-4 py-3 rounded-xl border-2 text-left font-medium transition-all cursor-pointer ${
                         answers.q2 === opt
                           ? 'border-[#2D2D2D] bg-[#2D2D2D] text-white'
                           : 'border-[#CCCCCC] bg-white text-[#2D2D2D] hover:border-[#333333]'
@@ -179,7 +179,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                 <button
                   onClick={() => handleNext('q2', 'q3')}
                   disabled={!answers.q2}
-                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Tiếp tục →
                 </button>
@@ -196,7 +196,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                     <button
                       key={opt}
                       onClick={() => setAnswers({ ...answers, q3: opt })}
-                      className={`px-4 py-3 rounded-xl border-2 font-medium transition-all ${
+                      className={`px-4 py-3 rounded-xl border-2 font-medium transition-all cursor-pointer ${
                         answers.q3 === opt
                           ? 'border-[#2D2D2D] bg-[#2D2D2D] text-white'
                           : 'border-[#CCCCCC] bg-white text-[#2D2D2D] hover:border-[#333333]'
@@ -209,7 +209,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                 <button
                   onClick={() => handleNext('q3', 'q4')}
                   disabled={!answers.q3}
-                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Tiếp tục →
                 </button>
@@ -231,7 +231,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                 <button
                   onClick={() => handleNext('q4', 'calendar')}
                   disabled={!answers.q4.trim()}
-                  className="w-full py-3 rounded-full bg-[#6B2D3E] text-white font-semibold hover:bg-[#5a2535] transition-colors disabled:opacity-40"
+                  className="w-full py-3 rounded-full bg-[#6B2D3E] text-white font-semibold hover:bg-[#5a2535] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   Tạo kế hoạch học tập 🚀
                 </button>
@@ -263,7 +263,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={handleConnectCalendar}
                     disabled={calendarConnecting}
-                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl border-2 border-[#333333] bg-white hover:bg-[#F8F8F8] transition-colors font-semibold text-[#2D2D2D] disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl border-2 border-[#333333] bg-white hover:bg-[#F8F8F8] transition-colors font-semibold text-[#2D2D2D] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {calendarConnecting ? (
                       <>
@@ -287,7 +287,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
 
                 <button
                   onClick={() => handleNext('calendar', 'generating')}
-                  className={`w-full py-3 rounded-full font-semibold transition-colors ${
+                  className={`w-full py-3 rounded-full font-semibold transition-colors cursor-pointer ${
                     calendarConnected
                       ? 'bg-[#4CD964] text-[#2D2D2D] hover:bg-[#3bc453]'
                       : 'bg-[#2D2D2D] text-white hover:bg-[#1a1a1a]'
@@ -333,7 +333,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={handleModify}
                     disabled={isRegenerating || !modifyInput.trim()}
-                    className="px-4 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-medium hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                    className="px-4 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-medium hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {isRegenerating ? '...' : 'Cập nhật'}
                   </button>
@@ -341,7 +341,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
 
                 <button
                   onClick={handleComplete}
-                  className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold hover:bg-[#3bc453] transition-colors shadow-md"
+                  className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold hover:bg-[#3bc453] transition-colors shadow-md cursor-pointer"
                 >
                   OK, hoàn thành ✓
                 </button>

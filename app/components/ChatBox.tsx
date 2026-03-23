@@ -82,14 +82,14 @@ export default function ChatBox() {
                   </div>
                 ))}
               </div>
-              <button className="ml-auto text-[11px] text-blue-500 font-medium hover:underline">
+              <button className="ml-auto text-[11px] text-blue-500 font-medium hover:underline cursor-pointer">
                 Mời bạn bè
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="w-6 h-6 rounded-full bg-[#F1F1EC] border border-[#CCCCCC] flex items-center justify-center hover:bg-[#E5E5DF] transition-colors"
+                className="w-8 h-8 rounded-full bg-[#F1F1EC] border border-[#CCCCCC] flex items-center justify-center hover:bg-[#E5E5DF] transition-colors cursor-pointer"
               >
-                <X size={10} className="text-[#5A5C58]" />
+                <X size={12} className="text-[#5A5C58]" />
               </button>
             </div>
 
@@ -155,7 +155,7 @@ export default function ChatBox() {
       {/* Toggle Button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
         style={{ backgroundColor: '#2D2D2D' }}
       >
         <span className="text-xl">💬</span>

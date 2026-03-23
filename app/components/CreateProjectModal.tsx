@@ -157,7 +157,7 @@ export default function CreateProjectModal({ onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -245,7 +245,7 @@ export default function CreateProjectModal({ onClose }: Props) {
                 <button
                   onClick={() => setStep(2)}
                   disabled={!projectName.trim()}
-                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Tiếp tục →
                 </button>
@@ -345,7 +345,7 @@ export default function CreateProjectModal({ onClose }: Props) {
 
                 <button
                   onClick={() => setStep(3)}
-                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors"
+                  className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                 >
                   Đã đủ tài liệu ✓
                 </button>
@@ -401,14 +401,14 @@ export default function CreateProjectModal({ onClose }: Props) {
 
                 <button
                   onClick={handleCreateProject}
-                  className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg"
+                  className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer"
                 >
                   Tạo dự án 🎉
                 </button>
 
                 <button
                   onClick={() => setStep(2)}
-                  className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors"
+                  className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer"
                 >
                   ← Quay lại
                 </button>
