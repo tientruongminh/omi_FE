@@ -135,7 +135,7 @@ export default function SchedulePage() {
         {TIME_SLOTS.map((slot, rowIdx) => (
           <div
             key={slot}
-            className="grid border-b-2 border-[#CCCCCC] last:border-b-0"
+            className="grid border-b-2 border-[#CCCCCC] last:border-b-0 hover:bg-[#2D2D2D]/[0.02] transition-colors group/row"
             style={{ gridTemplateColumns: '64px repeat(7, 1fr)', minHeight: '80px' }}
           >
             {/* Time label */}

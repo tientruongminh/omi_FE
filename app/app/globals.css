@@ -5,10 +5,20 @@
   --foreground: #2D2D2D;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Brand text selection */
+::selection {
+  background-color: rgba(107, 45, 62, 0.18);
+  color: #6B2D3E;
 }
 
 /* Custom scrollbar */
@@ -62,6 +72,16 @@ body {
   box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
 }
 
+/* Marching ants selection animation */
+@keyframes marchingAnts {
+  to { stroke-dashoffset: -20; }
+}
+
+.mindmap-child-node.selected-animated {
+  animation: marchingAnts 0.5s linear infinite;
+  stroke-dasharray: 6 4;
+}
+
 /* Dot-grid background for mindmap canvas */
 .mindmap-bg {
   background-color: #F5F0EB;
@@ -110,9 +130,95 @@ body {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
+/* Typing indicator animation */
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+  will-change: transform;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Count-up shimmer for stats */
+@keyframes count-shimmer {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle animated dot grid for landing hero */
+@keyframes dot-drift {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-8px) translateX(4px); }
+  66% { transform: translateY(4px) translateX(-4px); }
+}
+
+.animated-dot {
+  animation: dot-drift 8s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* Mobile responsiveness improvements */
 @media (max-width: 768px) {
   .hide-mobile {
     display: none !important;
   }
+}
+
+/* Nav link underline animation */
+.nav-link-underline {
+  position: relative;
+}
+.nav-link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #6B2D3E;
+  transition: width 0.2s ease;
+  border-radius: 1px;
+}
+.nav-link-underline:hover::after {
+  width: 100%;
+}
+
+/* Tooltip styles */
+.tooltip-wrapper {
+  position: relative;
+}
+.tooltip-wrapper .tooltip-label {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2D2D2D;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateX(-50%) translateY(4px);
+  z-index: 100;
+}
+.tooltip-wrapper:hover .tooltip-label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.tooltip-wrapper .tooltip-label::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #2D2D2D;
 }

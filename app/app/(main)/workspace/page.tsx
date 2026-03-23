@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Send, X, Upload, Cloud } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface FileItem {
   id: string;
@@ -100,12 +101,54 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
+        🤖
+      </div>
+      <div className="px-4 py-3 rounded-2xl rounded-tl-none bg-white border-2 border-[#CCCCCC] flex items-center gap-1.5">
+        <span className="typing-dot w-2 h-2 rounded-full bg-[#5A5C58] block" />
+        <span className="typing-dot w-2 h-2 rounded-full bg-[#5A5C58] block" />
+        <span className="typing-dot w-2 h-2 rounded-full bg-[#5A5C58] block" />
+      </div>
+    </div>
+  );
+}
+
 export default function WorkspacePage() {
   const [files, setFiles] = useState<FileItem[]>(INITIAL_FILES);
-  const [messages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([]);
+  const [showTyping, setShowTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Animate messages in stagger on mount
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    let idx = 0;
+    const showNext = () => {
+      if (idx < INITIAL_MESSAGES.length) {
+        const msg = INITIAL_MESSAGES[idx];
+        if (msg.role === 'ai' && idx > 0) {
+          setShowTyping(true);
+          timer = setTimeout(() => {
+            setShowTyping(false);
+            setVisibleMessages((prev) => [...prev, msg]);
+            idx++;
+            timer = setTimeout(showNext, 200);
+          }, 800);
+        } else {
+          setVisibleMessages((prev) => [...prev, msg]);
+          idx++;
+          timer = setTimeout(showNext, 300);
+        }
+      }
+    };
+    timer = setTimeout(showNext, 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Show floating note after 2 seconds
   useEffect(() => {
@@ -133,11 +176,18 @@ export default function WorkspacePage() {
           <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#333333]">
             <h2 className="text-lg font-black text-[#2D2D2D]">Tệp dự án</h2>
             <div className="flex items-center gap-3">
-              {checkedCount > 0 && (
-                <span className="text-xs bg-[#6B2D3E] text-white px-3 py-1 rounded-full font-bold">
-                  {checkedCount} đã chọn
-                </span>
-              )}
+              <AnimatePresence>
+                {checkedCount > 0 && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="text-xs bg-[#6B2D3E] text-white px-3 py-1 rounded-full font-bold"
+                  >
+                    {checkedCount} đã chọn
+                  </motion.span>
+                )}
+              </AnimatePresence>
               <button className="flex items-center gap-1.5 px-4 py-2 bg-[#4CD964] text-[#2D2D2D] text-sm font-bold rounded-full border-2 border-[#2D2D2D] hover:bg-[#3DC954] transition-colors cursor-pointer">
                 <Upload size={14} />
                 Tải lên
@@ -147,28 +197,54 @@ export default function WorkspacePage() {
 
           {/* File list */}
           <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
-            {files.map((file) => (
-              <div
+            {files.map((file, i) => (
+              <motion.div
                 key={file.id}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.3, ease: 'easeOut' }}
                 onClick={() => toggleFile(file.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all hover:shadow-sm ${
                   file.checked
                     ? 'border-[#6B2D3E] bg-[#FFF5F7]'
                     : 'border-[#CCCCCC] bg-white hover:border-[#333333]'
                 }`}
+                style={{ willChange: 'transform, opacity' }}
               >
-                {/* Checkbox */}
-                <div
+                {/* Animated Checkbox */}
+                <motion.div
                   className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
                     file.checked ? 'bg-[#6B2D3E] border-[#6B2D3E]' : 'border-[#CCCCCC] bg-white'
                   }`}
+                  animate={{ scale: file.checked ? [1, 1.2, 1] : 1 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  {file.checked && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
+                  <AnimatePresence>
+                    {file.checked && (
+                      <motion.svg
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        exit={{ pathLength: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        width="10"
+                        height="8"
+                        viewBox="0 0 10 8"
+                        fill="none"
+                      >
+                        <motion.path
+                          d="M1 4L3.5 6.5L9 1"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.25 }}
+                        />
+                      </motion.svg>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
 
                 {/* File icon */}
                 <div
@@ -185,7 +261,7 @@ export default function WorkspacePage() {
                     {file.size} • {file.time}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -230,38 +306,58 @@ export default function WorkspacePage() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'ai' && (
-                  <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
-                    🤖
-                  </div>
-                )}
-                <div
-                  className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-[#6B2D3E] text-white rounded-tr-none'
-                      : 'bg-white border-2 border-[#CCCCCC] text-[#2D2D2D] rounded-tl-none'
-                  }`}
+            <AnimatePresence initial={false}>
+              {visibleMessages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  style={{ willChange: 'transform, opacity' }}
                 >
-                  {msg.content}
-                  {msg.links && (
-                    <div className="mt-2 flex flex-col gap-1">
-                      {msg.links.map((link) => (
-                        <a
-                          key={link.label}
-                          href={link.href}
-                          className="text-[#6B2D3E] font-semibold hover:underline text-sm"
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          {link.label}
-                        </a>
-                      ))}
+                  {msg.role === 'ai' && (
+                    <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
+                      🤖
                     </div>
                   )}
-                </div>
-              </div>
-            ))}
+                  <div
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-[#6B2D3E] text-white rounded-tr-none'
+                        : 'bg-white border-2 border-[#CCCCCC] text-[#2D2D2D] rounded-tl-none'
+                    }`}
+                  >
+                    {msg.content}
+                    {msg.links && (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {msg.links.map((link) => (
+                          <a
+                            key={link.label}
+                            href={link.href}
+                            className="text-[#6B2D3E] font-semibold hover:underline text-sm"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            {link.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+              {showTyping && (
+                <motion.div
+                  key="typing"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TypingIndicator />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Chat input */}
@@ -289,32 +385,39 @@ export default function WorkspacePage() {
       </div>
 
       {/* ── Floating Action Note ── */}
-      <div
-        className={`fixed bottom-8 right-8 z-50 transition-all duration-500 ${
-          showNote ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-      >
-        <div
-          className="flex items-start gap-3 p-4 rounded-2xl max-w-[260px]"
-          style={{
-            backgroundColor: '#FFF8EC',
-            border: '2px solid #F5C542',
-            boxShadow: '4px 4px 0 #2D2D2D',
-          }}
-        >
-          <div className="flex-1">
-            <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
-              💡 <strong>Mẹo:</strong> Chọn nhiều file rồi nhờ AI tóm tắt cùng lúc!
-            </p>
-          </div>
-          <button
-            onClick={() => setShowNote(false)}
-            className="w-8 h-8 rounded-full bg-[#2D2D2D]/10 flex items-center justify-center hover:bg-[#2D2D2D]/20 transition-colors flex-shrink-0 text-[#5A5C58] cursor-pointer"
+      <AnimatePresence>
+        {showNote && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed bottom-8 right-8 z-50"
+            style={{ willChange: 'transform, opacity' }}
           >
-            <X size={12} />
-          </button>
-        </div>
-      </div>
+            <div
+              className="flex items-start gap-3 p-4 rounded-2xl max-w-[260px]"
+              style={{
+                backgroundColor: '#FFF8EC',
+                border: '2px solid #F5C542',
+                boxShadow: '4px 4px 0 #2D2D2D',
+              }}
+            >
+              <div className="flex-1">
+                <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
+                  💡 <strong>Mẹo:</strong> Chọn nhiều file rồi nhờ AI tóm tắt cùng lúc!
+                </p>
+              </div>
+              <button
+                onClick={() => setShowNote(false)}
+                className="w-8 h-8 rounded-full bg-[#2D2D2D]/10 flex items-center justify-center hover:bg-[#2D2D2D]/20 transition-colors flex-shrink-0 text-[#5A5C58] cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

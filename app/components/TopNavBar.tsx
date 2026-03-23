@@ -17,6 +17,7 @@ const NAV_LINKS = [
 export default function TopNavBar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#F7F7F2]/90 backdrop-blur-sm border-b border-[#2D2D2D]/10">
@@ -38,13 +39,17 @@ export default function TopNavBar() {
               <Link
                 key={href}
                 href={href}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all relative group ${
                   isActive
                     ? 'bg-[#2D2D2D] text-white'
                     : 'text-[#5A5C58] hover:text-[#2D2D2D] hover:bg-[#2D2D2D]/8 active:scale-95'
                 }`}
               >
                 {label}
+                {/* Underline indicator for inactive */}
+                {!isActive && (
+                  <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#6B2D3E] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left rounded-full" />
+                )}
               </Link>
             );
           })}
@@ -53,24 +58,36 @@ export default function TopNavBar() {
         {/* Right side */}
         <div className="flex items-center gap-2 md:gap-3 ml-auto">
           {/* Search bar — hidden on small mobile */}
-          <div className="hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] min-w-[140px] md:min-w-[200px] focus-within:border-[#6B2D3E] transition-colors">
+          <div
+            className={`hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 bg-[#F1F1EC] min-w-[140px] md:min-w-[200px] transition-all duration-200 ${
+              searchFocused ? 'border-[#6B2D3E] shadow-sm' : 'border-[#2D2D2D]/10'
+            }`}
+          >
             <Search size={14} className="text-[#6B7280] flex-shrink-0" />
             <input
               type="text"
-              placeholder="Tìm kiếm..."
-              className="bg-transparent text-sm text-[#6B7280] outline-none w-full placeholder:text-[#6B7280]"
+              placeholder={searchFocused ? 'Tìm kiếm môn học, tài liệu...' : 'Tìm kiếm...'}
+              className="bg-transparent text-sm text-[#6B7280] outline-none w-full placeholder:text-[#6B7280] transition-all"
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
             />
           </div>
 
-          {/* Dark mode toggle */}
-          <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 hover:bg-[#E8E8E2] active:scale-90 transition-all">
-            <Moon size={14} className="text-[#5A5C58]" />
-          </button>
+          {/* Dark mode toggle with tooltip */}
+          <div className="tooltip-wrapper">
+            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 hover:bg-[#E8E8E2] active:scale-90 transition-all">
+              <Moon size={14} className="text-[#5A5C58]" />
+            </button>
+            <span className="tooltip-label">Chế độ tối</span>
+          </div>
 
-          {/* Avatar */}
-          <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D] bg-[#DCDDD7] flex items-center justify-center hover:border-[#6B2D3E] hover:bg-[#D0CECA] active:scale-90 transition-all overflow-hidden">
-            <User size={16} className="text-[#5A5C58]" />
-          </button>
+          {/* Avatar with tooltip */}
+          <div className="tooltip-wrapper">
+            <button className="w-[34px] md:w-[38px] h-[34px] md:h-[38px] rounded-full border-2 border-[#2D2D2D] bg-[#DCDDD7] flex items-center justify-center hover:border-[#6B2D3E] hover:bg-[#D0CECA] active:scale-90 transition-all overflow-hidden">
+              <User size={16} className="text-[#5A5C58]" />
+            </button>
+            <span className="tooltip-label">Tài khoản</span>
+          </div>
 
           {/* Hamburger — mobile only */}
           <button

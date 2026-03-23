@@ -1,5 +1,6 @@
 import TopNavBar from "@/components/TopNavBar";
 import Footer from "@/components/Footer";
+import PageTransition from "@/components/PageTransition";
 
 export default function MainLayout({
   children,
@@ -10,7 +11,7 @@ export default function MainLayout({
     <>
       <TopNavBar />
       <main className="flex-1 pt-[62px] md:pt-[72px]">
-        {children}
+        <PageTransition>{children}</PageTransition>
       </main>
       <Footer />
     </>
