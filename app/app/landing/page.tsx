@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { motion, Variants, useInView } from 'framer-motion';
-import { Menu, Star } from 'lucide-react';
+import { ChevronDown, Menu, Star } from 'lucide-react';
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 
@@ -26,14 +26,36 @@ const fadeRight: Variants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: 'easeOut' } },
 };
 
+// ─── Count-up hook ────────────────────────────────────────────────────────────
+
+function useCountUp(target: number, duration = 1800, start = false) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [start, target, duration]);
+  return count;
+}
+
 // ─── CTA Button ──────────────────────────────────────────────────────────────
 
-function CTAButton({ href = '/', className = '' }: { href?: string; className?: string }) {
+function CTAButton({ href = '/', className = '', light = false }: { href?: string; className?: string; light?: boolean }) {
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 ${className}`}
-      style={{ background: '#2D2D2D', willChange: 'transform' }}
+      className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 ${className}`}
+      style={{
+        background: light ? '#FFFFFF' : '#2D2D2D',
+        color: light ? '#2D2D2D' : '#FFFFFF',
+        willChange: 'transform',
+      }}
     >
       Bắt đầu miễn phí
     </Link>
@@ -51,32 +73,30 @@ const DEMO_SUBJECTS = [
   },
   {
     id: 'vat-ly',
-    label: 'Vật Lý Đại Cương',
+    label: 'Vật Lý',
     chapters: ['Cơ học', 'Nhiệt động lực học', 'Điện từ', 'Quang học'],
     stats: '4 chương • 16 bài • ~8 tuần',
   },
   {
     id: 'ctdl',
-    label: 'Cấu Trúc Dữ Liệu',
+    label: 'CTDL',
     chapters: ['Mảng & Danh sách', 'Stack & Queue', 'Cây & Đồ thị', 'Sắp xếp & Tìm kiếm'],
     stats: '4 chương • 14 bài • ~7 tuần',
   },
 ];
 
 function InteractiveDemo() {
+  type DEMO_SUBJECT = (typeof DEMO_SUBJECTS)[number];
   const [demoState, setDemoState] = useState<'idle' | 'loading' | 'result'>('idle');
   const [selectedSubject, setSelectedSubject] = useState<DEMO_SUBJECT | null>(null);
   const [typeText, setTypeText] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
-
-  type DEMO_SUBJECT = (typeof DEMO_SUBJECTS)[number];
 
   const handleSelectSubject = (subject: DEMO_SUBJECT) => {
     setSelectedSubject(subject);
     setDemoState('loading');
     setTypeText('');
 
-    // Typewriter effect
     const text = `Đang phân tích tài liệu ${subject.label}...`;
     let i = 0;
     const interval = setInterval(() => {
@@ -84,7 +104,6 @@ function InteractiveDemo() {
       i++;
       if (i >= text.length) {
         clearInterval(interval);
-        // After typing completes, show result
         setTimeout(() => setDemoState('result'), 600);
       }
     }, 40);
@@ -103,13 +122,12 @@ function InteractiveDemo() {
         background: '#FFFFFF',
         border: '2px solid #E5DDD5',
         boxShadow: '0 8px 40px rgba(0,0,0,0.07)',
-        minHeight: 320,
+        minHeight: 340,
       }}
     >
       {/* State: idle */}
       {demoState === 'idle' && (
-        <div className="flex flex-col items-center justify-center p-8 gap-6 h-full" style={{ minHeight: 320 }}>
-          {/* Drop zone */}
+        <div className="flex flex-col items-center justify-center p-8 gap-6 h-full" style={{ minHeight: 340 }}>
           <div
             className="w-full flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 px-4 transition-all"
             style={{
@@ -125,9 +143,9 @@ function InteractiveDemo() {
             <p className="text-sm font-semibold text-center" style={{ color: '#5A5C58' }}>
               Kéo thả tài liệu vào đây
             </p>
+            <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>PDF, PPTX, DOCX...</p>
           </div>
 
-          {/* Quick demo */}
           <div className="flex flex-col items-center gap-3 w-full">
             <p className="text-xs" style={{ color: '#9CA3AF' }}>hoặc thử ngay với:</p>
             <div className="flex flex-wrap gap-2 justify-center">
@@ -148,9 +166,9 @@ function InteractiveDemo() {
 
       {/* State: loading */}
       {demoState === 'loading' && (
-        <div className="flex flex-col items-center justify-center p-8 gap-5 h-full" style={{ minHeight: 320 }}>
+        <div className="flex flex-col items-center justify-center p-8 gap-5 h-full" style={{ minHeight: 340 }}>
           <motion.div
-            className="w-12 h-12 rounded-full border-4 border-t-transparent"
+            className="w-12 h-12 rounded-full border-4"
             style={{ borderColor: '#E5DDD5', borderTopColor: '#2D2D2D' }}
             animate={{ rotate: 360 }}
             transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
@@ -170,7 +188,6 @@ function InteractiveDemo() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-          {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-lg">🧠</span>
@@ -187,7 +204,6 @@ function InteractiveDemo() {
             </button>
           </div>
 
-          {/* Chapters */}
           <div
             className="flex flex-col gap-1.5 rounded-xl p-4"
             style={{ background: '#F9F6F2', border: '1px solid #E5DDD5' }}
@@ -211,11 +227,16 @@ function InteractiveDemo() {
             ))}
           </div>
 
-          {/* Stats + CTA */}
           <div className="flex items-center justify-between pt-1">
             <p className="text-xs font-semibold" style={{ color: '#9CA3AF' }}>
               📊 {selectedSubject.stats}
             </p>
+            <span
+              className="text-xs px-2 py-1 rounded-full font-semibold"
+              style={{ background: '#EDFAF4', color: '#1A6E3E' }}
+            >
+              ⚡ Xong trong 30 giây
+            </span>
           </div>
 
           <Link
@@ -240,20 +261,14 @@ function MindmapScreenshot() {
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
       <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>🗺️ Bản đồ tư duy — Giải Tích 1</p>
-      {/* Mini mindmap */}
       <div className="flex flex-col items-center gap-3 flex-1 justify-center">
-        {/* Root node */}
         <div
           className="px-5 py-2 rounded-full text-xs font-bold text-white text-center"
           style={{ background: '#7C6FCD' }}
         >
           Giải Tích 1
         </div>
-
-        {/* Connector */}
         <div className="w-px h-3" style={{ background: '#C8C4BF' }} />
-
-        {/* Children */}
         <div className="grid grid-cols-2 gap-2 w-full">
           {['Giới hạn', 'Đạo hàm', 'Tích phân', 'Chuỗi số'].map((node, i) => (
             <div
@@ -285,8 +300,6 @@ function FlashcardScreenshot() {
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
       <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>🃏 Flashcard — Đạo hàm cơ bản</p>
-
-      {/* Flashcard */}
       <div
         className="flex-1 rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md p-4 text-center"
         style={{
@@ -299,9 +312,7 @@ function FlashcardScreenshot() {
         {!flipped ? (
           <>
             <p className="text-xs" style={{ color: '#9CA3AF' }}>Câu hỏi</p>
-            <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>
-              d/dx (sin x) = ?
-            </p>
+            <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>d/dx (sin x) = ?</p>
             <p className="text-[10px]" style={{ color: '#C8C4BF' }}>Nhấn để xem đáp án</p>
           </>
         ) : (
@@ -312,8 +323,6 @@ function FlashcardScreenshot() {
           </>
         )}
       </div>
-
-      {/* 4 methods */}
       <div className="grid grid-cols-4 gap-1">
         {[
           { icon: '📝', label: 'Quiz' },
@@ -349,10 +358,7 @@ function ChatScreenshot() {
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
       <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>💬 AI Tutor — 24/7</p>
-
-      {/* Messages */}
       <div className="flex flex-col gap-3 flex-1">
-        {/* User message */}
         <div className="flex justify-end">
           <div
             className="px-3 py-2 rounded-2xl rounded-tr-sm text-xs max-w-[80%]"
@@ -361,8 +367,6 @@ function ChatScreenshot() {
             Giải thích giới hạn bằng tiếng Việt đơn giản nhất?
           </div>
         </div>
-
-        {/* AI message */}
         <div className="flex justify-start gap-2">
           <div
             className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold"
@@ -374,12 +378,10 @@ function ChatScreenshot() {
             className="px-3 py-2 rounded-2xl rounded-tl-sm text-xs max-w-[80%] leading-relaxed"
             style={{ background: '#FFFFFF', border: '1px solid #E5DDD5', color: '#2D2D2D' }}
           >
-            Hãy tưởng tượng bạn đang đi dần đến một điểm mà không bao giờ đến hẳn — giới hạn là giá trị bạn &quot;tiến gần đến&quot;. 🎯
+            Hãy tưởng tượng bạn đi dần đến một điểm mà không bao giờ đến hẳn — giới hạn là giá trị bạn &quot;tiến gần đến&quot;. 🎯
           </div>
         </div>
       </div>
-
-      {/* Input bar */}
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
         style={{ background: '#FFFFFF', border: '1px solid #E5DDD5' }}
@@ -401,13 +403,14 @@ function ChatScreenshot() {
 interface ProductCardProps {
   title: string;
   caption: string;
+  stat: string;
   children: React.ReactNode;
   tilt?: number;
   delay?: number;
   inView: boolean;
 }
 
-function ProductCard({ title, caption, children, tilt = 0, delay = 0, inView }: ProductCardProps) {
+function ProductCard({ title, caption, stat, children, tilt = 0, delay = 0, inView }: ProductCardProps) {
   return (
     <motion.div
       custom={delay}
@@ -435,23 +438,103 @@ function ProductCard({ title, caption, children, tilt = 0, delay = 0, inView }: 
       </div>
       <div className="px-2">
         <p className="text-sm font-bold mb-1" style={{ color: '#2D2D2D' }}>{title}</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#5A5C58' }}>{caption}</p>
+        <p className="text-xs leading-relaxed mb-2" style={{ color: '#5A5C58' }}>{caption}</p>
+        <span
+          className="inline-block text-xs font-bold px-2.5 py-1 rounded-full"
+          style={{ background: '#EDFAF4', color: '#1A6E3E' }}
+        >
+          {stat}
+        </span>
       </div>
     </motion.div>
+  );
+}
+
+// ─── Stats Bar ────────────────────────────────────────────────────────────────
+
+interface StatItemProps {
+  value: number;
+  suffix: string;
+  label: string;
+  inView: boolean;
+}
+
+function StatItem({ value, suffix, label, inView }: StatItemProps) {
+  const count = useCountUp(value, 1600, inView);
+  return (
+    <div className="flex flex-col items-center gap-1 px-6 py-4">
+      <span className="text-2xl md:text-3xl font-extrabold text-white">
+        {count}{suffix}
+      </span>
+      <span className="text-xs md:text-sm text-center" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── FAQ Accordion ────────────────────────────────────────────────────────────
+
+interface FAQItemProps {
+  question: string;
+  answer: string;
+}
+
+function FAQItem({ question, answer }: FAQItemProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden transition-all"
+      style={{ border: '1.5px solid #E5DDD5', background: '#FFFFFF' }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left transition-colors hover:bg-[#F9F6F2]"
+      >
+        <span className="text-sm font-bold" style={{ color: '#2D2D2D' }}>{question}</span>
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="flex-shrink-0 ml-3"
+        >
+          <ChevronDown size={18} color="#9CA3AF" />
+        </motion.div>
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+        style={{ overflow: 'hidden' }}
+      >
+        <p
+          className="px-6 pb-5 text-sm leading-relaxed"
+          style={{ color: '#5A5C58' }}
+        >
+          {answer}
+        </p>
+      </motion.div>
+    </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const comparisonRef = useRef(null);
   const showcaseRef = useRef(null);
+  const statsRef = useRef(null);
   const testimonialsRef = useRef(null);
   const manifestoRef = useRef(null);
+  const faqRef = useRef(null);
   const ctaRef = useRef(null);
 
+  const comparisonInView = useInView(comparisonRef, { once: true, margin: '-80px' });
   const showcaseInView = useInView(showcaseRef, { once: true, margin: '-80px' });
+  const statsInView = useInView(statsRef, { once: true, margin: '-80px' });
   const testimonialsInView = useInView(testimonialsRef, { once: true, margin: '-80px' });
   const manifestoInView = useInView(manifestoRef, { once: true, margin: '-80px' });
+  const faqInView = useInView(faqRef, { once: true, margin: '-80px' });
   const ctaInView = useInView(ctaRef, { once: true, margin: '-80px' });
 
   return (
@@ -463,7 +546,6 @@ export default function LandingPage() {
         style={{ background: 'rgba(245,240,235,0.94)', backdropFilter: 'blur(14px)' }}
       >
         <div className="max-w-[1100px] mx-auto px-5 h-[62px] flex items-center justify-between">
-          {/* Left: hamburger */}
           <button
             className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/5 transition-colors"
             aria-label="Menu"
@@ -471,7 +553,6 @@ export default function LandingPage() {
             <Menu size={20} color="#2D2D2D" />
           </button>
 
-          {/* Center: logo */}
           <span
             className="text-xl italic"
             style={{ fontFamily: 'Georgia, serif', color: '#6B2D3E', letterSpacing: '-0.01em' }}
@@ -479,13 +560,12 @@ export default function LandingPage() {
             omilearn
           </span>
 
-          {/* Right: CTA */}
           <CTAButton className="text-xs py-2.5 px-5" />
         </div>
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 1 — HERO: SHOW, DON'T TELL
+          SECTION 1 — HERO: Strong hook + Interactive demo
       ══════════════════════════════════════════════════════════════════ */}
       <section className="w-full max-w-[1100px] mx-auto px-5 pt-16 pb-24 flex flex-col md:flex-row items-start gap-14 md:gap-10">
 
@@ -496,31 +576,43 @@ export default function LandingPage() {
           initial="hidden"
           animate="visible"
         >
+          {/* Badge */}
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6"
+            style={{ background: '#EDFAF4', color: '#1A6E3E', border: '1.5px solid #3DBE7A' }}
+          >
+            ⚡ AI đang thay đổi cách học
+          </div>
+
+          {/* Headline */}
+          <h1
+            className="font-extrabold leading-[1.2] mb-6"
+            style={{ fontSize: 'clamp(34px, 4.5vw, 50px)', color: '#2D2D2D' }}
+          >
+            Sinh viên giỏi<br />
+            không học nhiều hơn.<br />
+            Họ học{' '}
+            <span style={{ color: '#E8887A', fontStyle: 'italic' }}>thông minh hơn.</span>
+          </h1>
+
           {/* Subtitle */}
           <p
-            className="text-base italic mb-6"
-            style={{ fontFamily: 'Georgia, serif', color: '#5A5C58' }}
+            className="text-base mb-8 leading-relaxed"
+            style={{ color: '#5A5C58', maxWidth: 420 }}
           >
-            Trợ lý học tập AI cho sinh viên Việt Nam
+            Upload tài liệu → AI tạo lộ trình cá nhân → quiz, flashcard, mindmap sẵn sàng.{' '}
+            <strong style={{ color: '#2D2D2D' }}>Trong 30 giây.</strong>
           </p>
-
-          {/* Headline — 3 lines, each a step */}
-          <h1 className="font-extrabold leading-[1.2] mb-8" style={{ fontSize: 'clamp(38px, 5vw, 52px)', color: '#2D2D2D' }}>
-            Upload tài liệu.<br />
-            AI tạo lộ trình.<br />
-            Bạn chỉ cần học.
-          </h1>
 
           {/* CTA */}
           <CTAButton className="mb-4 text-base py-4 px-8" />
 
-          {/* Friction removers */}
-          <p className="text-sm mb-2" style={{ color: '#5A5C58' }}>
-            Miễn phí. Không cần thẻ tín dụng.
-          </p>
-
+          {/* Trust line */}
           <p className="text-sm" style={{ color: '#9CA3AF' }}>
-            Được 12 trường đại học tin dùng
+            Được sinh viên từ{' '}
+            <strong style={{ color: '#5A5C58' }}>Bách Khoa</strong>,{' '}
+            <strong style={{ color: '#5A5C58' }}>Kinh Tế</strong>,{' '}
+            <strong style={{ color: '#5A5C58' }}>FPT</strong>... tin dùng
           </p>
         </motion.div>
 
@@ -536,7 +628,123 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 2 — PRODUCT SHOWCASE: 3 FAKE SCREENSHOTS
+          SECTION 2 — BEFORE vs AFTER
+      ══════════════════════════════════════════════════════════════════ */}
+      <section
+        ref={comparisonRef}
+        className="w-full max-w-[1100px] mx-auto px-5 pb-24"
+      >
+        <motion.div
+          className="text-center mb-12"
+          variants={fadeUp}
+          initial="hidden"
+          animate={comparisonInView ? 'visible' : 'hidden'}
+        >
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-3" style={{ color: '#2D2D2D' }}>
+            Bạn đang ở bên nào?
+          </h2>
+          <p className="text-base" style={{ color: '#5A5C58' }}>
+            Hai cách học. Hai kết quả khác nhau.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-start">
+
+          {/* Left — Học kiểu cũ */}
+          <motion.div
+            custom={0}
+            variants={fadeUp}
+            initial="hidden"
+            animate={comparisonInView ? 'visible' : 'hidden'}
+            className="rounded-2xl p-6 md:p-8 flex flex-col gap-4"
+            style={{
+              background: '#F5F5F5',
+              border: '2px dashed #D1CCC6',
+            }}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>
+              Học kiểu cũ
+            </p>
+            <div className="flex flex-col gap-3">
+              {[
+                { icon: '📚', text: 'Đọc 200 trang → 2 ngày' },
+                { icon: '📝', text: 'Tự tóm tắt → quên 80% sau 1 tuần' },
+                { icon: '🃏', text: 'Tự làm flashcard → mất 3 tiếng' },
+                { icon: '😰', text: 'Ôn thi → không biết bắt đầu từ đâu' },
+              ].map((item) => (
+                <div key={item.text} className="flex items-start gap-3">
+                  <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
+                  <span className="text-sm" style={{ color: '#9CA3AF' }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+            <div
+              className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
+              style={{ background: '#EBEBEB', color: '#9CA3AF' }}
+            >
+              📊 Kết quả: &quot;Hy vọng qua môn&quot;
+            </div>
+          </motion.div>
+
+          {/* Right — Học với Omilearn */}
+          <motion.div
+            custom={1}
+            variants={fadeUp}
+            initial="hidden"
+            animate={comparisonInView ? 'visible' : 'hidden'}
+            className="rounded-2xl p-6 md:p-8 flex flex-col gap-4"
+            style={{
+              background: '#FFFFFF',
+              border: '2px solid #3DBE7A',
+              boxShadow: '0 4px 32px rgba(61,190,122,0.12)',
+              transform: 'scale(1.02)',
+            }}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#3DBE7A' }}>
+              Học với Omilearn
+            </p>
+            <div className="flex flex-col gap-3">
+              {[
+                { icon: '⚡', text: 'AI tóm tắt 200 trang → 5 phút' },
+                { icon: '🧠', text: 'Spaced repetition → nhớ 95% sau 1 tháng' },
+                { icon: '🃏', text: 'Auto flashcard + quiz → sẵn sàng ngay' },
+                { icon: '🗺️', text: 'Lộ trình cá nhân → biết chính xác học gì' },
+              ].map((item) => (
+                <div key={item.text} className="flex items-start gap-3">
+                  <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
+                  <span className="text-sm font-medium" style={{ color: '#2D2D2D' }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+            <div
+              className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
+              style={{ background: '#EDFAF4', color: '#1A6E3E' }}
+            >
+              🏆 Kết quả: &quot;Top 10% lớp&quot;
+            </div>
+          </motion.div>
+        </div>
+
+        {/* CTA below comparison */}
+        <motion.div
+          className="text-center mt-10"
+          custom={2}
+          variants={fadeUp}
+          initial="hidden"
+          animate={comparisonInView ? 'visible' : 'hidden'}
+        >
+          <Link
+            href="/"
+            className="text-sm font-semibold transition-all hover:opacity-60"
+            style={{ color: '#E8887A', textDecoration: 'underline', textUnderlineOffset: 4 }}
+          >
+            Chuyển sang bên phải →
+          </Link>
+        </motion.div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 3 — PRODUCT SHOWCASE
       ══════════════════════════════════════════════════════════════════ */}
       <section
         ref={showcaseRef}
@@ -549,7 +757,7 @@ export default function LandingPage() {
           animate={showcaseInView ? 'visible' : 'hidden'}
         >
           <h2 className="text-3xl md:text-4xl font-extrabold mb-3" style={{ color: '#2D2D2D' }}>
-            Xem trước khi dùng
+            Mọi thứ bạn cần, trong một nơi.
           </h2>
           <p className="text-base" style={{ color: '#5A5C58', lineHeight: 1.7 }}>
             Đây là giao diện thật. Không phải mockup quảng cáo.
@@ -559,7 +767,8 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 items-start">
           <ProductCard
             title="Mindmap thông minh"
-            caption="Kiến thức được tổ chức thành bản đồ tư duy. Click để đào sâu."
+            caption="Tổ chức kiến thức trực quan"
+            stat="Hiểu sâu hơn 3x"
             tilt={1}
             delay={0}
             inView={showcaseInView}
@@ -569,7 +778,8 @@ export default function LandingPage() {
 
           <ProductCard
             title="Ôn tập 4 cách"
-            caption="4 phương pháp ôn tập được khoa học chứng minh hiệu quả."
+            caption="Quiz • Flashcard • Tự luận • Dạy AI"
+            stat="Nhớ lâu hơn 95%"
             tilt={-1}
             delay={1}
             inView={showcaseInView}
@@ -579,7 +789,8 @@ export default function LandingPage() {
 
           <ProductCard
             title="AI Tutor riêng"
-            caption="Hỏi bất cứ lúc nào. Không ngại hỏi. AI kiên nhẫn vô hạn."
+            caption="Hỏi bất cứ lúc nào, bất cứ điều gì"
+            stat="Tiết kiệm 4 giờ/tuần"
             tilt={1}
             delay={2}
             inView={showcaseInView}
@@ -590,8 +801,27 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 3 — SOCIAL PROOF: HONEST AND HUMAN
+          SECTION 4 — SOCIAL PROOF: Stats + Testimonials
       ══════════════════════════════════════════════════════════════════ */}
+
+      {/* Stats bar */}
+      <section ref={statsRef} className="w-full pb-16">
+        <div
+          className="w-full py-2"
+          style={{ background: '#2D2D2D' }}
+        >
+          <div className="max-w-[1100px] mx-auto px-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+              <StatItem value={12} suffix="+" label="trường đại học" inView={statsInView} />
+              <StatItem value={4} suffix=" giờ" label="tiết kiệm/tuần" inView={statsInView} />
+              <StatItem value={98} suffix="%" label="muốn giới thiệu" inView={statsInView} />
+              <StatItem value={10} suffix="%" label="top lớp trung bình" inView={statsInView} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
       <section
         ref={testimonialsRef}
         className="w-full max-w-[1100px] mx-auto px-5 pb-24"
@@ -610,22 +840,22 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             {
-              quote: 'Mình upload slide Giải Tích lên, 2 phút sau có hẳn lộ trình + flashcard. Trước đó mất cả buổi tối để tổng hợp.',
+              quote: 'Upload slide Giải Tích, 2 phút sau có lộ trình + flashcard. Trước mất cả buổi tối.',
               name: 'Minh Anh',
-              school: 'Bách Khoa Hà Nội',
-              metric: 'Tiết kiệm ~4 giờ mỗi chương',
+              school: 'Bách Khoa HN',
+              badge: 'Từ 6.5 → 8.7 điểm thi',
             },
             {
-              quote: 'Cái hay nhất là tính năng quiz tự động. Ôn thi mà như chơi game, không thấy chán.',
+              quote: 'Tính năng quiz tự động biến ôn thi thành game. Không thấy chán nữa.',
               name: 'Hoàng Nam',
-              school: 'Kinh Tế Quốc Dân',
-              metric: 'GPA tăng từ 2.8 → 3.5',
+              school: 'Kinh Tế QD',
+              badge: 'GPA 2.8 → 3.5',
             },
             {
-              quote: "Mình dùng 'Dạy lại cho AI' — phải giải thích bằng lời mình, mới thấy chỗ nào chưa hiểu.",
+              quote: "'Dạy lại cho AI' — phải giải thích bằng lời mình, mới thấy chỗ nào chưa hiểu.",
               name: 'Thu Hà',
-              school: 'Bách Khoa Đà Nẵng',
-              metric: 'Điểm đồ án nhóm: 9.5/10',
+              school: 'Bách Khoa ĐN',
+              badge: 'Đồ án nhóm 9.5/10',
             },
           ].map((t, i) => (
             <motion.div
@@ -640,27 +870,24 @@ export default function LandingPage() {
                 border: '2px solid #E5DDD5',
               }}
             >
-              {/* Stars */}
               <div className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star key={s} size={13} fill="#F5C542" color="#F5C542" />
                 ))}
               </div>
 
-              {/* Quote */}
               <p className="text-sm flex-1" style={{ color: '#5A5C58', lineHeight: 1.7 }}>
                 &ldquo;{t.quote}&rdquo;
               </p>
 
-              {/* Metric */}
+              {/* Green badge with result */}
               <div
-                className="px-3 py-2 rounded-lg text-xs font-semibold"
-                style={{ background: '#EDFAF4', color: '#1A6E3E' }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold"
+                style={{ background: '#EDFAF4', color: '#1A6E3E', border: '1px solid #3DBE7A' }}
               >
-                ✓ {t.metric}
+                ✓ {t.badge}
               </div>
 
-              {/* Author */}
               <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: '#F0EBE3' }}>
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
@@ -676,76 +903,106 @@ export default function LandingPage() {
             </motion.div>
           ))}
         </div>
-
-        {/* University trust line */}
-        <motion.p
-          className="text-center text-sm mt-10"
-          style={{ color: '#9CA3AF', lineHeight: 1.7 }}
-          variants={fadeUp}
-          initial="hidden"
-          animate={testimonialsInView ? 'visible' : 'hidden'}
-          custom={4}
-        >
-          Được sinh viên từ{' '}
-          <strong style={{ color: '#5A5C58' }}>Bách Khoa</strong>,{' '}
-          <strong style={{ color: '#5A5C58' }}>Kinh Tế</strong>,{' '}
-          <strong style={{ color: '#5A5C58' }}>Y Dược</strong>,{' '}
-          <strong style={{ color: '#5A5C58' }}>FPT</strong>... tin dùng
-        </motion.p>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 4 — MANIFESTO: TẠI SAO BÂY GIỜ?
+          SECTION 5 — MANIFESTO: Tại sao bây giờ?
       ══════════════════════════════════════════════════════════════════ */}
       <section
         ref={manifestoRef}
         className="w-full max-w-[780px] mx-auto px-5 py-24"
       >
-        <div className="text-center">
+        <motion.div
+          className="text-center"
+          variants={fadeUp}
+          initial="hidden"
+          animate={manifestoInView ? 'visible' : 'hidden'}
+        >
           <p
             className="italic leading-relaxed"
             style={{
               fontFamily: 'Georgia, serif',
               fontSize: 'clamp(20px, 2.5vw, 28px)',
               color: '#2D2D2D',
-              lineHeight: 1.75,
+              lineHeight: 1.85,
             }}
           >
             Kỷ nguyên AI đã thay đổi mọi ngành nghề.
             <br />Giáo dục là ngành tiếp theo.
             <br />
             <br />
-            Sinh viên dùng AI không phải vì lười —
-            <br />mà vì thông minh hơn.
+            Sinh viên giỏi nhất không phải người học nhiều nhất.
+            <br />Mà là người biết dùng đúng công cụ.
             <br />
             <br />
-            Câu hỏi không phải &ldquo;có nên dùng AI?&rdquo;
-            <br />mà là &ldquo;dùng AI nào?&rdquo;
+            Bạn có{' '}
+            <strong style={{ fontStyle: 'normal', color: '#E8887A' }}>168 giờ</strong>{' '}
+            mỗi tuần.
+            <br />Omilearn giúp mỗi giờ đáng giá{' '}
+            <strong style={{ fontStyle: 'normal', color: '#3DBE7A' }}>gấp đôi.</strong>
           </p>
 
           <div className="mt-12">
             <Link
               href="/"
-              className="text-sm transition-all hover:opacity-60"
-              style={{ color: '#5A5C58', textDecoration: 'underline', textUnderlineOffset: 4 }}
+              className="text-sm font-semibold transition-all hover:opacity-60"
+              style={{ color: '#2D2D2D', textDecoration: 'underline', textUnderlineOffset: 4 }}
             >
-              Thử Omilearn miễn phí →
+              Bắt đầu miễn phí →
             </Link>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 5 — CTA BANNER: WARM AND CONFIDENT
+          SECTION 6 — FAQ: Objection handler
+      ══════════════════════════════════════════════════════════════════ */}
+      <section
+        ref={faqRef}
+        className="w-full max-w-[720px] mx-auto px-5 pb-24"
+      >
+        <motion.div
+          className="text-center mb-10"
+          variants={fadeUp}
+          initial="hidden"
+          animate={faqInView ? 'visible' : 'hidden'}
+        >
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#2D2D2D' }}>
+            Câu hỏi thường gặp
+          </h2>
+        </motion.div>
+
+        <motion.div
+          className="flex flex-col gap-3"
+          variants={fadeUp}
+          initial="hidden"
+          animate={faqInView ? 'visible' : 'hidden'}
+          custom={1}
+        >
+          <FAQItem
+            question="Tôi tự học cũng được mà?"
+            answer='Được. Nhưng bạn có 168 giờ/tuần. AI giúp mỗi giờ hiệu quả gấp đôi. Câu hỏi không phải "có cần không" — mà là "tại sao chưa?"'
+          />
+          <FAQItem
+            question="AI có thay thế việc học không?"
+            answer="Không. Omilearn không học hộ bạn. Bạn vẫn đọc, hiểu, ôn. AI chỉ loại bỏ phần lãng phí — tổng hợp tài liệu, tạo flashcard, lập kế hoạch. Phần khó vẫn là của bạn."
+          />
+          <FAQItem
+            question="Mình không giỏi công nghệ..."
+            answer="Upload file. Bấm nút. Xong. Nếu biết dùng Zalo, biết dùng Omilearn."
+          />
+        </motion.div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 7 — FINAL CTA: Confident close
       ══════════════════════════════════════════════════════════════════ */}
       <section
         ref={ctaRef}
         className="w-full px-5 pb-24"
-        style={{
-          background: 'linear-gradient(180deg, #F5F0EB 0%, #EDE5DB 100%)',
-        }}
+        style={{ background: 'linear-gradient(180deg, #F5F0EB 0%, #EDE5DB 100%)' }}
       >
-        <div className="max-w-[1100px] mx-auto pt-16">
+        <div className="max-w-[1100px] mx-auto pt-8">
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -753,23 +1010,18 @@ export default function LandingPage() {
             className="flex justify-center"
           >
             <div
-              className="w-full max-w-[520px] rounded-3xl px-10 py-14 flex flex-col items-center text-center gap-6"
+              className="w-full max-w-[520px] rounded-3xl px-10 py-14 flex flex-col items-center text-center gap-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
               style={{
                 background: '#2D2D2D',
                 boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+                willChange: 'transform',
               }}
             >
               <h2 className="text-2xl md:text-3xl font-extrabold text-white">
-                Sẵn sàng thử?
+                Sẵn sàng học thông minh hơn?
               </h2>
 
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-sm font-bold text-[#2D2D2D] bg-white transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
-                style={{ willChange: 'transform' }}
-              >
-                Bắt đầu miễn phí
-              </Link>
+              <CTAButton light className="text-base py-4 px-8" />
 
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 Miễn phí. Không cần thẻ tín dụng.
@@ -789,7 +1041,6 @@ export default function LandingPage() {
         }}
       >
         <div className="max-w-[1100px] mx-auto px-5 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Logo + copyright */}
           <div className="flex flex-col items-center md:items-start gap-1">
             <span
               className="text-lg italic"
@@ -802,7 +1053,6 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Links */}
           <div className="flex items-center gap-5 flex-wrap justify-center">
             {['Chính sách bảo mật', 'Điều khoản', 'Liên hệ'].map((link) => (
               <a
