@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 const NAV_LINKS = [
   { href: '/',           label: 'Dự án'    },
+  { href: '/dashboard',  label: 'Dashboard' },
   { href: '/roadmap',    label: 'Roadmap'  },
   { href: '/learn',      label: 'Học tập'  },
   { href: '/schedule',   label: 'Lịch học' },
@@ -34,7 +35,7 @@ export default function TopNavBar() {
         {/* Nav links — hidden on mobile */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
           {NAV_LINKS.map(({ href, label }) => {
-            const isActive = pathname === href;
+            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
             return (
               <Link
                 key={href}

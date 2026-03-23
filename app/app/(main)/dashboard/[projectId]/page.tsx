@@ -8,17 +8,17 @@ import { dashboardStats, upcomingStudySessions } from '@/lib/data';
 import { useOmiLearnStore } from '@/lib/store';
 import AIStreamText from '@/components/AIStreamText';
 
-const ANALYSIS_TEXT = `📊 Phân tích tiến độ — Hệ Điều Hành và Linux
+const ANALYSIS_TEXT = `Phân tích tiến độ — Hệ Điều Hành và Linux
 
-✅ Điểm mạnh: Bạn nắm vững Khái Niệm Cơ Bản (95%) và Kiến Trúc Hệ Thống (88%). Phần quản lý tiến trình và bộ nhớ cũng khá tốt.
+Điểm mạnh: Bạn nắm vững Khái Niệm Cơ Bản (95%) và Kiến Trúc Hệ Thống (88%). Phần quản lý tiến trình và bộ nhớ cũng khá tốt.
 
-⚠️ Cần cải thiện: Lập Trình Shell (35%) — bạn mới chỉ hoàn thành phần lý thuyết, cần thêm thực hành viết script. Phần Debug và Khởi Động (20%) chưa bắt đầu.
+Cần cải thiện: Lập Trình Shell (35%) — bạn mới chỉ hoàn thành phần lý thuyết, cần thêm thực hành viết script. Phần Debug và Khởi Động (20%) chưa bắt đầu.
 
-📈 Tiến độ: 13/20 đơn vị hoàn thành. Dự kiến hoàn thành toàn bộ vào ngày 15 Tháng 4, 2025 nếu duy trì tốc độ hiện tại.
+Tiến độ: 13/20 đơn vị hoàn thành. Dự kiến hoàn thành toàn bộ vào ngày 15 Tháng 4, 2025 nếu duy trì tốc độ hiện tại.
 
-💡 Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script tự động backup file mỗi ngày để luyện tay. Sau đó chuyển sang phần Debug.
+Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script tự động backup file mỗi ngày để luyện tay. Sau đó chuyển sang phần Debug.
 
-🏆 So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
+So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
 
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -149,7 +149,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
 
       {/* Calendar + Sessions */}
       <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 md:p-6 mb-8">
-        <h2 className="font-bold text-[#2D2D2D] text-lg mb-4">📅 Lịch học sắp tới</h2>
+        <h2 className="font-bold text-[#2D2D2D] text-lg mb-4">Lịch học sắp tới</h2>
         
         {/* Mini week view */}
         <div className="grid grid-cols-7 gap-1.5 mb-6">
@@ -206,7 +206,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
             href={`/learn?project=${projectId}`}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] active:scale-[0.99] transition-all"
           >
-            📖 Tiếp tục học
+            Tiếp tục học
           </Link>
         </div>
       </div>
@@ -224,7 +224,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
             onClick={handleAnalysis}
             className="flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors cursor-pointer"
           >
-            {showAnalysis ? '🔄 Phân tích lại' : '🔍 Phân tích sâu'}
+            {showAnalysis ? 'Phân tích lại' : 'Phân tích sâu'}
           </motion.button>
         </div>
 
