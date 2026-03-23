@@ -190,7 +190,7 @@ function InteractiveDemo() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🧠</span>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#3DBE7A', color: '#fff' }}>✓</div>
               <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>
                 Lộ trình: {selectedSubject.label}
               </p>
@@ -229,13 +229,13 @@ function InteractiveDemo() {
 
           <div className="flex items-center justify-between pt-1">
             <p className="text-xs font-semibold" style={{ color: '#9CA3AF' }}>
-              📊 {selectedSubject.stats}
+              {selectedSubject.stats}
             </p>
             <span
               className="text-xs px-2 py-1 rounded-full font-semibold"
               style={{ background: '#EDFAF4', color: '#1A6E3E' }}
             >
-              ⚡ Xong trong 30 giây
+              Xong trong 30 giây
             </span>
           </div>
 
@@ -260,7 +260,7 @@ function MindmapScreenshot() {
       className="rounded-xl p-5 h-full flex flex-col gap-4"
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>🗺️ Bản đồ tư duy — Giải Tích 1</p>
+      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>Bản đồ tư duy — Giải Tích 1</p>
       <div className="flex flex-col items-center gap-3 flex-1 justify-center">
         <div
           className="px-5 py-2 rounded-full text-xs font-bold text-white text-center"
@@ -299,7 +299,7 @@ function FlashcardScreenshot() {
       className="rounded-xl p-5 h-full flex flex-col gap-4"
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>🃏 Flashcard — Đạo hàm cơ bản</p>
+      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>Flashcard — Đạo hàm cơ bản</p>
       <div
         className="flex-1 rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md p-4 text-center"
         style={{
@@ -325,10 +325,10 @@ function FlashcardScreenshot() {
       </div>
       <div className="grid grid-cols-4 gap-1">
         {[
-          { icon: '📝', label: 'Quiz' },
-          { icon: '🃏', label: 'Flashcard' },
-          { icon: '✍️', label: 'Tự luận' },
-          { icon: '🤖', label: 'Dạy AI' },
+          { icon: 'Q', label: 'Quiz' },
+          { icon: 'F', label: 'Flashcard' },
+          { icon: 'T', label: 'Tự luận' },
+          { icon: 'D', label: 'Dạy AI' },
         ].map((m, i) => (
           <div
             key={m.label}
@@ -338,7 +338,7 @@ function FlashcardScreenshot() {
               border: '1px solid #E5DDD5',
             }}
           >
-            <span className="text-sm">{m.icon}</span>
+            <span className="text-[10px] font-black" style={{ color: i === 1 ? '#fff' : '#5A5C58' }}>{m.icon}</span>
             <span className="text-[9px] font-semibold" style={{ color: i === 1 ? '#fff' : '#9CA3AF' }}>
               {m.label}
             </span>
@@ -357,7 +357,7 @@ function ChatScreenshot() {
       className="rounded-xl p-5 h-full flex flex-col gap-3"
       style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
     >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>💬 AI Tutor — 24/7</p>
+      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>AI Tutor — 24/7</p>
       <div className="flex flex-col gap-3 flex-1">
         <div className="flex justify-end">
           <div
@@ -581,7 +581,8 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6"
             style={{ background: '#EDFAF4', color: '#1A6E3E', border: '1.5px solid #3DBE7A' }}
           >
-            ⚡ AI đang thay đổi cách học
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#3DBE7A' }} />
+            AI đang thay đổi cách học
           </div>
 
           {/* Headline */}
@@ -667,10 +668,10 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col gap-3">
               {[
-                { icon: '📚', text: 'Đọc 200 trang → 2 ngày' },
-                { icon: '📝', text: 'Tự tóm tắt → quên 80% sau 1 tuần' },
-                { icon: '🃏', text: 'Tự làm flashcard → mất 3 tiếng' },
-                { icon: '😰', text: 'Ôn thi → không biết bắt đầu từ đâu' },
+                { icon: '—', text: 'Đọc 200 trang → 2 ngày' },
+                { icon: '—', text: 'Tự tóm tắt → quên 80% sau 1 tuần' },
+                { icon: '—', text: 'Tự làm flashcard → mất 3 tiếng' },
+                { icon: '—', text: 'Ôn thi → không biết bắt đầu từ đâu' },
               ].map((item) => (
                 <div key={item.text} className="flex items-start gap-3">
                   <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
@@ -682,7 +683,7 @@ export default function LandingPage() {
               className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
               style={{ background: '#EBEBEB', color: '#9CA3AF' }}
             >
-              📊 Kết quả: &quot;Hy vọng qua môn&quot;
+              Kết quả: &quot;Hy vọng qua môn&quot;
             </div>
           </motion.div>
 
@@ -705,10 +706,10 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col gap-3">
               {[
-                { icon: '⚡', text: 'AI tóm tắt 200 trang → 5 phút' },
-                { icon: '🧠', text: 'Spaced repetition → nhớ 95% sau 1 tháng' },
-                { icon: '🃏', text: 'Auto flashcard + quiz → sẵn sàng ngay' },
-                { icon: '🗺️', text: 'Lộ trình cá nhân → biết chính xác học gì' },
+                { icon: '→', text: 'AI tóm tắt 200 trang → 5 phút' },
+                { icon: '→', text: 'Spaced repetition → nhớ 95% sau 1 tháng' },
+                { icon: '→', text: 'Auto flashcard + quiz → sẵn sàng ngay' },
+                { icon: '→', text: 'Lộ trình cá nhân → biết chính xác học gì' },
               ].map((item) => (
                 <div key={item.text} className="flex items-start gap-3">
                   <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
@@ -720,7 +721,7 @@ export default function LandingPage() {
               className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
               style={{ background: '#EDFAF4', color: '#1A6E3E' }}
             >
-              🏆 Kết quả: &quot;Top 10% lớp&quot;
+              Kết quả: &quot;Top 10% lớp&quot;
             </div>
           </motion.div>
         </div>
