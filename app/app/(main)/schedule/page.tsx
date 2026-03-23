@@ -74,13 +74,13 @@ export default function SchedulePage() {
               onClick={() => setWeekOffset((w) => w - 1)}
               className="px-4 md:px-6 py-2 rounded-full border-2 border-white text-white text-sm font-black uppercase tracking-wider hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
             >
-              PREV
+              ← TRƯỚC
             </button>
             <button
               onClick={() => setWeekOffset((w) => w + 1)}
               className="px-4 md:px-6 py-2 rounded-full border-2 border-[#2D2D2D] bg-[#F5C542] text-[#2D2D2D] text-sm font-black uppercase tracking-wider hover:bg-[#E6B830] active:scale-95 transition-all cursor-pointer"
             >
-              NEXT
+              SAU →
             </button>
           </div>
         </div>

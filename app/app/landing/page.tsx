@@ -82,19 +82,19 @@ export default function LandingPage() {
               href="#features"
               className="text-[#2D2D2D] text-sm font-semibold border-b-2 border-[#6B2D3E] pb-0.5 hover:text-[#6B2D3E] transition-colors"
             >
-              Features
+              Tính năng
             </a>
             <a
               href="#how"
               className="text-[#5A5C58] text-sm font-medium hover:text-[#2D2D2D] transition-colors"
             >
-              How it Works
+              Cách hoạt động
             </a>
             <a
               href="#pricing"
               className="text-[#5A5C58] text-sm font-medium hover:text-[#2D2D2D] transition-colors"
             >
-              Pricing
+              Giá cả
             </a>
           </div>
 
@@ -104,13 +104,13 @@ export default function LandingPage() {
               href="/"
               className="text-sm font-black text-[#2D2D2D] hover:text-[#6B2D3E] transition-colors"
             >
-              Sign In
+              Đăng nhập
             </Link>
             <Link
               href="/"
               className="px-5 py-2 rounded-md border-2 border-[#2D2D2D] text-sm font-bold text-[#2D2D2D] hover:bg-[#2D2D2D] hover:text-white transition-all hover:scale-105 active:scale-95"
             >
-              Get Started
+              Bắt đầu
             </Link>
           </div>
         </div>

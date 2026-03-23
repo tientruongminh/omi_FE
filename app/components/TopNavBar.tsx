@@ -91,7 +91,7 @@ export default function TopNavBar() {
 
           {/* Hamburger — mobile only */}
           <button
-            className="md:hidden w-[34px] h-[34px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 transition-colors"
+            className="md:hidden w-[34px] h-[34px] rounded-full border-2 border-[#2D2D2D]/10 bg-[#F1F1EC] flex items-center justify-center hover:border-[#2D2D2D]/30 transition-colors cursor-pointer"
             onClick={() => setMobileOpen((o) => !o)}
           >
             <Menu size={14} className="text-[#5A5C58]" />

@@ -136,7 +136,7 @@ export default function HomePage() {
                     className="text-[#2D2D2D] text-sm line-through"
                     style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
                   >
-                    complete
+                    hoàn thành
                   </span>
                 ) : (
                   <div className="flex items-center gap-2">

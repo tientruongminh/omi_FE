@@ -44,9 +44,12 @@ function LearnContent() {
     'n7': 'khoi-dong',
   };
 
+  // Default to node 4 (giao-dien, index 3) when no URL param
+  const DEFAULT_NODE_ID = mindmapNodes[3]?.id ?? mindmapNodes[0]?.id ?? 'giao-dien';
+
   const resolvedNodeId = nodeParam
-    ? (ROADMAP_TO_MINDMAP[nodeParam] ?? (mindmapNodes.find((n) => n.id === nodeParam) ? nodeParam : mindmapNodes[0]?.id ?? 'giao-dien'))
-    : (mindmapNodes[0]?.id ?? 'giao-dien');
+    ? (ROADMAP_TO_MINDMAP[nodeParam] ?? (mindmapNodes.find((n) => n.id === nodeParam) ? nodeParam : DEFAULT_NODE_ID))
+    : DEFAULT_NODE_ID;
 
   // ─── State ───────────────────────────────────────────────────
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(resolvedNodeId);

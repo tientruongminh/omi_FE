@@ -15,19 +15,19 @@ export default function Footer() {
           >
             omilearn
           </span>
-          <span className="text-[#2D2D2D] text-sm">© 2024 Editorial Learning</span>
+          <span className="text-[#2D2D2D] text-sm">© 2025 Editorial Learning</span>
         </div>
 
-        {/* Right: links — Privacy, Terms, Help Center */}
+        {/* Right: links */}
         <div className="flex items-center gap-6">
           <Link href="#" className="text-[#2D2D2D] text-sm hover:text-[#6B2D3E] transition-colors">
-            Privacy
+            Quyền riêng tư
           </Link>
           <Link href="#" className="text-[#2D2D2D] text-sm hover:text-[#6B2D3E] transition-colors">
-            Terms
+            Điều khoản
           </Link>
           <Link href="#" className="text-[#2D2D2D] text-sm hover:text-[#6B2D3E] transition-colors">
-            Help Center
+            Trợ giúp
           </Link>
         </div>
       </div>
