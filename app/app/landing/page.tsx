@@ -906,43 +906,146 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 5 — MANIFESTO: Tại sao bây giờ?
+          SECTION 5 — MANIFESTO: Tại sao bây giờ? (cinematic reveal)
       ══════════════════════════════════════════════════════════════════ */}
       <section
         ref={manifestoRef}
-        className="w-full max-w-[780px] mx-auto px-5 py-24"
+        className="w-full py-32 relative overflow-hidden"
+        style={{ background: 'linear-gradient(180deg, #F5F0EB 0%, #EDE5DB 50%, #F5F0EB 100%)' }}
       >
-        <motion.div
-          className="text-center"
-          variants={fadeUp}
-          initial="hidden"
-          animate={manifestoInView ? 'visible' : 'hidden'}
-        >
-          <p
-            className="italic leading-relaxed"
+        {/* Decorative subtle lines */}
+        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.04 }}>
+          <div className="absolute top-1/4 left-0 right-0 h-px bg-[#2D2D2D]" />
+          <div className="absolute top-2/4 left-0 right-0 h-px bg-[#2D2D2D]" />
+          <div className="absolute top-3/4 left-0 right-0 h-px bg-[#2D2D2D]" />
+        </div>
+
+        <div className="max-w-[780px] mx-auto px-5 text-center relative z-10">
+          {(() => {
+            const lines = [
+              { text: 'Kỷ nguyên AI đã thay đổi mọi ngành nghề.', type: 'normal' as const },
+              { text: 'Giáo dục là ngành tiếp theo.', type: 'normal' as const },
+              { text: '', type: 'spacer' as const },
+              { text: 'Sinh viên giỏi nhất không phải người học nhiều nhất.', type: 'normal' as const },
+              { text: 'Mà là người biết dùng đúng công cụ.', type: 'bold' as const },
+              { text: '', type: 'spacer' as const },
+            ];
+            return lines.map((line, i) => {
+              if (line.type === 'spacer') return <div key={i} className="h-6" />;
+              return (
+                <motion.p
+                  key={i}
+                  className="italic"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: 'clamp(20px, 2.5vw, 28px)',
+                    color: '#2D2D2D',
+                    lineHeight: 2,
+                    fontWeight: line.type === 'bold' ? 600 : 400,
+                  }}
+                  initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+                  animate={manifestoInView ? {
+                    opacity: 1,
+                    y: 0,
+                    filter: 'blur(0px)',
+                    transition: { duration: 0.8, delay: i * 0.3, ease: 'easeOut' },
+                  } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
+                >
+                  {line.text}
+                </motion.p>
+              );
+            });
+          })()}
+
+          {/* Last 2 lines with color highlights — extra delay */}
+          <div className="h-6" />
+          <motion.p
+            className="italic"
             style={{
               fontFamily: 'Georgia, serif',
               fontSize: 'clamp(20px, 2.5vw, 28px)',
               color: '#2D2D2D',
-              lineHeight: 1.85,
+              lineHeight: 2,
             }}
+            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+            animate={manifestoInView ? {
+              opacity: 1,
+              y: 0,
+              filter: 'blur(0px)',
+              transition: { duration: 0.8, delay: 1.8, ease: 'easeOut' },
+            } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
           >
-            Kỷ nguyên AI đã thay đổi mọi ngành nghề.
-            <br />Giáo dục là ngành tiếp theo.
-            <br />
-            <br />
-            Sinh viên giỏi nhất không phải người học nhiều nhất.
-            <br />Mà là người biết dùng đúng công cụ.
-            <br />
-            <br />
             Bạn có{' '}
-            <strong style={{ fontStyle: 'normal', color: '#E8887A' }}>168 giờ</strong>{' '}
+            <motion.strong
+              style={{ fontStyle: 'normal', color: '#E8887A', position: 'relative', display: 'inline-block' }}
+              initial={{ opacity: 0 }}
+              animate={manifestoInView ? {
+                opacity: 1,
+                transition: { duration: 0.5, delay: 2.4 },
+              } : { opacity: 0 }}
+            >
+              168 giờ
+              <motion.span
+                className="absolute -bottom-1 left-0 h-[3px] rounded-full"
+                style={{ background: '#E8887A' }}
+                initial={{ width: '0%' }}
+                animate={manifestoInView ? {
+                  width: '100%',
+                  transition: { duration: 0.6, delay: 2.7, ease: 'easeOut' },
+                } : { width: '0%' }}
+              />
+            </motion.strong>{' '}
             mỗi tuần.
-            <br />Omilearn giúp mỗi giờ đáng giá{' '}
-            <strong style={{ fontStyle: 'normal', color: '#3DBE7A' }}>gấp đôi.</strong>
-          </p>
+          </motion.p>
 
-          <div className="mt-12">
+          <motion.p
+            className="italic"
+            style={{
+              fontFamily: 'Georgia, serif',
+              fontSize: 'clamp(20px, 2.5vw, 28px)',
+              color: '#2D2D2D',
+              lineHeight: 2,
+            }}
+            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+            animate={manifestoInView ? {
+              opacity: 1,
+              y: 0,
+              filter: 'blur(0px)',
+              transition: { duration: 0.8, delay: 2.1, ease: 'easeOut' },
+            } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
+          >
+            Omilearn giúp mỗi giờ đáng giá{' '}
+            <motion.strong
+              style={{ fontStyle: 'normal', color: '#3DBE7A', position: 'relative', display: 'inline-block' }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={manifestoInView ? {
+                opacity: 1,
+                scale: 1,
+                transition: { duration: 0.5, delay: 3.0, ease: 'backOut' },
+              } : { opacity: 0, scale: 0.8 }}
+            >
+              gấp đôi.
+              <motion.span
+                className="absolute -bottom-1 left-0 h-[3px] rounded-full"
+                style={{ background: '#3DBE7A' }}
+                initial={{ width: '0%' }}
+                animate={manifestoInView ? {
+                  width: '100%',
+                  transition: { duration: 0.6, delay: 3.3, ease: 'easeOut' },
+                } : { width: '0%' }}
+              />
+            </motion.strong>
+          </motion.p>
+
+          {/* CTA fades in last */}
+          <motion.div
+            className="mt-14"
+            initial={{ opacity: 0 }}
+            animate={manifestoInView ? {
+              opacity: 1,
+              transition: { duration: 0.6, delay: 3.6 },
+            } : { opacity: 0 }}
+          >
             <Link
               href="/"
               className="text-sm font-semibold transition-all hover:opacity-60"
@@ -950,8 +1053,8 @@ export default function LandingPage() {
             >
               Bắt đầu miễn phí →
             </Link>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
