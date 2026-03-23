@@ -48,6 +48,8 @@ interface ContextMenuState {
   y: number;
   nodeId?: string;
   nodeType?: string;
+  hasChildren?: boolean;
+  isCollapsed?: boolean;
 }
 
 interface SelectionToolbarState {
@@ -155,6 +157,7 @@ interface DraggableNodeProps {
   onClick: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: CanvasNode) => void;
   scale: number;
+  collapsedChildCount?: number;
 }
 
 function DraggableNode({
@@ -165,6 +168,7 @@ function DraggableNode({
   onClick,
   onContextMenu,
   scale,
+  collapsedChildCount = 0,
 }: DraggableNodeProps) {
   const style = NODE_STYLES[node.type];
   const isDragging = useRef(false);
@@ -208,11 +212,11 @@ function DraggableNode({
 
   const getIcon = () => {
     if (node.type === 'document') {
-      return node.docType === 'video' ? '🎬' : '📄';
+      return node.docType === 'video' ? '▶' : '◎';
     }
-    if (node.type === 'ai-response') return '🤖';
-    if (node.type === 'note') return '📝';
-    if (node.type === 'topic') return '🖥️';
+    if (node.type === 'ai-response') return 'AI';
+    if (node.type === 'note') return '✎';
+    if (node.type === 'topic') return '◆';
     return null;
   };
 
@@ -247,7 +251,7 @@ function DraggableNode({
     >
       <div className="flex items-center gap-2 h-full px-3 overflow-hidden">
         {icon && (
-          <span className="text-base flex-shrink-0 leading-none">{icon}</span>
+          <span className="text-[11px] flex-shrink-0 leading-none font-bold" style={{ opacity: 0.6 }}>{icon}</span>
         )}
         <span
           className="text-[12.5px] font-semibold leading-tight truncate"
@@ -258,6 +262,14 @@ function DraggableNode({
         >
           {node.title}
         </span>
+        {collapsedChildCount > 0 && (
+          <span
+            className="ml-auto flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{ background: 'rgba(0,0,0,0.1)', color: style.textColor }}
+          >
+            +{collapsedChildCount}
+          </span>
+        )}
       </div>
     </motion.div>
   );
@@ -327,7 +339,7 @@ function ExpandedDocContent({ node, onClose, onCreateAINode }: ExpandedDocProps)
     <div className="flex flex-col h-full bg-[#F5F0EB]">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
-        <span className="text-lg">{node.docType === 'video' ? '🎬' : '📄'}</span>
+        <span className="text-lg">{node.docType === 'video' ? '▶' : '◎'}</span>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-[#2D2D2D] text-[14px] truncate">{node.title}</h3>
           {doc && (
@@ -430,7 +442,7 @@ function ExpandedNoteContent({ node, onClose }: { node: CanvasNode; onClose: () 
   return (
     <div className="flex flex-col h-full bg-[#FFFDE7]">
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F59E0B]/30 flex-shrink-0">
-        <span className="text-lg">📝</span>
+        <span className="text-lg">✎</span>
         <div className="flex-1">
           <h3 className="font-bold text-[#92400E] text-[14px]">{node.title}</h3>
         </div>
@@ -478,7 +490,7 @@ function ExpandedAIContent({ node, onClose }: { node: CanvasNode; onClose: () =>
   return (
     <div className="flex flex-col h-full bg-[#EEF2FF]">
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#818CF8]/30 flex-shrink-0">
-        <span className="text-lg">🤖</span>
+        <span className="text-lg">AI</span>
         <div className="flex-1">
           <h3 className="font-bold text-[#3730A3] text-[14px]">Câu trả lời AI</h3>
         </div>
@@ -490,7 +502,7 @@ function ExpandedAIContent({ node, onClose }: { node: CanvasNode; onClose: () =>
         {msgs.map((m, idx) => (
           <div key={m.id} className={`flex gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
             {m.role === 'ai' && (
-              <div className="w-7 h-7 rounded-xl bg-white border border-[#A5B4FC] flex items-center justify-center text-sm flex-shrink-0 mt-0.5">🤖</div>
+              <div className="w-7 h-7 rounded-xl bg-white border border-[#A5B4FC] flex items-center justify-center text-sm flex-shrink-0 mt-0.5">AI</div>
             )}
             <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[12.5px] leading-relaxed ${m.role === 'user' ? 'bg-[#6B2D3E] text-white rounded-tr-sm' : 'bg-white border border-[#E5E5DF] text-[#2D2D2D] rounded-tl-sm'}`}>
               {idx === 0 && m.role === 'ai' ? (
@@ -576,7 +588,7 @@ function ExpandedView({ expandedNodeIds, nodes, onClose, onCreateAINode }: Expan
           {(node.type === 'topic' || node.type === 'chapter') && (
             <div className="flex flex-col h-full">
               <div className="flex items-center gap-3 px-5 py-3.5 border-b-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
-                <span className="text-lg">{node.type === 'topic' ? '🖥️' : '📚'}</span>
+                <span className="text-lg">{node.type === 'topic' ? '◆' : '◇'}</span>
                 <h3 className="flex-1 font-bold text-[#2D2D2D] text-[15px]">{node.title}</h3>
                 <button onClick={() => onClose(node.id)} className="w-7 h-7 rounded-full bg-white border border-[#333333]/20 flex items-center justify-center cursor-pointer"><X size={13} /></button>
               </div>
@@ -604,36 +616,43 @@ function ContextMenu({ menu, onAction, onClose }: ContextMenuProps) {
     if (!menu.nodeId) {
       // Empty canvas
       return [
-        { label: '+ Thêm chủ đề mới', action: 'add-topic' },
-        { label: '📝 Thêm ghi chú', action: 'add-note' },
+        { label: 'Thêm chủ đề mới', action: 'add-topic' },
+        { label: 'Thêm ghi chú', action: 'add-note' },
       ];
     }
+    const baseItems: { label: string; action: string; danger?: boolean }[] = [];
     switch (menu.nodeType) {
       case 'chapter':
-        return [
-          { label: '📄 Thêm tài liệu', action: 'add-document' },
-          { label: '🎨 Đổi màu', action: 'change-color' },
-          { label: '🗑 Xóa chủ đề', action: 'delete-node', danger: true },
-        ];
+        baseItems.push(
+          { label: 'Thêm tài liệu', action: 'add-document' },
+          { label: 'Đổi màu', action: 'change-color' },
+        );
+        break;
       case 'document':
-        return [
-          { label: '🤖 AI Ôn tập', action: 'ai-review' },
-          { label: '💬 AI Hỏi đáp', action: 'ai-chat' },
-          { label: '📖 Mở đọc', action: 'open-read' },
-          { label: '🗑 Xóa tài liệu', action: 'delete-node', danger: true },
-        ];
+        baseItems.push(
+          { label: 'AI Ôn tập', action: 'ai-review' },
+          { label: 'AI Hỏi đáp', action: 'ai-chat' },
+          { label: 'Mở đọc', action: 'open-read' },
+        );
+        break;
       case 'ai-response':
       case 'note':
-        return [
-          { label: '🔗 Tạo node kế thừa', action: 'create-child' },
-          { label: '🗑 Xóa', action: 'delete-node', danger: true },
-        ];
-      default:
-        return [
-          { label: '🗑 Xóa', action: 'delete-node', danger: true },
-        ];
+        baseItems.push(
+          { label: 'Tạo node kế thừa', action: 'create-child' },
+        );
+        break;
     }
-  }, [menu.nodeId, menu.nodeType]);
+    // Collapse/Expand for any node with children
+    if (menu.hasChildren) {
+      if (menu.isCollapsed) {
+        baseItems.push({ label: 'Mở rộng', action: 'expand-node' });
+      } else {
+        baseItems.push({ label: 'Thu gọn', action: 'collapse-node' });
+      }
+    }
+    baseItems.push({ label: 'Xóa', action: 'delete-node', danger: true });
+    return baseItems;
+  }, [menu.nodeId, menu.nodeType, menu.hasChildren, menu.isCollapsed]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -720,10 +739,57 @@ export default function InfiniteCanvas() {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
 
   // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarNodeId, setSidebarNodeId] = useState<string | null>(null); // chapter node id (canvas)
+
+  // ── Collapse/expand helpers ────────────────────────────────
+
+  const getChildCount = useCallback((nodeId: string): number => {
+    return nodes.filter((n) => n.parentId === nodeId).length;
+  }, [nodes]);
+
+  const getAllDescendantIds = useCallback((nodeId: string): string[] => {
+    const result: string[] = [];
+    const queue = [nodeId];
+    while (queue.length) {
+      const current = queue.shift()!;
+      const children = nodes.filter((n) => n.parentId === current);
+      for (const child of children) {
+        result.push(child.id);
+        queue.push(child.id);
+      }
+    }
+    return result;
+  }, [nodes]);
+
+  const isNodeHidden = useCallback((nodeId: string): boolean => {
+    // Walk up the parent chain — if any ancestor is collapsed, this node is hidden
+    let current = nodes.find((n) => n.id === nodeId);
+    while (current?.parentId) {
+      if (collapsedNodeIds.has(current.parentId)) return true;
+      current = nodes.find((n) => n.id === current!.parentId);
+    }
+    return false;
+  }, [nodes, collapsedNodeIds]);
+
+  const hasChildren = useCallback((nodeId: string): boolean => {
+    return nodes.some((n) => n.parentId === nodeId);
+  }, [nodes]);
+
+  const toggleCollapse = useCallback((nodeId: string) => {
+    setCollapsedNodeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
 
   // Panning
   const isPanning = useRef(false);
@@ -843,8 +909,10 @@ export default function InfiniteCanvas() {
       y: e.clientY,
       nodeId: node.id,
       nodeType: node.type,
+      hasChildren: hasChildren(node.id),
+      isCollapsed: collapsedNodeIds.has(node.id),
     });
-  }, []);
+  }, [hasChildren, collapsedNodeIds]);
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -976,6 +1044,16 @@ export default function InfiniteCanvas() {
         break;
       }
 
+      case 'collapse-node': {
+        if (nodeId) toggleCollapse(nodeId);
+        break;
+      }
+
+      case 'expand-node': {
+        if (nodeId) toggleCollapse(nodeId);
+        break;
+      }
+
       case 'delete-node': {
         if (!nodeId) break;
         setNodes((prev) => prev.filter((n) => n.id !== nodeId));
@@ -1001,7 +1079,7 @@ export default function InfiniteCanvas() {
         break;
       }
     }
-  }, [nodes, genId, transform, focusedNodeId]);
+  }, [nodes, genId, transform, focusedNodeId, toggleCollapse]);
 
   // ── Document sidebar apply ─────────────────────────────────
 
@@ -1184,6 +1262,8 @@ export default function InfiniteCanvas() {
               const fromNode = nodes.find((n) => n.id === edge.from);
               const toNode = nodes.find((n) => n.id === edge.to);
               if (!fromNode || !toNode) return null;
+              // Hide edges to/from hidden nodes
+              if (isNodeHidden(edge.from) || isNodeHidden(edge.to)) return null;
               const color = EDGE_COLORS[fromNode.type] ?? '#818CF8';
               return (
                 <BezierEdge
@@ -1198,18 +1278,23 @@ export default function InfiniteCanvas() {
 
           {/* Nodes */}
           <AnimatePresence>
-            {nodes.map((node) => (
-              <DraggableNode
-                key={node.id}
-                node={node}
-                isExpanded={expandedNodeIds.includes(node.id)}
-                isFocused={focusedNodeId === node.id}
-                onDrag={handleNodeDrag}
-                onClick={handleNodeClick}
-                onContextMenu={handleContextMenu}
-                scale={transform.scale}
-              />
-            ))}
+            {nodes.map((node) => {
+              if (isNodeHidden(node.id)) return null;
+              const childCount = collapsedNodeIds.has(node.id) ? getAllDescendantIds(node.id).length : 0;
+              return (
+                <DraggableNode
+                  key={node.id}
+                  node={node}
+                  isExpanded={expandedNodeIds.includes(node.id)}
+                  isFocused={focusedNodeId === node.id}
+                  onDrag={handleNodeDrag}
+                  onClick={handleNodeClick}
+                  onContextMenu={handleContextMenu}
+                  scale={transform.scale}
+                  collapsedChildCount={childCount}
+                />
+              );
+            })}
           </AnimatePresence>
         </div>
 
