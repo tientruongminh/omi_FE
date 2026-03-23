@@ -300,7 +300,7 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
               }}
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#2D2D2D] hover:bg-[#F1F1EC] w-full text-left transition-colors"
             >
-              📖 Bắt đầu học
+              Bắt đầu học
             </button>
             <button
               onClick={() => addNodeAfter(contextMenu.nodeId)}

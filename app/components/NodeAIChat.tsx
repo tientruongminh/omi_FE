@@ -36,7 +36,7 @@ export default function NodeAIChat({ docId, paragraphs, docTitle, onBack, title,
     {
       id: 'init',
       role: 'ai',
-      text: 'Tôi đã đọc tài liệu này. Bạn có câu hỏi gì không? 📚',
+      text: 'Tôi đã đọc tài liệu này. Bạn có câu hỏi gì không?',
     },
   ]);
   const [input, setInput] = useState('');
@@ -113,7 +113,7 @@ export default function NodeAIChat({ docId, paragraphs, docTitle, onBack, title,
       <div className="w-[360px] flex-shrink-0 flex flex-col bg-[#F5F0EB]">
         {/* Chat header */}
         <div className="flex items-center gap-2.5 px-4 py-3 border-b-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
-          <span className="text-xl">🤖</span>
+          <span className="text-xl">AI</span>
           <span className="font-bold text-[#2D2D2D] text-[14px]">Trợ lý AI</span>
           <div className="w-2 h-2 rounded-full bg-[#4CD964] ml-1" />
           {isStandalone && onClose && (
@@ -146,7 +146,7 @@ export default function NodeAIChat({ docId, paragraphs, docTitle, onBack, title,
               >
                 {msg.role === 'ai' && (
                   <div className="w-7 h-7 rounded-xl bg-[#EEF2FF] border border-[#A5B4FC] flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
-                    🤖
+                    AI
                   </div>
                 )}
                 <div

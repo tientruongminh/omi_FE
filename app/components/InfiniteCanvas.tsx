@@ -605,7 +605,7 @@ function ExpandedSynthesisContent({ node, allNodes, onClose }: { node: CanvasNod
           sourceDocs.map((src, i) => (
             <div key={src.id} className="p-4 bg-[#F5F0EB] rounded-xl border border-[#E5E5DF]">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm">{src.docType === 'video' ? '▶' : src.type === 'ai-response' ? '🤖' : '◎'}</span>
+                <span className="text-sm">{src.docType === 'video' ? '▶' : src.type === 'ai-response' ? 'AI' : '◎'}</span>
                 <p className="text-[13px] font-bold text-[#2D2D2D]">{src.title}</p>
               </div>
               {src.content && (

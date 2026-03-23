@@ -28,9 +28,9 @@ function docIcon(type: LearningDocument['type']) {
 }
 
 function docIconEmoji(type: LearningDocument['type']) {
-  if (type === 'video') return '🎬';
-  if (type === 'worksheet') return '📝';
-  return '📄';
+  if (type === 'video') return '▶';
+  if (type === 'worksheet') return '✎';
+  return '◎';
 }
 
 function docColor(type: LearningDocument['type']): { bg: string; border: string } {

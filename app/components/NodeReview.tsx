@@ -139,7 +139,7 @@ function QuizTab() {
                 className="p-3.5 rounded-xl bg-[#EEF2FF] border-2 border-[#A5B4FC] mb-4"
               >
                 <p className="text-[12px] text-[#4338CA] leading-relaxed">
-                  💡 {question.explanation}
+                  — {question.explanation}
                 </p>
               </motion.div>
             )}
@@ -249,7 +249,7 @@ function FlashcardTab() {
           onClick={() => handleAction(true)}
           className="flex-1 py-2.5 rounded-xl border-2 border-[#6EE7B7] bg-[#D1FAE5] text-[#065F46] font-bold text-sm hover:bg-[#A7F3D0] transition-colors cursor-pointer"
         >
-          ✅ Đã nhớ
+          ✓ Đã nhớ
         </button>
       </div>
     </div>
@@ -268,7 +268,7 @@ function EssayTab() {
     <div className="flex flex-col h-full gap-4">
       <div className="p-3.5 rounded-xl bg-[#EEF2FF] border-2 border-[#A5B4FC]">
         <p className="text-[13px] text-[#2D2D2D] font-medium leading-relaxed">
-          📝 {essayQuestion.question}
+          {essayQuestion.question}
         </p>
       </div>
 
@@ -302,7 +302,7 @@ function EssayTab() {
             className="p-4 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7]"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-base">🤖</span>
+              <span className="text-base">AI</span>
               <span className="text-[11px] font-bold text-[#059669] uppercase tracking-wider">
                 Phản hồi AI
               </span>
@@ -330,7 +330,7 @@ function TeachAITab() {
       {/* AI message */}
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] border-2 border-[#A5B4FC] flex items-center justify-center flex-shrink-0 text-lg">
-          🤖
+          AI
         </div>
         <div className="flex-1 p-3.5 rounded-2xl rounded-tl-sm bg-[#EEF2FF] border-2 border-[#A5B4FC]">
           <p className="text-[13px] text-[#2D2D2D] leading-relaxed">
@@ -369,7 +369,7 @@ function TeachAITab() {
             className="flex items-start gap-3"
           >
             <div className="w-9 h-9 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] flex items-center justify-center flex-shrink-0 text-lg">
-              🤖
+              AI
             </div>
             <div className="flex-1 p-3.5 rounded-2xl rounded-tl-sm bg-[#D1FAE5] border-2 border-[#6EE7B7]">
               <p className="text-[13px] text-[#065F46] leading-relaxed">

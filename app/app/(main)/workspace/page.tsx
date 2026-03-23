@@ -28,7 +28,7 @@ const INITIAL_FILES: FileItem[] = [
     name: 'Báo cáo Hệ Điều Hành — Tuần 5.docx',
     size: '2.3 MB',
     time: 'Hôm qua',
-    icon: '📝',
+    icon: '✎',
     iconBg: '#DBEAFE',
     iconColor: '#1E40AF',
     checked: false,
@@ -38,7 +38,7 @@ const INITIAL_FILES: FileItem[] = [
     name: 'Slide bài giảng — Process Management.pdf',
     size: '5.1 MB',
     time: '2 ngày trước',
-    icon: '📄',
+    icon: '◎',
     iconBg: '#FCE7F3',
     iconColor: '#9D174D',
     checked: false,
@@ -68,7 +68,7 @@ const INITIAL_FILES: FileItem[] = [
     name: 'Ghi chú thảo luận nhóm.txt',
     size: '12 KB',
     time: 'Tuần trước',
-    icon: '📄',
+    icon: '◎',
     iconBg: '#F3F4F6',
     iconColor: '#374151',
     checked: false,
@@ -105,7 +105,7 @@ function TypingIndicator() {
   return (
     <div className="flex justify-start">
       <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
-        🤖
+        AI
       </div>
       <div className="px-4 py-3 rounded-2xl rounded-tl-none bg-white border-2 border-[#CCCCCC] flex items-center gap-1.5">
         <span className="typing-dot w-2 h-2 rounded-full bg-[#5A5C58] block" />
@@ -292,7 +292,7 @@ export default function WorkspacePage() {
           <div className="px-5 py-4 border-b-2 border-[#333333]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#2D2D2D] flex items-center justify-center text-xl flex-shrink-0">
-                🤖
+                AI
               </div>
               <div>
                 <h2 className="font-black text-[#2D2D2D] text-base">Trợ lý AI</h2>
@@ -318,7 +318,7 @@ export default function WorkspacePage() {
                 >
                   {msg.role === 'ai' && (
                     <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
-                      🤖
+                      AI
                     </div>
                   )}
                   <div
@@ -405,7 +405,7 @@ export default function WorkspacePage() {
             >
               <div className="flex-1">
                 <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
-                  💡 <strong>Mẹo:</strong> Chọn nhiều file rồi nhờ AI tóm tắt cùng lúc!
+                  — <strong>Mẹo:</strong> Chọn nhiều file rồi nhờ AI tóm tắt cùng lúc!
                 </p>
               </div>
               <button

@@ -244,7 +244,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                   disabled={!answers.q4.trim()}
                   className="w-full py-3 rounded-full bg-[#6B2D3E] text-white font-semibold hover:bg-[#5a2535] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  Tạo kế hoạch học tập 🚀
+                  Tạo kế hoạch học tập
                 </button>
               </motion.div>
             )}
@@ -254,7 +254,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
               <motion.div key="calendar" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }} className="p-6 space-y-5">
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-2xl bg-white border-2 border-[#333333] flex items-center justify-center mx-auto mb-4 text-3xl">
-                    📅
+                    ⊘
                   </div>
                   <h3 className="text-lg font-bold text-[#2D2D2D] mb-2">Kết nối Google Calendar</h3>
                   <p className="text-sm text-[#5A5C58]">
@@ -264,7 +264,7 @@ export default function PlanSurveyModal({ onClose }: { onClose: () => void }) {
 
                 {calendarConnected ? (
                   <div className="flex items-center gap-3 p-4 bg-[#ECFDF5] border-2 border-[#4CD964] rounded-xl">
-                    <span className="text-2xl">✅</span>
+                    <span className="text-2xl">✓</span>
                     <div>
                       <p className="font-semibold text-[#065F46]">Đã kết nối thành công!</p>
                       <p className="text-sm text-[#047857]">Google Calendar đã được liên kết với tài khoản của bạn.</p>

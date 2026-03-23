@@ -390,7 +390,7 @@ export const groupChatMessages: ChatMessage[] = [
   {
     id: 'cm4',
     sender: 'Minh Anh',
-    text: 'Thanks Lan! Chiều nay mình học nhóm ở thư viện nhé? 📚',
+    text: 'Thanks Lan! Chiều nay mình học nhóm ở thư viện nhé?',
     time: '10:38',
   },
 ];

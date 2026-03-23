@@ -139,7 +139,7 @@ function InteractiveDemo() {
             onDragLeave={() => setIsDragOver(false)}
             onDrop={(e) => { e.preventDefault(); setIsDragOver(false); }}
           >
-            <span className="text-3xl">📄</span>
+            <span className="text-3xl">◎</span>
             <p className="text-sm font-semibold text-center" style={{ color: '#5A5C58' }}>
               Kéo thả tài liệu vào đây
             </p>

@@ -47,7 +47,7 @@ export default function HomePage() {
 
         <div className="flex items-start justify-between relative z-10">
           <div>
-            <p className="text-[#9CA3AF] text-sm mb-2 uppercase tracking-widest">Xin chào! 👋</p>
+            <p className="text-[#9CA3AF] text-sm mb-2 uppercase tracking-widest">Xin chào!</p>
             <h1 className="text-white text-4xl font-bold leading-tight mb-3">
               Sẵn sàng học điều mới<br />hôm nay?
             </h1>
@@ -57,7 +57,7 @@ export default function HomePage() {
           </div>
           <div className="hidden md:block">
             <div className="w-32 h-32 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
-              <span className="text-5xl">📚</span>
+              <span className="text-5xl">◇</span>
             </div>
           </div>
         </div>
