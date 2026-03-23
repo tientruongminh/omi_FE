@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Send, Check, FileText } from 'lucide-react';
+import { X, Upload, Send, Check, FileText, Youtube, Globe, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AIStreamText from './AIStreamText';
 import { useOmiLearnStore } from '@/lib/store';
@@ -17,6 +17,15 @@ interface ChatMessage {
   streaming?: boolean;
 }
 
+type ResourceType = 'file' | 'youtube' | 'website' | 'link';
+
+interface Resource {
+  id: string;
+  type: ResourceType;
+  url: string;
+  title: string;
+}
+
 const SUGGESTED_DOCS = [
   { id: 'd1', title: 'Giới thiệu về Hệ Điều Hành — Tanenbaum (PDF, 2.3MB)' },
   { id: 'd2', title: 'Linux Command Line Basics — Video Series (YouTube)' },
@@ -24,6 +33,22 @@ const SUGGESTED_DOCS = [
 ];
 
 const AI_SEARCH_RESPONSE = `Tôi tìm thấy 3 tài liệu liên quan:\n\n📄 Giới thiệu về Hệ Điều Hành — Tanenbaum\n🎥 Linux Command Line Basics — Video Series\n📚 Operating System Concepts — Silberschatz\n\nBạn có muốn thêm tài liệu nào khác không?`;
+
+const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
+  { value: 'file', label: 'File', icon: <FileText size={13} />, color: '#7C3AED' },
+  { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
+  { value: 'website', label: 'Website', icon: <Globe size={13} />, color: '#0891B2' },
+  { value: 'link', label: 'Link', icon: <LinkIcon size={13} />, color: '#059669' },
+];
+
+function resourceIcon(type: ResourceType) {
+  switch (type) {
+    case 'youtube': return '🎬';
+    case 'website': return '🌐';
+    case 'link': return '🔗';
+    default: return '📄';
+  }
+}
 
 export default function CreateProjectModal({ onClose }: Props) {
   const router = useRouter();
@@ -43,6 +68,13 @@ export default function CreateProjectModal({ onClose }: Props) {
   const [showDocs, setShowDocs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // URL resources
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [newResourceType, setNewResourceType] = useState<ResourceType>('youtube');
+  const [newResourceUrl, setNewResourceUrl] = useState('');
+  const [newResourceTitle, setNewResourceTitle] = useState('');
+  const [showAddResource, setShowAddResource] = useState(false);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,7 +99,6 @@ export default function CreateProjectModal({ onClose }: Props) {
     setChatMessages((prev) => [...prev, { role: 'user', text: msg }]);
     setIsStreaming(true);
     setShowDocs(false);
-    // Simulate AI response
     setTimeout(() => {
       setChatMessages((prev) => [...prev, { role: 'ai', text: AI_SEARCH_RESPONSE, streaming: true }]);
     }, 600);
@@ -90,13 +121,30 @@ export default function CreateProjectModal({ onClose }: Props) {
     });
   };
 
+  const addResource = () => {
+    if (!newResourceUrl.trim()) return;
+    const newRes: Resource = {
+      id: `res-${Date.now()}`,
+      type: newResourceType,
+      url: newResourceUrl.trim(),
+      title: newResourceTitle.trim() || newResourceUrl.trim(),
+    };
+    setResources((prev) => [...prev, newRes]);
+    setNewResourceUrl('');
+    setNewResourceTitle('');
+    setShowAddResource(false);
+  };
+
+  const removeResource = (id: string) => {
+    setResources((prev) => prev.filter((r) => r.id !== id));
+  };
+
   const handleCreateProject = () => {
     const id = createProject(projectName || 'Hệ Điều Hành và Linux', projectDesc);
     router.push(`/roadmap?project=${id}`);
     onClose();
   };
 
-  // File type icon helper
   const fileTypeIcon = (name: string) => {
     const ext = name.split('.').pop()?.toLowerCase() ?? '';
     if (['xlsx', 'xls', 'csv'].includes(ext)) return '📊';
@@ -105,6 +153,8 @@ export default function CreateProjectModal({ onClose }: Props) {
     if (['mp3', 'wav', 'ogg'].includes(ext)) return '🎵';
     return '📄';
   };
+
+  const totalResourceCount = selectedDocs.size + uploadedFiles.length + resources.length;
 
   const stepVariants = {
     enter: { opacity: 0, x: 30 },
@@ -239,6 +289,123 @@ export default function CreateProjectModal({ onClose }: Props) {
                         </span>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                {/* URL Resources */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-[#2D2D2D]">Liên kết & URLs</label>
+                    <button
+                      onClick={() => setShowAddResource((v) => !v)}
+                      className="flex items-center gap-1 text-xs text-[#6B2D3E] font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                    >
+                      <Plus size={12} />
+                      Thêm liên kết
+                    </button>
+                  </div>
+
+                  {/* Add resource form */}
+                  <AnimatePresence>
+                    {showAddResource && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-white border-2 border-[#CCCCCC] rounded-xl p-4 space-y-3 mb-3">
+                          {/* Type selector */}
+                          <div className="flex gap-2">
+                            {RESOURCE_TYPE_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                onClick={() => setNewResourceType(opt.value)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all cursor-pointer"
+                                style={{
+                                  borderColor: newResourceType === opt.value ? opt.color : '#E5E5DF',
+                                  backgroundColor: newResourceType === opt.value ? opt.color + '15' : 'white',
+                                  color: newResourceType === opt.value ? opt.color : '#5A5C58',
+                                }}
+                              >
+                                {opt.icon}
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* URL input */}
+                          <input
+                            type="url"
+                            value={newResourceUrl}
+                            onChange={(e) => setNewResourceUrl(e.target.value)}
+                            placeholder={
+                              newResourceType === 'youtube'
+                                ? 'https://youtube.com/watch?v=...'
+                                : newResourceType === 'website'
+                                ? 'https://example.com/article'
+                                : 'https://...'
+                            }
+                            className="w-full px-3 py-2.5 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
+                          />
+
+                          {/* Title input */}
+                          <input
+                            type="text"
+                            value={newResourceTitle}
+                            onChange={(e) => setNewResourceTitle(e.target.value)}
+                            placeholder="Tiêu đề (tùy chọn)"
+                            className="w-full px-3 py-2.5 rounded-lg border-2 border-[#E5E5DF] text-sm text-[#2D2D2D] outline-none focus:border-[#6B2D3E] transition-colors"
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={addResource}
+                              disabled={!newResourceUrl.trim()}
+                              className="flex-1 py-2 rounded-lg bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 cursor-pointer"
+                            >
+                              Thêm
+                            </button>
+                            <button
+                              onClick={() => { setShowAddResource(false); setNewResourceUrl(''); setNewResourceTitle(''); }}
+                              className="px-4 py-2 rounded-lg bg-[#F1F1EC] text-[#5A5C58] text-sm font-semibold hover:bg-[#E5E5DF] transition-colors cursor-pointer"
+                            >
+                              Hủy
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Added resources list */}
+                  {resources.length > 0 && (
+                    <div className="space-y-2">
+                      {resources.map((res) => (
+                        <div key={res.id} className="flex items-center gap-2.5 px-3 py-2.5 bg-white border-2 border-[#E5E5DF] rounded-xl group">
+                          <span className="text-base">{resourceIcon(res.type)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-[#2D2D2D] truncate">{res.title}</p>
+                            <p className="text-xs text-[#9CA3AF] truncate">{res.url}</p>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: RESOURCE_TYPE_OPTIONS.find(o => o.value === res.type)?.color + '15', color: RESOURCE_TYPE_OPTIONS.find(o => o.value === res.type)?.color }}>
+                            {res.type}
+                          </span>
+                          <button
+                            onClick={() => removeResource(res.id)}
+                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full bg-[#FEE2E2] flex items-center justify-center transition-all cursor-pointer"
+                          >
+                            <Trash2 size={10} className="text-red-500" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {resources.length === 0 && !showAddResource && (
+                    <p className="text-xs text-[#9CA3AF] text-center py-2">
+                      YouTube, website, bất kỳ URL nào...
+                    </p>
                   )}
                 </div>
 
@@ -378,10 +545,26 @@ export default function CreateProjectModal({ onClose }: Props) {
                     </div>
                   )}
                   <div className="border-t border-dashed border-[#CCCCCC] pt-3">
-                    <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-1">Tài liệu đã chọn</p>
-                    <p className="font-semibold text-[#2D2D2D]">
-                      {selectedDocs.size + uploadedFiles.length} tài liệu
-                    </p>
+                    <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-2">Tài liệu đã chọn</p>
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold text-[#2D2D2D]">{totalResourceCount} tài liệu</span>
+                      {resources.length > 0 && (
+                        <span className="text-xs text-[#5A5C58] bg-[#F1F1EC] px-2 py-0.5 rounded-full">
+                          {resources.length} liên kết
+                        </span>
+                      )}
+                    </div>
+                    {/* Show added resources */}
+                    {resources.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {resources.map((res) => (
+                          <div key={res.id} className="flex items-center gap-2 text-xs text-[#5A5C58]">
+                            <span>{resourceIcon(res.type)}</span>
+                            <span className="truncate">{res.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -392,7 +575,7 @@ export default function CreateProjectModal({ onClose }: Props) {
                   </div>
                   <div>
                     <AIStreamText
-                      text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${selectedDocs.size + uploadedFiles.length} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục! 🚀`}
+                      text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục! 🚀`}
                       speed={18}
                       className="text-sm text-[#2D2D2D] leading-relaxed"
                     />
@@ -420,3 +603,4 @@ export default function CreateProjectModal({ onClose }: Props) {
     </div>
   );
 }
+

@@ -176,7 +176,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
           {upcomingStudySessions.map((session) => (
             <Link
               key={session.id}
-              href={`/learn?project=${projectId}`}
+              href={session.unitId ? `/learn?unit=${session.unitId}&project=${projectId}` : `/learn?project=${projectId}`}
               className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl hover:border-[#6B2D3E] hover:bg-[#FFF8F9] hover:shadow-sm active:scale-[0.99] transition-all group"
             >
               <div className="flex items-center gap-3">

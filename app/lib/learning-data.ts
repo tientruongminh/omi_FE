@@ -395,6 +395,28 @@ export const groupChatMessages: ChatMessage[] = [
   },
 ];
 
+// ─── Unit Summaries (AI-generated mock) ──────────────────────
+
+export const unitSummaries: Record<string, string> = {
+  'khai-niem': 'Đơn vị này giới thiệu các khái niệm nền tảng về hệ điều hành — từ lịch sử hình thành đến vai trò trung gian giữa phần cứng và phần mềm ứng dụng. Bạn sẽ hiểu tại sao OS không thể thiếu trong mọi thiết bị điện tử hiện đại.',
+  'kien-truc': 'Khám phá cấu trúc bên trong của hệ điều hành: kernel, user space, system calls và device drivers. Nắm vững sự khác biệt giữa monolithic kernel và microkernel — nền tảng để hiểu Linux, Windows và macOS.',
+  'quan-ly': 'Tìm hiểu cách OS quản lý ba tài nguyên quan trọng nhất: CPU (scheduling), RAM (paging/segmentation) và thiết bị I/O. Đây là trái tim của mọi hệ điều hành hiện đại.',
+  'giao-dien': 'Từ dòng lệnh đơn sơ những năm 1960 đến giao diện cảm ứng và thực tế ảo ngày nay — đơn vị này theo dõi hành trình phát triển của UI/UX trong hệ điều hành và tìm hiểu Window Manager trên Linux.',
+  'he-dieu-hanh': 'So sánh trực tiếp ba hệ điều hành phổ biến nhất: Windows, macOS và Linux. Phân tích ưu nhược điểm, use case phù hợp và các distro Linux nổi bật như Ubuntu, Fedora, Arch.',
+  'lap-trinh-shell': 'Làm chủ Bash shell scripting từ cơ bản đến nâng cao. Viết script tự động hóa tác vụ, xử lý file hàng loạt và quản trị hệ thống như một sysadmin thực thụ.',
+  'khoi-dong': 'Hiểu toàn bộ quy trình boot của Linux: từ khi nhấn nút nguồn đến khi desktop hiện ra. Học cách debug khi hệ thống gặp lỗi bằng strace, journalctl và dmesg.',
+};
+
+// ─── Additional Units (for right-click "Thêm đơn vị bài học") ─
+
+export const additionalUnits = [
+  { id: 'bao-mat', label: 'Bảo Mật Hệ Thống Linux', summary: 'Firewall, SELinux, mã hóa dữ liệu và các kỹ thuật hardening server Linux trước các mối đe dọa bảo mật phổ biến.' },
+  { id: 'networking', label: 'Networking và TCP/IP', summary: 'Mô hình OSI, giao thức TCP/IP, cấu hình mạng Linux, DNS, DHCP và phân tích traffic với Wireshark.' },
+  { id: 'docker', label: 'Docker và Containers', summary: 'Containerization với Docker: build image, compose multi-service apps và hiểu tại sao containers thay đổi cách deploy phần mềm.' },
+  { id: 'server-admin', label: 'Quản Trị Server Linux', summary: 'Cài đặt và cấu hình các dịch vụ server: Nginx, Apache, MySQL, SSH, cron jobs và monitoring với Prometheus/Grafana.' },
+  { id: 'cicd', label: 'CI/CD Pipeline với Bash', summary: 'Xây dựng pipeline tự động hóa: test, build và deploy ứng dụng bằng bash scripts kết hợp với GitHub Actions.' },
+];
+
 // ─── Context Menu Units ───────────────────────────────────────
 
 export const nearbyUnits = [

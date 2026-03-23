@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X } from 'lucide-react';
 import { RoadmapNode, RoadmapEdge } from '@/lib/data';
+import { mindmapNodes } from '@/lib/learning-data';
 
 interface Props {
   nodes: RoadmapNode[];
@@ -21,6 +22,17 @@ interface ContextMenu {
 
 const NODE_WIDTH = 170;
 const NODE_HEIGHT = 44;
+
+// Map roadmap node index to mindmap unit id
+const ROADMAP_TO_UNIT_MAP: Record<string, string> = {
+  'n1': 'khai-niem',
+  'n2': 'kien-truc',
+  'n3': 'quan-ly',
+  'n4': 'giao-dien',
+  'n5': 'he-dieu-hanh',
+  'n6': 'lap-trinh-shell',
+  'n7': 'khoi-dong',
+};
 
 export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges, onNodesChange, onEdgesChange, onNodeClick }: Props) {
   const [nodes, setNodes] = useState<RoadmapNode[]>(initialNodes);
@@ -106,6 +118,12 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
     y: (from.y + to.y) / 2 + NODE_HEIGHT / 2,
   });
 
+  const handleNodeClick = (nodeId: string) => {
+    // Map roadmap node to unit id and navigate via parent callback
+    const unitId = ROADMAP_TO_UNIT_MAP[nodeId] ?? nodeId;
+    onNodeClick?.(unitId);
+  };
+
   return (
     <div ref={containerRef} className="relative w-full overflow-auto" style={{ minHeight: svgHeight + 40 }}>
       {/* SVG for edges — updates as nodes move */}
@@ -164,84 +182,95 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
       })}
 
       {/* Nodes */}
-      {nodes.map((node, index) => (
-        <motion.div
-          key={node.id}
-          drag
-          dragMomentum={false}
-          dragConstraints={{ left: 0, top: 0, right: svgWidth - NODE_WIDTH, bottom: svgHeight - NODE_HEIGHT }}
-          onDragStart={() => {
-            // Record the node's initial position at drag start
-            dragStartPos.current[node.id] = { x: node.x, y: node.y };
-          }}
-          onDrag={(_, info) => {
-            // During drag: update state so SVG edges follow in real-time
-            const start = dragStartPos.current[node.id];
-            if (!start) return;
-            const newX = Math.max(0, start.x + info.offset.x);
-            const newY = Math.max(0, start.y + info.offset.y);
-            setNodes((prev) => {
-              const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
-              return next;
-            });
-          }}
-          onDragEnd={(_, info) => {
-            // Finalize position and notify parent
-            const start = dragStartPos.current[node.id];
-            if (!start) return;
-            const newX = Math.max(0, start.x + info.offset.x);
-            const newY = Math.max(0, start.y + info.offset.y);
-            delete dragStartPos.current[node.id];
-            setNodes((prev) => {
-              const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
-              onNodesChange?.(next);
-              return next;
-            });
-          }}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-          transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 25 }}
-          className="absolute z-20 cursor-grab active:cursor-grabbing select-none"
-          style={{ left: node.x, top: node.y, width: NODE_WIDTH }}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setContextMenu({ x: e.clientX, y: e.clientY, nodeId: node.id });
-          }}
-        >
-          {editingNode === node.id ? (
-            <input
-              autoFocus
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={() => {
-                if (editValue.trim()) updateNode(node.id, { label: editValue.trim() });
-                setEditingNode(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+      {nodes.map((node, index) => {
+        const unitId = ROADMAP_TO_UNIT_MAP[node.id];
+        const unitData = unitId ? mindmapNodes.find(m => m.id === unitId) : null;
+        return (
+          <motion.div
+            key={node.id}
+            drag
+            dragMomentum={false}
+            dragConstraints={{ left: 0, top: 0, right: svgWidth - NODE_WIDTH, bottom: svgHeight - NODE_HEIGHT }}
+            onDragStart={() => {
+              dragStartPos.current[node.id] = { x: node.x, y: node.y };
+            }}
+            onDrag={(_, info) => {
+              const start = dragStartPos.current[node.id];
+              if (!start) return;
+              const newX = Math.max(0, start.x + info.offset.x);
+              const newY = Math.max(0, start.y + info.offset.y);
+              setNodes((prev) => {
+                const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
+                return next;
+              });
+            }}
+            onDragEnd={(_, info) => {
+              const start = dragStartPos.current[node.id];
+              if (!start) return;
+              const newX = Math.max(0, start.x + info.offset.x);
+              const newY = Math.max(0, start.y + info.offset.y);
+              delete dragStartPos.current[node.id];
+              setNodes((prev) => {
+                const next = prev.map((n) => n.id === node.id ? { ...n, x: newX, y: newY } : n);
+                onNodesChange?.(next);
+                return next;
+              });
+            }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 25 }}
+            className="absolute z-20 cursor-grab active:cursor-grabbing select-none"
+            style={{ left: node.x, top: node.y, width: NODE_WIDTH }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu({ x: e.clientX, y: e.clientY, nodeId: node.id });
+            }}
+          >
+            {editingNode === node.id ? (
+              <input
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => {
                   if (editValue.trim()) updateNode(node.id, { label: editValue.trim() });
                   setEditingNode(null);
-                }
-                if (e.key === 'Escape') setEditingNode(null);
-              }}
-              className="w-full px-3 py-2 rounded-full border-2 border-[#6B2D3E] bg-white text-sm font-semibold text-[#2D2D2D] outline-none text-center"
-              style={{ height: NODE_HEIGHT }}
-            />
-          ) : (
-            <div
-              className="px-4 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full text-sm font-semibold text-[#2D2D2D] text-center shadow-sm hover:border-[#6B2D3E] hover:shadow-md hover:bg-[#E8E4DF] transition-all cursor-pointer"
-              style={{ height: NODE_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Click để học • Kéo để di chuyển • Chuột phải để chỉnh sửa"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNodeClick?.(node.id);
-              }}
-            >
-              {node.label}
-            </div>
-          )}
-        </motion.div>
-      ))}
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editValue.trim()) updateNode(node.id, { label: editValue.trim() });
+                    setEditingNode(null);
+                  }
+                  if (e.key === 'Escape') setEditingNode(null);
+                }}
+                className="w-full px-3 py-2 rounded-full border-2 border-[#6B2D3E] bg-white text-sm font-semibold text-[#2D2D2D] outline-none text-center"
+                style={{ height: NODE_HEIGHT }}
+              />
+            ) : (
+              <div className="group relative">
+                <div
+                  className="px-4 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full text-sm font-semibold text-[#2D2D2D] text-center shadow-sm hover:border-[#6B2D3E] hover:shadow-md hover:bg-[#E8E4DF] transition-all cursor-pointer"
+                  style={{ height: NODE_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Click để học • Kéo để di chuyển • Chuột phải để chỉnh sửa"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNodeClick(node.id);
+                  }}
+                >
+                  {node.label}
+                </div>
+                {/* Tooltip with unit summary on hover */}
+                {unitData && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-[#2D2D2D] text-white text-[11px] leading-relaxed rounded-xl px-3 py-2.5 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
+                    <p className="font-bold mb-1 text-[#4CD964]">{node.label}</p>
+                    <p>{unitData.subtitle}</p>
+                    <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-[#2D2D2D] rotate-45" />
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        );
+      })}
 
       {/* Context menu */}
       <AnimatePresence>
@@ -263,6 +292,15 @@ export default function RoadmapGraph({ nodes: initialNodes, edges: initialEdges,
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#2D2D2D] hover:bg-[#F1F1EC] w-full text-left transition-colors"
             >
               ✏️ Sửa tên
+            </button>
+            <button
+              onClick={() => {
+                handleNodeClick(contextMenu.nodeId);
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm text-[#2D2D2D] hover:bg-[#F1F1EC] w-full text-left transition-colors"
+            >
+              📖 Bắt đầu học
             </button>
             <button
               onClick={() => addNodeAfter(contextMenu.nodeId)}

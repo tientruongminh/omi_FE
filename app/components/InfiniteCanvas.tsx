@@ -8,11 +8,13 @@ import {
   useMemo,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Minus, RotateCcw, X, Send, MessageCircle, ClipboardList, Play, Pause } from 'lucide-react';
+import { Plus, Minus, RotateCcw, X, Send, MessageCircle, ClipboardList, Play, Pause, ChevronLeft } from 'lucide-react';
 import {
   mindmapNodes,
   documentTextContent,
   videoTranscripts,
+  unitSummaries,
+  additionalUnits,
   type LearningDocument,
 } from '@/lib/learning-data';
 import DocumentSidebar from './DocumentSidebar';
@@ -24,18 +26,20 @@ import AIStreamText from './AIStreamText';
 
 export interface CanvasNode {
   id: string;
-  type: 'topic' | 'chapter' | 'document' | 'ai-response' | 'note';
+  type: 'topic' | 'chapter' | 'document' | 'ai-response' | 'note' | 'synthesis';
   title: string;
   content?: string;
+  summary?: string; // for main topic/unit nodes
   docType?: 'text' | 'video';
-  docId?: string;   // reference to original doc id
-  nodeId?: string;  // reference to chapter/mindmap node id
+  docId?: string;
+  nodeId?: string;
   x: number;
   y: number;
   width: number;
   height: number;
   parentId?: string;
   color?: string;
+  synthSourceIds?: string[]; // for synthesis nodes
 }
 
 interface CanvasEdge {
@@ -46,6 +50,8 @@ interface CanvasEdge {
 interface ContextMenuState {
   x: number;
   y: number;
+  canvasX?: number; // canvas-space position for placing nodes
+  canvasY?: number;
   nodeId?: string;
   nodeType?: string;
   hasChildren?: boolean;
@@ -71,19 +77,21 @@ interface ContentNodeUI {
 // ─── Constants ────────────────────────────────────────────────
 
 const NODE_STYLES: Record<CanvasNode['type'], { bg: string; border: string; textColor: string }> = {
-  topic:       { bg: '#E8D5F5', border: '#A855F7', textColor: '#4C1D95' },
-  chapter:     { bg: '#EDFAF4', border: '#3DBE7A', textColor: '#1A4731' },
-  document:    { bg: '#FFFFFF', border: '#E5DDD5', textColor: '#2D2D2D' },
+  topic:         { bg: '#E8D5F5', border: '#A855F7', textColor: '#4C1D95' },
+  chapter:       { bg: '#EDFAF4', border: '#3DBE7A', textColor: '#1A4731' },
+  document:      { bg: '#FFFFFF', border: '#E5DDD5', textColor: '#2D2D2D' },
   'ai-response': { bg: '#EEF2FF', border: '#818CF8', textColor: '#3730A3' },
-  note:        { bg: '#FFFDE7', border: '#F59E0B', textColor: '#92400E' },
+  note:          { bg: '#FFFDE7', border: '#F59E0B', textColor: '#92400E' },
+  synthesis:     { bg: '#FFFFFF', border: '#A855F7', textColor: '#2D2D2D' },
 };
 
 const EDGE_COLORS: Record<CanvasNode['type'], string> = {
-  topic:       '#A855F7',
-  chapter:     '#3DBE7A',
-  document:    '#818CF8',
+  topic:         '#A855F7',
+  chapter:       '#3DBE7A',
+  document:      '#818CF8',
   'ai-response': '#818CF8',
-  note:        '#F59E0B',
+  note:          '#F59E0B',
+  synthesis:     '#A855F7',
 };
 
 // ─── Bezier path helper ───────────────────────────────────────
@@ -93,28 +101,44 @@ function bezierPath(x1: number, y1: number, x2: number, y2: number): string {
   return `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
 }
 
-// ─── Initial layout ───────────────────────────────────────────
+// ─── Build unit-centric layout (when unitId provided) ─────────
+
+function buildUnitLayout(unitId: string): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
+  const unit = mindmapNodes.find((n) => n.id === unitId);
+  const summary = unitSummaries[unitId] ?? 'Đơn vị học này chứa các tài liệu và bài học quan trọng về chủ đề này.';
+
+  const CENTER_X = 500;
+  const CENTER_Y = 350;
+
+  const mainNode: CanvasNode = {
+    id: `unit-${unitId}`,
+    type: 'topic',
+    title: unit?.label ?? unitId,
+    summary,
+    nodeId: unitId,
+    x: CENTER_X - 130,
+    y: CENTER_Y - 45,
+    width: 260,
+    height: 90,
+  };
+
+  return { nodes: [mainNode], edges: [] };
+}
+
+// ─── Build default layout (all chapters) ─────────────────────
 
 function buildInitialNodes(): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
   const CENTER_X = 600;
   const CENTER_Y = 400;
   const RADIUS = 270;
 
-  // Radial layout for 7 chapter nodes
-  const angles = [
-    -90,   // top
-    -45,   // top-right
-    0,     // right
-    45,    // bottom-right
-    90,    // bottom
-    135,   // bottom-left
-    180,   // left
-  ];
+  const angles = [-90, -45, 0, 45, 90, 135, 180];
 
   const topicNode: CanvasNode = {
     id: 'topic-root',
     type: 'topic',
     title: 'Hệ Điều Hành và Linux',
+    summary: 'Khóa học toàn diện về hệ điều hành Linux — từ khái niệm cơ bản đến lập trình shell nâng cao.',
     x: CENTER_X - 110,
     y: CENTER_Y - 30,
     width: 220,
@@ -175,6 +199,9 @@ function DraggableNode({
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
 
+  const isSynthesis = node.type === 'synthesis';
+  const isMainTopic = node.type === 'topic' && node.summary;
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -211,9 +238,8 @@ function DraggableNode({
   };
 
   const getIcon = () => {
-    if (node.type === 'document') {
-      return node.docType === 'video' ? '▶' : '◎';
-    }
+    if (node.type === 'synthesis') return '⬡';
+    if (node.type === 'document') return node.docType === 'video' ? '▶' : '◎';
     if (node.type === 'ai-response') return 'AI';
     if (node.type === 'note') return '✎';
     if (node.type === 'topic') return '◆';
@@ -221,6 +247,12 @@ function DraggableNode({
   };
 
   const icon = getIcon();
+
+  // Synthesis gradient border via boxShadow trick
+  const synthesisStyle = isSynthesis ? {
+    background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #A855F7, #22C55E) border-box',
+    border: '2px solid transparent',
+  } : {};
 
   return (
     <motion.div
@@ -231,11 +263,14 @@ function DraggableNode({
         top: node.y,
         width: node.width,
         height: node.height,
-        backgroundColor: style.bg,
-        border: `2px solid ${style.border}`,
+        backgroundColor: isSynthesis ? '#FFFFFF' : style.bg,
+        border: isSynthesis ? '2px solid transparent' : `2px solid ${style.border}`,
+        ...synthesisStyle,
         color: style.textColor,
         boxShadow: isFocused
           ? `0 0 0 3px ${style.border}, 0 8px 32px rgba(0,0,0,0.18)`
+          : isSynthesis
+          ? '0 4px 20px rgba(168,85,247,0.2)'
           : '0 2px 10px rgba(0,0,0,0.08)',
         zIndex: isFocused ? 10 : 1,
         opacity: isExpanded ? 0.6 : 1,
@@ -249,26 +284,34 @@ function DraggableNode({
       onClick={handleClick}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, node); }}
     >
-      <div className="flex items-center gap-2 h-full px-3 overflow-hidden">
-        {icon && (
-          <span className="text-[11px] flex-shrink-0 leading-none font-bold" style={{ opacity: 0.6 }}>{icon}</span>
-        )}
-        <span
-          className="text-[12.5px] font-semibold leading-tight truncate"
-          style={{
-            fontSize: node.type === 'topic' ? 14 : 12.5,
-            fontWeight: node.type === 'topic' ? 700 : 600,
-          }}
-        >
-          {node.title}
-        </span>
-        {collapsedChildCount > 0 && (
+      <div className="flex flex-col h-full px-3 py-2 overflow-hidden justify-center">
+        <div className="flex items-center gap-2">
+          {icon && (
+            <span className={`text-[11px] flex-shrink-0 leading-none font-bold ${isSynthesis ? 'text-purple-500' : ''}`} style={{ opacity: isSynthesis ? 1 : 0.6 }}>{icon}</span>
+          )}
           <span
-            className="ml-auto flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-            style={{ background: 'rgba(0,0,0,0.1)', color: style.textColor }}
+            className="text-[12.5px] font-semibold leading-tight truncate"
+            style={{
+              fontSize: node.type === 'topic' ? 14 : node.type === 'synthesis' ? 13 : 12.5,
+              fontWeight: node.type === 'topic' || node.type === 'synthesis' ? 700 : 600,
+            }}
           >
-            +{collapsedChildCount}
+            {node.title}
           </span>
+          {collapsedChildCount > 0 && (
+            <span
+              className="ml-auto flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: 'rgba(0,0,0,0.1)', color: style.textColor }}
+            >
+              +{collapsedChildCount}
+            </span>
+          )}
+        </div>
+        {/* Summary text for main topic nodes */}
+        {isMainTopic && node.summary && (
+          <p className="text-[10px] mt-1 leading-relaxed opacity-70 line-clamp-2" style={{ color: style.textColor }}>
+            {node.summary}
+          </p>
         )}
       </div>
     </motion.div>
@@ -302,7 +345,7 @@ function BezierEdge({ fromNode, toNode, color }: EdgeProps) {
   );
 }
 
-// ─── ExpandedTextContent ──────────────────────────────────────
+// ─── ExpandedDocContent ───────────────────────────────────────
 
 interface ExpandedDocProps {
   node: CanvasNode;
@@ -353,7 +396,6 @@ function ExpandedDocContent({ node, onClose, onCreateAINode }: ExpandedDocProps)
         </button>
       </div>
 
-      {/* Tab bar */}
       {view === 'content' && node.docType === 'text' && (
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="space-y-4 max-w-xl mx-auto">
@@ -368,17 +410,18 @@ function ExpandedDocContent({ node, onClose, onCreateAINode }: ExpandedDocProps)
 
       {view === 'content' && node.docType === 'video' && (
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {/* Video mock */}
+          {/* Video mock placeholder */}
           <div
             className="w-full rounded-2xl overflow-hidden relative group cursor-pointer mb-4"
             style={{ aspectRatio: '16/9', background: '#1A1A2E' }}
             onClick={() => setPlaying((p) => !p)}
           >
             <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(129,140,248,0.4) 0%, rgba(79,70,229,0.2) 50%, #1A1A2E 100%)' }} />
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <motion.div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/40" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                 {playing ? <Pause size={20} className="text-white fill-white" /> : <Play size={20} className="text-white fill-white ml-1" />}
               </motion.div>
+              <p className="text-white/80 text-[12px] font-medium px-4 text-center">{node.title}</p>
             </div>
             {doc && <div className="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 text-white text-[10px] font-mono">{doc.duration}</div>}
           </div>
@@ -533,6 +576,49 @@ function ExpandedAIContent({ node, onClose }: { node: CanvasNode; onClose: () =>
   );
 }
 
+// ─── ExpandedSynthesisContent ─────────────────────────────────
+
+function ExpandedSynthesisContent({ node, allNodes, onClose }: { node: CanvasNode; allNodes: CanvasNode[]; onClose: () => void }) {
+  const sourceDocs = (node.synthSourceIds ?? [])
+    .map(id => allNodes.find(n => n.id === id))
+    .filter(Boolean) as CanvasNode[];
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b-2 border-[#333333]/10 flex-shrink-0" style={{ background: 'linear-gradient(to right, #F5F3FF, #ECFDF5)' }}>
+        <span className="text-lg">⬡</span>
+        <div className="flex-1">
+          <h3 className="font-bold text-[#2D2D2D] text-[14px]">{node.title}</h3>
+          <p className="text-[11px] text-[#5A5C58]">Tổng hợp từ {sourceDocs.length} nguồn</p>
+        </div>
+        <button onClick={onClose} className="w-7 h-7 rounded-full bg-white border border-[#333333]/20 flex items-center justify-center cursor-pointer"><X size={13} /></button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        {sourceDocs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+            <div className="text-4xl">⬡</div>
+            <p className="text-[#5A5C58] text-[13px] leading-relaxed max-w-xs">
+              Kéo các node khác vào đây để tổng hợp kiến thức từ nhiều nguồn.
+            </p>
+          </div>
+        ) : (
+          sourceDocs.map((src, i) => (
+            <div key={src.id} className="p-4 bg-[#F5F0EB] rounded-xl border border-[#E5E5DF]">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm">{src.docType === 'video' ? '▶' : src.type === 'ai-response' ? '🤖' : '◎'}</span>
+                <p className="text-[13px] font-bold text-[#2D2D2D]">{src.title}</p>
+              </div>
+              {src.content && (
+                <p className="text-[12px] text-[#5A5C58] leading-relaxed line-clamp-3">{src.content}</p>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── ExpandedView ─────────────────────────────────────────────
 
 interface ExpandedViewProps {
@@ -585,20 +671,82 @@ function ExpandedView({ expandedNodeIds, nodes, onClose, onCreateAINode }: Expan
           {node.type === 'ai-response' && (
             <ExpandedAIContent node={node} onClose={() => onClose(node.id)} />
           )}
+          {node.type === 'synthesis' && (
+            <ExpandedSynthesisContent node={node} allNodes={nodes} onClose={() => onClose(node.id)} />
+          )}
           {(node.type === 'topic' || node.type === 'chapter') && (
             <div className="flex flex-col h-full">
               <div className="flex items-center gap-3 px-5 py-3.5 border-b-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
                 <span className="text-lg">{node.type === 'topic' ? '◆' : '◇'}</span>
-                <h3 className="flex-1 font-bold text-[#2D2D2D] text-[15px]">{node.title}</h3>
+                <div className="flex-1">
+                  <h3 className="font-bold text-[#2D2D2D] text-[15px]">{node.title}</h3>
+                  {node.summary && <p className="text-[12px] text-[#5A5C58] mt-0.5">{node.summary}</p>}
+                </div>
                 <button onClick={() => onClose(node.id)} className="w-7 h-7 rounded-full bg-white border border-[#333333]/20 flex items-center justify-center cursor-pointer"><X size={13} /></button>
               </div>
               <div className="flex-1 flex items-center justify-center text-[#5A5C58] text-sm">
-                {node.type === 'chapter' ? 'Nhấp chuột phải để thêm tài liệu →' : 'Canvas gốc của chủ đề này'}
+                {node.type === 'chapter' ? 'Nhấp chuột phải để thêm tài liệu →' : 'Nhấn vào để mở sidebar tài liệu'}
               </div>
             </div>
           )}
         </motion.div>
       ))}
+    </motion.div>
+  );
+}
+
+// ─── Add Unit Menu ────────────────────────────────────────────
+
+interface AddUnitMenuProps {
+  x: number;
+  y: number;
+  canvasX: number;
+  canvasY: number;
+  onAddUnit: (unitId: string, unitLabel: string, cx: number, cy: number) => void;
+  onClose: () => void;
+}
+
+function AddUnitMenu({ x, y, canvasX, canvasY, onAddUnit, onClose }: AddUnitMenuProps) {
+  useEffect(() => {
+    const close = () => onClose();
+    setTimeout(() => document.addEventListener('click', close), 0);
+    return () => document.removeEventListener('click', close);
+  }, [onClose]);
+
+  const allUnits = [
+    ...mindmapNodes.map(n => ({ id: n.id, label: n.label, subtitle: n.subtitle })),
+    ...additionalUnits.map(u => ({ id: u.id, label: u.label, subtitle: u.summary })),
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92 }}
+      transition={{ duration: 0.12 }}
+      className="fixed z-[70] bg-white border-2 border-[#333333] rounded-xl shadow-2xl overflow-hidden"
+      style={{ left: x, top: y, width: 280, maxHeight: 360 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="px-4 py-3 border-b border-[#CCCCCC] bg-[#F5F0EB]">
+        <p className="text-[12px] font-bold text-[#2D2D2D]">Thêm đơn vị bài học</p>
+        <p className="text-[10px] text-[#5A5C58]">Chọn để thêm vào canvas</p>
+      </div>
+      <div className="overflow-y-auto" style={{ maxHeight: 300 }}>
+        {allUnits.map((unit) => (
+          <button
+            key={unit.id}
+            className="w-full text-left px-4 py-3 hover:bg-[#F5F0EB] transition-colors border-b border-[#F1F1EC] last:border-0"
+            onClick={() => {
+              onAddUnit(unit.id, unit.label, canvasX, canvasY);
+              onClose();
+            }}
+          >
+            <p className="text-[13px] font-semibold text-[#2D2D2D]">{unit.label}</p>
+            <p className="text-[10px] text-[#5A5C58] leading-snug mt-0.5 line-clamp-2">{unit.subtitle}</p>
+          </button>
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -609,19 +757,26 @@ interface ContextMenuProps {
   menu: ContextMenuState;
   onAction: (action: string, nodeId?: string) => void;
   onClose: () => void;
+  onShowAddUnit: () => void;
 }
 
-function ContextMenu({ menu, onAction, onClose }: ContextMenuProps) {
+function ContextMenu({ menu, onAction, onClose, onShowAddUnit }: ContextMenuProps) {
   const items = useMemo(() => {
     if (!menu.nodeId) {
-      // Empty canvas
       return [
         { label: 'Thêm chủ đề mới', action: 'add-topic' },
         { label: 'Thêm ghi chú', action: 'add-note' },
+        { label: 'Thêm đơn vị bài học', action: 'add-unit' },
+        { label: 'Tạo node tổng hợp', action: 'add-synthesis' },
       ];
     }
     const baseItems: { label: string; action: string; danger?: boolean }[] = [];
     switch (menu.nodeType) {
+      case 'topic':
+        baseItems.push(
+          { label: 'Mở tài liệu', action: 'open-read' },
+        );
+        break;
       case 'chapter':
         baseItems.push(
           { label: 'Thêm tài liệu', action: 'add-document' },
@@ -635,14 +790,16 @@ function ContextMenu({ menu, onAction, onClose }: ContextMenuProps) {
           { label: 'Mở đọc', action: 'open-read' },
         );
         break;
-      case 'ai-response':
-      case 'note':
+      case 'synthesis':
         baseItems.push(
-          { label: 'Tạo node kế thừa', action: 'create-child' },
+          { label: 'Mở tổng hợp', action: 'open-read' },
         );
         break;
+      case 'ai-response':
+      case 'note':
+        baseItems.push({ label: 'Tạo node kế thừa', action: 'create-child' });
+        break;
     }
-    // Collapse/Expand for any node with children
     if (menu.hasChildren) {
       if (menu.isCollapsed) {
         baseItems.push({ label: 'Mở rộng', action: 'expand-node' });
@@ -655,9 +812,7 @@ function ContextMenu({ menu, onAction, onClose }: ContextMenuProps) {
   }, [menu.nodeId, menu.nodeType, menu.hasChildren, menu.isCollapsed]);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => {
-      onClose();
-    };
+    const close = (e: MouseEvent) => { onClose(); };
     setTimeout(() => document.addEventListener('click', close), 0);
     return () => document.removeEventListener('click', close);
   }, [onClose]);
@@ -678,8 +833,12 @@ function ContextMenu({ menu, onAction, onClose }: ContextMenuProps) {
           className="w-full text-left px-4 py-2.5 text-[13px] hover:bg-[#F1F1EC] transition-colors cursor-pointer"
           style={{ color: (item as any).danger ? '#DC2626' : '#2D2D2D' }}
           onClick={() => {
-            onAction(item.action, menu.nodeId);
-            onClose();
+            if (item.action === 'add-unit') {
+              onShowAddUnit();
+            } else {
+              onAction(item.action, menu.nodeId);
+              onClose();
+            }
           }}
         >
           {item.label}
@@ -723,16 +882,25 @@ function SelectionToolbar({ toolbar, onCreate, onClose }: SelectionToolbarProps)
 
 // ─── Main InfiniteCanvas ──────────────────────────────────────
 
-export default function InfiniteCanvas() {
+interface InfiniteCanvasProps {
+  unitId?: string;
+  projectId?: string;
+}
+
+export default function InfiniteCanvas({ unitId, projectId }: InfiniteCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Canvas transform
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
 
-  // Nodes & edges
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => buildInitialNodes(), []);
-  const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
-  const [edges, setEdges] = useState<CanvasEdge[]>(initialEdges);
+  // Nodes & edges — depends on whether we have a unit context
+  const initialData = useMemo(() => {
+    if (unitId) return buildUnitLayout(unitId);
+    return buildInitialNodes();
+  }, [unitId]);
+
+  const [nodes, setNodes] = useState<CanvasNode[]>(initialData.nodes);
+  const [edges, setEdges] = useState<CanvasEdge[]>(initialData.edges);
 
   // Interaction state
   const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>([]);
@@ -741,15 +909,35 @@ export default function InfiniteCanvas() {
   const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
 
-  // Sidebar
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarNodeId, setSidebarNodeId] = useState<string | null>(null); // chapter node id (canvas)
+  // Unit-specific: show sidebar if coming from unit context
+  const [sidebarOpen, setSidebarOpen] = useState(!!unitId);
+  const [sidebarNodeId, setSidebarNodeId] = useState<string | null>(
+    unitId ? `unit-${unitId}` : null
+  );
+
+  // Add unit menu
+  const [addUnitMenu, setAddUnitMenu] = useState<{
+    x: number; y: number; canvasX: number; canvasY: number;
+  } | null>(null);
+
+  // Reset when unitId changes
+  useEffect(() => {
+    const data = unitId ? buildUnitLayout(unitId) : buildInitialNodes();
+    setNodes(data.nodes);
+    setEdges(data.edges);
+    setExpandedNodeIds([]);
+    setFocusedNodeId(null);
+    setCollapsedNodeIds(new Set());
+    if (unitId) {
+      setSidebarOpen(true);
+      setSidebarNodeId(`unit-${unitId}`);
+    } else {
+      setSidebarOpen(false);
+      setSidebarNodeId(null);
+    }
+  }, [unitId]);
 
   // ── Collapse/expand helpers ────────────────────────────────
-
-  const getChildCount = useCallback((nodeId: string): number => {
-    return nodes.filter((n) => n.parentId === nodeId).length;
-  }, [nodes]);
 
   const getAllDescendantIds = useCallback((nodeId: string): string[] => {
     const result: string[] = [];
@@ -766,7 +954,6 @@ export default function InfiniteCanvas() {
   }, [nodes]);
 
   const isNodeHidden = useCallback((nodeId: string): boolean => {
-    // Walk up the parent chain — if any ancestor is collapsed, this node is hidden
     let current = nodes.find((n) => n.id === nodeId);
     while (current?.parentId) {
       if (collapsedNodeIds.has(current.parentId)) return true;
@@ -782,11 +969,8 @@ export default function InfiniteCanvas() {
   const toggleCollapse = useCallback((nodeId: string) => {
     setCollapsedNodeIds((prev) => {
       const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
       return next;
     });
   }, []);
@@ -867,17 +1051,28 @@ export default function InfiniteCanvas() {
     const node = nodes.find((n) => n.id === id);
     if (!node) return;
 
-    // Chapter nodes: just focus (no expanded view)
-    if (node.type === 'chapter' || node.type === 'topic') {
+    // Topic with unitId → open document sidebar
+    if (node.type === 'topic' && node.nodeId) {
+      setFocusedNodeId(id);
+      zoomToNode(id);
+      setSidebarNodeId(id);
+      setSidebarOpen(true);
+      return;
+    }
+
+    // Chapter nodes: open sidebar
+    if (node.type === 'chapter' && node.nodeId) {
       setFocusedNodeId((prev) => (prev === id ? null : id));
       zoomToNode(id);
+      setSidebarNodeId(id);
+      setSidebarOpen(true);
       return;
     }
 
     // Other nodes: expand
     setExpandedNodeIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 2) return [prev[1], id]; // keep last two
+      if (prev.length >= 2) return [prev[1], id];
       return [...prev, id];
     });
     setFocusedNodeId(id);
@@ -918,12 +1113,37 @@ export default function InfiniteCanvas() {
     const target = e.target as HTMLElement;
     if (target.closest('[data-node-id]')) return;
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    // Calculate canvas-space position
+    const canvasX = (e.clientX - transformRef.current.x) / transformRef.current.scale;
+    const canvasY = (e.clientY - transformRef.current.y) / transformRef.current.scale;
+    setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
   }, []);
 
   // ── Generate unique ID ─────────────────────────────────────
 
   const genId = useCallback(() => `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, []);
+
+  // ── Add unit to canvas ────────────────────────────────────
+
+  const handleAddUnit = useCallback((uid: string, label: string, cx: number, cy: number) => {
+    const unit = mindmapNodes.find(m => m.id === uid);
+    const summary = unitSummaries[uid] ?? '';
+
+    const mainId = genId();
+    const mainNode: CanvasNode = {
+      id: mainId,
+      type: 'topic',
+      title: label,
+      summary,
+      nodeId: uid,
+      x: cx,
+      y: cy,
+      width: 220,
+      height: 80,
+    };
+
+    setNodes(prev => [...prev, mainNode]);
+  }, [genId]);
 
   // ── Context menu actions ───────────────────────────────────
 
@@ -932,7 +1152,6 @@ export default function InfiniteCanvas() {
 
     switch (action) {
       case 'add-document': {
-        // Open sidebar to select docs for this chapter
         if (canvasNode?.nodeId) {
           setSidebarNodeId(nodeId ?? null);
           setSidebarOpen(true);
@@ -942,9 +1161,7 @@ export default function InfiniteCanvas() {
 
       case 'ai-chat': {
         if (!canvasNode) break;
-        // Find the doc content
         const chapterNode = mindmapNodes.find((n) => n.id === canvasNode.nodeId);
-        const doc = chapterNode?.documents.find((d) => d.id === canvasNode.docId);
         const paragraphs = canvasNode.docType === 'text'
           ? (documentTextContent[canvasNode.docId ?? ''] ?? [])
           : [videoTranscripts[canvasNode.docId ?? ''] ?? ''];
@@ -982,7 +1199,6 @@ export default function InfiniteCanvas() {
         };
         setNodes((prev) => [...prev, newNode]);
         setEdges((prev) => [...prev, { from: canvasNode.id, to: newNode.id }]);
-        // Open expanded review
         setExpandedNodeIds([newNode.id]);
         break;
       }
@@ -1014,12 +1230,14 @@ export default function InfiniteCanvas() {
       }
 
       case 'add-topic': {
+        const cx = contextMenu?.canvasX ?? 500;
+        const cy = contextMenu?.canvasY ?? 350;
         const newTopic: CanvasNode = {
           id: genId(),
           type: 'chapter',
           title: 'Chủ đề mới',
-          x: 500 - transform.x / transform.scale,
-          y: 350 - transform.y / transform.scale,
+          x: cx,
+          y: cy,
           width: 180,
           height: 44,
           parentId: 'topic-root',
@@ -1030,17 +1248,37 @@ export default function InfiniteCanvas() {
       }
 
       case 'add-note': {
+        const cx = contextMenu?.canvasX ?? 500;
+        const cy = contextMenu?.canvasY ?? 380;
         const newNote: CanvasNode = {
           id: genId(),
           type: 'note',
           title: 'Ghi chú mới',
           content: '',
-          x: 500 - transform.x / transform.scale,
-          y: 380 - transform.y / transform.scale,
+          x: cx,
+          y: cy,
           width: 160,
           height: 44,
         };
         setNodes((prev) => [...prev, newNote]);
+        break;
+      }
+
+      case 'add-synthesis': {
+        const cx = contextMenu?.canvasX ?? 500;
+        const cy = contextMenu?.canvasY ?? 350;
+        const synthNode: CanvasNode = {
+          id: genId(),
+          type: 'synthesis',
+          title: 'Tổng hợp kiến thức',
+          content: '',
+          x: cx,
+          y: cy,
+          width: 220,
+          height: 60,
+          synthSourceIds: [],
+        };
+        setNodes((prev) => [...prev, synthNode]);
         break;
       }
 
@@ -1064,35 +1302,39 @@ export default function InfiniteCanvas() {
       }
 
       case 'change-color': {
-        // Cycle through a few colors
         const colors = ['#EDFAF4', '#FEF3C7', '#DBEAFE', '#FCE7F3', '#F3F4F6'];
-        const borders = ['#3DBE7A', '#F59E0B', '#60A5FA', '#F472B6', '#9CA3AF'];
         const currentIdx = colors.indexOf(canvasNode?.color ?? '#EDFAF4');
         const nextIdx = (currentIdx + 1) % colors.length;
         if (nodeId) {
           setNodes((prev) =>
-            prev.map((n) =>
-              n.id === nodeId ? { ...n, color: colors[nextIdx] } : n
-            )
+            prev.map((n) => n.id === nodeId ? { ...n, color: colors[nextIdx] } : n)
           );
         }
         break;
       }
     }
-  }, [nodes, genId, transform, focusedNodeId, toggleCollapse]);
+  }, [nodes, genId, contextMenu, focusedNodeId, toggleCollapse]);
 
   // ── Document sidebar apply ─────────────────────────────────
 
   const handleSidebarApply = useCallback((mindmapNodeId: string, contentNodes: ContentNodeUI[]) => {
-    const chapterCanvasNode = nodes.find(
-      (n) => n.type === 'chapter' && n.nodeId === mindmapNodeId
+    // Find the canvas node that is either 'chapter' or 'topic' for this mindmap node
+    const parentCanvasNode = nodes.find(
+      (n) => (n.type === 'chapter' || n.type === 'topic') && n.nodeId === mindmapNodeId
     );
-    if (!chapterCanvasNode) return;
+    if (!parentCanvasNode) return;
 
     const chapterMindmapNode = mindmapNodes.find((n) => n.id === mindmapNodeId);
+    const count = contentNodes.length;
 
     const newNodes: CanvasNode[] = contentNodes.map((cn, i) => {
       const originalDoc = chapterMindmapNode?.documents.find((d) => d.id === cn.docId);
+      // Fan/arc layout below the parent node
+      const angle = count === 1 ? Math.PI / 2 : (Math.PI / (count + 1)) * (i + 1);
+      const radius = 220;
+      const fanX = parentCanvasNode.x + parentCanvasNode.width / 2 + Math.cos(angle) * radius - 100;
+      const fanY = parentCanvasNode.y + parentCanvasNode.height + Math.sin(angle) * radius * 0.5 + 20;
+
       return {
         id: genId() + '-' + i,
         type: 'document' as const,
@@ -1100,15 +1342,15 @@ export default function InfiniteCanvas() {
         docId: cn.docId,
         docType: originalDoc?.type === 'video' ? 'video' : 'text',
         nodeId: mindmapNodeId,
-        x: chapterCanvasNode.x + 210,
-        y: chapterCanvasNode.y + (i * 60) - ((contentNodes.length - 1) * 30),
+        x: fanX,
+        y: fanY,
         width: 200,
         height: 44,
-        parentId: chapterCanvasNode.id,
+        parentId: parentCanvasNode.id,
       };
     });
 
-    const newEdges = newNodes.map((n) => ({ from: chapterCanvasNode.id, to: n.id }));
+    const newEdges = newNodes.map((n) => ({ from: parentCanvasNode.id, to: n.id }));
 
     setNodes((prev) => [...prev, ...newNodes]);
     setEdges((prev) => [...prev, ...newEdges]);
@@ -1124,14 +1366,12 @@ export default function InfiniteCanvas() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
-      // Find source node via data-node-id
       let el: Node | null = range.startContainer;
       let sourceNodeId: string | null = null;
       while (el && el !== document.body) {
         if (el instanceof HTMLElement) {
           const id = el.getAttribute('data-node-id');
           if (id) { sourceNodeId = id; break; }
-          // check inside expanded view
           const expandedId = el.closest('[data-expanded-node-id]');
           if (expandedId) {
             sourceNodeId = (expandedId as HTMLElement).getAttribute('data-expanded-node-id');
@@ -1215,12 +1455,11 @@ export default function InfiniteCanvas() {
     setEdges((prev) => [...prev, { from: sourceNodeId, to: newNode.id }]);
   }, [nodes, genId]);
 
-  // ── Get the sidebar's mindmap nodeId ──────────────────────
+  // ── Get sidebar mindmap node ID ────────────────────────────
   const sidebarMindmapNodeId = sidebarNodeId
     ? nodes.find((n) => n.id === sidebarNodeId)?.nodeId ?? null
     : null;
 
-  // ── Canvas size (infinite feel) ────────────────────────────
   const CANVAS_W = 3000;
   const CANVAS_H = 2400;
 
@@ -1262,7 +1501,6 @@ export default function InfiniteCanvas() {
               const fromNode = nodes.find((n) => n.id === edge.from);
               const toNode = nodes.find((n) => n.id === edge.to);
               if (!fromNode || !toNode) return null;
-              // Hide edges to/from hidden nodes
               if (isNodeHidden(edge.from) || isNodeHidden(edge.to)) return null;
               const color = EDGE_COLORS[fromNode.type] ?? '#818CF8';
               return (
@@ -1323,8 +1561,15 @@ export default function InfiniteCanvas() {
 
         {/* Hint */}
         <div className="absolute bottom-3 right-14 text-[11px] text-[#9CA3AF] bg-white/60 px-2.5 py-1 rounded-lg border border-[#E5E5DF]">
-          Chuột phải để thêm tài liệu · Kéo để di chuyển · Scroll để zoom
+          Chuột phải để thêm · Kéo để di chuyển · Scroll để zoom
         </div>
+
+        {/* Unit context indicator */}
+        {unitId && (
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-[#E8D5F5] border-2 border-[#A855F7] rounded-xl px-3 py-1.5">
+            <span className="text-[11px] font-bold text-[#4C1D95]">◆ {mindmapNodes.find(n => n.id === unitId)?.label ?? unitId}</span>
+          </div>
+        )}
       </div>
 
       {/* Document Sidebar (right panel) */}
@@ -1343,7 +1588,6 @@ export default function InfiniteCanvas() {
               onClose={() => { setSidebarOpen(false); setSidebarNodeId(null); }}
               onApply={handleSidebarApply}
               onOpenDocument={(docId, nodeId) => {
-                // Find canvas node for this doc
                 const cn = nodes.find((n) => n.type === 'document' && n.docId === docId);
                 if (cn) {
                   setExpandedNodeIds([cn.id]);
@@ -1356,13 +1600,38 @@ export default function InfiniteCanvas() {
         )}
       </AnimatePresence>
 
-      {/* Context menu (fixed position, outside canvas transform) */}
+      {/* Context menu */}
       <AnimatePresence>
         {contextMenu && (
           <ContextMenu
             menu={contextMenu}
             onAction={handleContextAction}
             onClose={() => setContextMenu(null)}
+            onShowAddUnit={() => {
+              if (contextMenu) {
+                setAddUnitMenu({
+                  x: contextMenu.x,
+                  y: contextMenu.y,
+                  canvasX: contextMenu.canvasX ?? 500,
+                  canvasY: contextMenu.canvasY ?? 350,
+                });
+                setContextMenu(null);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Add unit menu */}
+      <AnimatePresence>
+        {addUnitMenu && (
+          <AddUnitMenu
+            x={addUnitMenu.x}
+            y={addUnitMenu.y}
+            canvasX={addUnitMenu.canvasX}
+            canvasY={addUnitMenu.canvasY}
+            onAddUnit={handleAddUnit}
+            onClose={() => setAddUnitMenu(null)}
           />
         )}
       </AnimatePresence>

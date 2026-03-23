@@ -7,6 +7,15 @@ export interface Project {
   date: string;
   progress?: number; // 0-100, undefined means complete
   isComplete?: boolean;
+  isB2B?: boolean; // B2B/group course flag
+}
+
+export interface ProjectMember {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  role: 'owner' | 'editor' | 'viewer';
 }
 
 export interface SharedCourse {
@@ -55,6 +64,7 @@ export interface StudySession {
   date: string;
   duration: string;
   day: string;
+  unitId?: string; // links to a mindmap node id
 }
 
 // Dashboard Data
@@ -65,6 +75,7 @@ export const projects: Project[] = [
     description: 'Nghiên cứu kiến trúc hệ điều hành, quản lý tiến trình, bộ nhớ và hệ thống file trên Linux.',
     date: '15 Tháng 3, 2025',
     progress: 65,
+    isB2B: false,
   },
   {
     id: '2',
@@ -72,6 +83,7 @@ export const projects: Project[] = [
     description: 'Tìm hiểu các cấu trúc dữ liệu cơ bản và nâng cao: mảng, danh sách liên kết, cây, đồ thị, và các thuật toán sắp xếp, tìm kiếm.',
     date: '2 Tháng 3, 2025',
     isComplete: true,
+    isB2B: false,
   },
   {
     id: '3',
@@ -79,6 +91,7 @@ export const projects: Project[] = [
     description: 'Mô hình OSI, TCP/IP, routing, switching, bảo mật mạng và thực hành cấu hình mạng LAN/WAN.',
     date: '20 Tháng 2, 2025',
     progress: 40,
+    isB2B: true, // B2B group course
   },
   {
     id: '4',
@@ -86,7 +99,15 @@ export const projects: Project[] = [
     description: 'Machine Learning cơ bản, neural networks, NLP và computer vision. Ứng dụng AI trong thực tế.',
     date: '10 Tháng 3, 2025',
     progress: 25,
+    isB2B: false,
   },
+];
+
+// Project members mock data
+export const projectMembers: ProjectMember[] = [
+  { id: 'm1', name: 'Minh Anh', initials: 'MA', color: '#4CD964', role: 'editor' },
+  { id: 'm2', name: 'Hoàng Nam', initials: 'HN', color: '#818CF8', role: 'viewer' },
+  { id: 'm3', name: 'Thu Lan', initials: 'TL', color: '#F08080', role: 'editor' },
 ];
 
 export const sharedCourses: SharedCourse[] = [
@@ -174,7 +195,7 @@ export const dashboardStats: DashboardStat[] = [
 
 // Upcoming study sessions
 export const upcomingStudySessions: StudySession[] = [
-  { id: 's1', title: 'Quản Lý Tiến Trình', date: 'Thứ 2, 08:00 - 10:00', duration: '2 giờ', day: 'T2' },
-  { id: 's2', title: 'Hệ Thống File Linux', date: 'Thứ 4, 14:00 - 16:00', duration: '2 giờ', day: 'T4' },
-  { id: 's3', title: 'Lập Trình Shell Bash', date: 'Thứ 6, 10:00 - 12:00', duration: '2 giờ', day: 'T6' },
+  { id: 's1', title: 'Quản Lý Tiến Trình', date: 'Thứ 2, 08:00 - 10:00', duration: '2 giờ', day: 'T2', unitId: 'quan-ly' },
+  { id: 's2', title: 'Hệ Thống File Linux', date: 'Thứ 4, 14:00 - 16:00', duration: '2 giờ', day: 'T4', unitId: 'khoi-dong' },
+  { id: 's3', title: 'Lập Trình Shell Bash', date: 'Thứ 6, 10:00 - 12:00', duration: '2 giờ', day: 'T6', unitId: 'lap-trinh-shell' },
 ];

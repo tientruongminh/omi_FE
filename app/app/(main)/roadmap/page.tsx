@@ -27,10 +27,10 @@ function RoadmapContent() {
   const [edges, setEdges] = useState<RoadmapEdge[]>(defaultRoadmapEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  const handleNodeClick = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
-    // Navigate to learn page with node context
-    router.push(`/learn?node=${nodeId}&project=${projectId}`);
+  const handleNodeClick = (unitId: string) => {
+    setSelectedNodeId(unitId);
+    // Navigate to learn page with unit context
+    router.push(`/learn?unit=${unitId}&project=${projectId}`);
   };
 
   return (

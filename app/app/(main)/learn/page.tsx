@@ -12,11 +12,13 @@ import { useOmiLearnStore } from '@/lib/store';
 function LearnContent() {
   const searchParams = useSearchParams();
   const projectParam = searchParams.get('project');
+  const unitParam = searchParams.get('unit');
 
   const { projects } = useOmiLearnStore();
   const project = projects.find((p) => p.id === projectParam);
   const projectTitle = project?.title ?? 'Hệ Điều Hành và Linux';
   const projectId = projectParam ?? 'os-linux';
+  const isB2B = project?.isB2B ?? false;
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 72px)', backgroundColor: '#F5F0EB' }}>
@@ -36,16 +38,24 @@ function LearnContent() {
           </Link>
           <ChevronRight size={12} />
           <span className="text-[#6B2D3E] font-bold">Học tập</span>
+          {unitParam && (
+            <>
+              <ChevronRight size={12} />
+              <span className="text-[#2D2D2D] font-medium text-[11px] px-2 py-0.5 bg-[#E8D5F5] rounded-full">
+                {unitParam}
+              </span>
+            </>
+          )}
         </nav>
       </div>
 
       {/* Infinite Canvas — fills remaining space */}
       <div className="flex-1 p-4 min-h-0 relative">
-        <InfiniteCanvas />
+        <InfiniteCanvas unitId={unitParam ?? undefined} projectId={projectId} />
       </div>
 
       {/* Floating UI */}
-      <ChatBox />
+      <ChatBox isB2B={isB2B} />
       <FloatingNote />
     </div>
   );
