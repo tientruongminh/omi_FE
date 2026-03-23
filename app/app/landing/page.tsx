@@ -546,12 +546,14 @@ export default function LandingPage() {
         style={{ background: 'rgba(245,240,235,0.94)', backdropFilter: 'blur(14px)' }}
       >
         <div className="max-w-[1100px] mx-auto px-5 h-[62px] flex items-center justify-between">
-          <button
-            className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/5 transition-colors"
-            aria-label="Menu"
-          >
-            <Menu size={20} color="#2D2D2D" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/5 transition-colors"
+              aria-label="Menu"
+            >
+              <Menu size={20} color="#2D2D2D" />
+            </button>
+          </div>
 
           <span
             className="text-xl italic"
@@ -560,7 +562,16 @@ export default function LandingPage() {
             omilearn
           </span>
 
-          <CTAButton className="text-xs py-2.5 px-5" />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="text-sm font-semibold transition-all hover:opacity-70"
+              style={{ color: '#5A5C58' }}
+            >
+              Đăng nhập
+            </Link>
+            <CTAButton className="text-xs py-2.5 px-5" />
+          </div>
         </div>
       </nav>
 

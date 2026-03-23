@@ -22,9 +22,9 @@ export default function TopNavBar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#F5F0EB]/95 backdrop-blur-sm border-b-2 border-[#2D2D2D]">
       <div className="max-w-[1280px] mx-auto px-4 md:px-6 h-[62px] md:h-[72px] flex items-center gap-4 md:gap-6">
-        {/* Logo */}
+        {/* Logo — links to landing page */}
         <Link
-          href="/"
+          href="/landing"
           className="text-[#6B2D3E] text-xl md:text-2xl font-medium tracking-tight lowercase flex-shrink-0 hover:opacity-80 transition-opacity"
           style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
         >
