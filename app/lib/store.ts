@@ -1,28 +1,35 @@
 import { create } from 'zustand';
 import { Project } from './data';
 
-// Vietnamese projects (initial mock data)
+// Vietnamese CS projects (initial mock data)
 const initialProjects: Project[] = [
   {
-    id: 'os-linux',
+    id: '1',
     title: 'Hệ Điều Hành và Linux',
-    description: 'Tìm hiểu về hệ điều hành, kiến trúc Linux và lập trình Shell cơ bản.',
-    date: '24 Tháng 10, 2024',
-    progress: 60,
+    description: 'Nghiên cứu kiến trúc hệ điều hành, quản lý tiến trình, bộ nhớ và hệ thống file trên Linux.',
+    date: '15 Tháng 3, 2025',
+    progress: 65,
   },
   {
-    id: 'kinh-te-vi-mo',
-    title: 'Kinh Tế Vi Mô',
-    description: 'Nghiên cứu các nguyên lý kinh tế vi mô, cung cầu và thị trường.',
-    date: '2 Tháng 11, 2024',
+    id: '2',
+    title: 'Cấu Trúc Dữ Liệu và Giải Thuật',
+    description: 'Tìm hiểu các cấu trúc dữ liệu cơ bản và nâng cao: mảng, danh sách liên kết, cây, đồ thị, và các thuật toán sắp xếp, tìm kiếm.',
+    date: '2 Tháng 3, 2025',
     isComplete: true,
   },
   {
-    id: 'lap-trinh-web',
-    title: 'Lập Trình Web',
-    description: 'Học HTML, CSS, JavaScript và các framework hiện đại để xây dựng web.',
-    date: '15 Tháng 10, 2024',
-    progress: 75,
+    id: '3',
+    title: 'Mạng Máy Tính',
+    description: 'Mô hình OSI, TCP/IP, routing, switching, bảo mật mạng và thực hành cấu hình mạng LAN/WAN.',
+    date: '20 Tháng 2, 2025',
+    progress: 40,
+  },
+  {
+    id: '4',
+    title: 'Trí Tuệ Nhân Tạo',
+    description: 'Machine Learning cơ bản, neural networks, NLP và computer vision. Ứng dụng AI trong thực tế.',
+    date: '10 Tháng 3, 2025',
+    progress: 25,
   },
 ];
 

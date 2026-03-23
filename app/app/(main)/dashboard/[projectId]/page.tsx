@@ -10,13 +10,15 @@ import AIStreamText from '@/components/AIStreamText';
 
 const ANALYSIS_TEXT = `📊 Phân tích tiến độ — Hệ Điều Hành và Linux
 
-✅ Điểm mạnh: Bạn nắm vững phần Khái Niệm Cơ Bản và Kiến Trúc Hệ Thống
+✅ Điểm mạnh: Bạn nắm vững Khái Niệm Cơ Bản (95%) và Kiến Trúc Hệ Thống (88%). Phần quản lý tiến trình và bộ nhớ cũng khá tốt.
 
-⚠️ Cần cải thiện: Phần Lập Trình Shell cần thêm thực hành
+⚠️ Cần cải thiện: Lập Trình Shell (35%) — bạn mới chỉ hoàn thành phần lý thuyết, cần thêm thực hành viết script. Phần Debug và Khởi Động (20%) chưa bắt đầu.
 
-📈 Dự kiến hoàn thành: 15 Tháng 12, 2025
+📈 Tiến độ: 13/20 đơn vị hoàn thành. Dự kiến hoàn thành toàn bộ vào ngày 15 Tháng 4, 2025 nếu duy trì tốc độ hiện tại.
 
-💡 Gợi ý: Tăng thời gian thực hành lên 2 giờ/tuần để đạt mục tiêu đúng hạn`;
+💡 Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script tự động backup file mỗi ngày để luyện tay. Sau đó chuyển sang phần Debug.
+
+🏆 So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
 
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -109,7 +111,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
         {/* Circular progress */}
         <div className="md:col-span-2 bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6 flex flex-col items-center justify-center hover:border-[#6B2D3E]/40 transition-colors">
           <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-4">Tiến độ tổng thể</p>
-          <CircularProgress percentage={progress} units={12} total={20} />
+          <CircularProgress percentage={progress} units={13} total={20} />
         </div>
 
         {/* Stats cards */}

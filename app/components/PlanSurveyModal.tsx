@@ -8,36 +8,47 @@ import { useOmiLearnStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 
 const PLAN_TEXT = `📋 Kế hoạch học tập — Hệ Điều Hành và Linux
+Thời gian: 8 tuần | 10 giờ/tuần
 
-Tuần 1-2: Khái Niệm Cơ Bản
-• Đọc: Giới thiệu về Hệ Điều Hành (2 giờ)
-• Video: Lịch sử phát triển OS (1 giờ)
-• Bài tập: Cài đặt Linux VM (3 giờ)
+Tuần 1: Khái Niệm Cơ Bản
+• Xem video: Tổng quan Hệ Điều Hành (2h)
+• Đọc: Lịch sử phát triển HĐH (1.5h)
+• Bài tập: Phân loại các HĐH phổ biến (1h)
+• Quiz ôn tập (0.5h)
 
-Tuần 3-4: Kiến Trúc Hệ Thống
-• Đọc: Kernel và System Calls (3 giờ)
-• Lab: Phân tích process management (2 giờ)
+Tuần 2: Kiến Trúc Hệ Thống
+• Xem video: Kernel và System Calls (2h)
+• Đọc: Monolithic vs Microkernel (2h)
+• Lab: Biên dịch Linux Kernel đơn giản (3h)
+• Flashcard ôn tập (0.5h)
 
-Tuần 5-6: Quản Lý Tài Nguyên
-• Video: Memory management deep dive (2 giờ)
-• Thực hành: Monitoring tools (3 giờ)
+Tuần 3-4: Quản Lý Tài Nguyên
+• Video: Process Management (2h)
+• Video: Memory Management (2h)
+• Đọc: Paging và Segmentation (2h)
+• Lab: Sử dụng top, htop, ps (2h)
+• Tự luận: So sánh các thuật toán scheduling (1h)
 
-Tuần 7-8: Giao Diện Người Dùng
-• Đọc: Desktop Environment overview (1.5 giờ)
-• Thực hành: Cấu hình GNOME/KDE (2 giờ)
+Tuần 5: Giao Diện Người Dùng
+• Video: GUI vs CLI (1.5h)
+• Đọc: Window Manager (1.5h)
+• Thực hành: Cài đặt và tùy chỉnh i3wm (3h)
 
-Tuần 9-10: Hệ Điều Hành Phổ Biến
-• Video: Ubuntu vs Fedora vs Arch (2 giờ)
-• Bài tập: Cài đặt và so sánh (4 giờ)
+Tuần 6: Hệ Điều Hành Phổ Biến
+• Đọc: Linux Distributions (2h)
+• Lab: Cài đặt Ubuntu và Arch Linux (4h)
+• Quiz so sánh (0.5h)
 
-Tuần 11-12: Lập Trình Shell
-• Đọc: Bash scripting guide (3 giờ)
-• Thực hành: Viết 10 script tự động hóa (5 giờ)
+Tuần 7: Lập Trình Shell
+• Video: Bash Scripting (3h)
+• Lab: Viết 5 scripts thực tế (4h)
+• Peer review scripts với nhóm (1h)
 
-Tuần 13-14: Khởi Động và Debug
-• Đọc: GRUB và systemd (2 giờ)
-• Lab: Debug boot issues (3 giờ)
-• Dự án cuối: Tùy chỉnh Linux hoàn chỉnh (6 giờ)`;
+Tuần 8: Khởi Động và Debug + Ôn tập
+• Video: Boot Process (1.5h)
+• Lab: Debug với strace, gdb (2h)
+• Ôn tập tổng: Quiz + Flashcard + Mô phỏng phỏng vấn (3h)
+• Dạy lại cho AI để kiểm tra hiểu biết (1h)`;
 
 type Step = 'q1' | 'q2' | 'q3' | 'q4' | 'calendar' | 'generating' | 'done';
 

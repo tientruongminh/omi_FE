@@ -24,37 +24,47 @@ interface ChatMessage {
 const INITIAL_FILES: FileItem[] = [
   {
     id: '1',
-    name: 'Kế hoạch triển khai.xlsx',
-    size: '1.1 MB',
-    time: 'Hôm qua',
-    icon: '📊',
-    iconBg: '#D1FAE5',
-    iconColor: '#065F46',
-    checked: false,
-  },
-  {
-    id: '2',
-    name: 'Báo cáo tiến độ.docx',
+    name: 'Báo cáo Hệ Điều Hành — Tuần 5.docx',
     size: '2.3 MB',
-    time: '2 ngày trước',
+    time: 'Hôm qua',
     icon: '📝',
     iconBg: '#DBEAFE',
     iconColor: '#1E40AF',
     checked: false,
   },
   {
-    id: '3',
-    name: 'Phác thảo UI/UX.png',
-    size: '5.8 MB',
-    time: '3 ngày trước',
-    icon: '🖼️',
+    id: '2',
+    name: 'Slide bài giảng — Process Management.pdf',
+    size: '5.1 MB',
+    time: '2 ngày trước',
+    icon: '📄',
     iconBg: '#FCE7F3',
     iconColor: '#9D174D',
     checked: false,
   },
   {
+    id: '3',
+    name: 'Lab3_BashScript.sh',
+    size: '4.2 KB',
+    time: '3 ngày trước',
+    icon: '💻',
+    iconBg: '#D1FAE5',
+    iconColor: '#065F46',
+    checked: false,
+  },
+  {
     id: '4',
-    name: 'Ghi chú họp.txt',
+    name: 'Ảnh chụp màn hình lỗi kernel.png',
+    size: '1.8 MB',
+    time: 'Tuần trước',
+    icon: '🖼️',
+    iconBg: '#FEF3C7',
+    iconColor: '#92400E',
+    checked: false,
+  },
+  {
+    id: '5',
+    name: 'Ghi chú thảo luận nhóm.txt',
     size: '12 KB',
     time: 'Tuần trước',
     icon: '📄',
@@ -69,22 +79,23 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     id: '1',
     role: 'ai',
     content:
-      'Chào bạn! Tôi có thể giúp gì cho đồ án omilearn của bạn hôm nay? Tôi có thể giúp tìm tài liệu tham khảo hoặc phân tích các tệp bạn vừa tải lên.',
+      'Chào bạn! Tôi có thể giúp gì cho đồ án Hệ Điều Hành của bạn hôm nay? Tôi thấy bạn vừa upload báo cáo tuần 5.',
   },
   {
     id: '2',
     role: 'user',
     content:
-      'Tìm cho tôi thêm các tài liệu về xu hướng thiết kế học tập điện tử (e-learning) năm 2024.',
+      'Tìm thêm tài liệu về process scheduling algorithms',
   },
   {
     id: '3',
     role: 'ai',
     content:
-      'Tất nhiên! Tôi đã tìm thấy 3 tài liệu liên quan đến xu hướng E-learning 2024. Tôi đang đóng bộ chúng vào Tài liệu dự án cho bạn:',
+      'Tôi tìm thấy 3 tài liệu liên quan. Đang thêm vào thư viện dự án của bạn:',
     links: [
-      { label: '✅ Gamification in 2024.pdf', href: '#' },
-      { label: '✅ Microlearning Trends.pdf', href: '#' },
+      { label: '✅ CPU Scheduling Algorithms Comparison.pdf', href: '#' },
+      { label: '✅ Linux CFS Scheduler Explained.pdf', href: '#' },
+      { label: '✅ Real-time Scheduling in RTOS.pdf', href: '#' },
     ],
   },
 ];
@@ -293,7 +304,7 @@ export default function WorkspacePage() {
         >
           <div className="flex-1">
             <p className="text-xs text-[#2D2D2D] font-medium leading-relaxed">
-              💡 <strong>Mẹo:</strong> Bạn có thể chọn nhiều file để AI tóm tắt cùng 1 lúc
+              💡 <strong>Mẹo:</strong> Chọn nhiều file rồi nhờ AI tóm tắt cùng lúc!
             </p>
           </div>
           <button

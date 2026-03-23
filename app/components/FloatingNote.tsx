@@ -40,7 +40,7 @@ export default function FloatingNote() {
               ×
             </button>
             <p className="text-[12.5px] text-[#5A5C58] leading-relaxed">
-              💡 <strong className="text-[#2D2D2D]">Mẹo:</strong> Nhấn đúp vào node để mở tài liệu. Kéo canvas để di chuyển mindmap.
+              💡 <strong className="text-[#2D2D2D]">Mẹo:</strong> Nhấn đúp vào node để mở tài liệu. Kéo canvas để di chuyển. Cuộn chuột để zoom.
             </p>
           </div>
         </motion.div>

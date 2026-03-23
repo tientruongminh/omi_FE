@@ -60,45 +60,52 @@ export interface StudySession {
 // Dashboard Data
 export const projects: Project[] = [
   {
-    id: 'os-linux',
+    id: '1',
     title: 'Hệ Điều Hành và Linux',
-    description: 'Tìm hiểu về hệ điều hành, kiến trúc Linux và lập trình Shell cơ bản.',
-    date: '24 Tháng 10, 2024',
-    progress: 60,
+    description: 'Nghiên cứu kiến trúc hệ điều hành, quản lý tiến trình, bộ nhớ và hệ thống file trên Linux.',
+    date: '15 Tháng 3, 2025',
+    progress: 65,
   },
   {
-    id: 'kinh-te-vi-mo',
-    title: 'Kinh Tế Vi Mô',
-    description: 'Nghiên cứu các nguyên lý kinh tế vi mô, cung cầu và thị trường.',
-    date: '2 Tháng 11, 2024',
+    id: '2',
+    title: 'Cấu Trúc Dữ Liệu và Giải Thuật',
+    description: 'Tìm hiểu các cấu trúc dữ liệu cơ bản và nâng cao: mảng, danh sách liên kết, cây, đồ thị, và các thuật toán sắp xếp, tìm kiếm.',
+    date: '2 Tháng 3, 2025',
     isComplete: true,
   },
   {
-    id: 'lap-trinh-web',
-    title: 'Lập Trình Web',
-    description: 'Học HTML, CSS, JavaScript và các framework hiện đại để xây dựng web.',
-    date: '15 Tháng 10, 2024',
-    progress: 75,
+    id: '3',
+    title: 'Mạng Máy Tính',
+    description: 'Mô hình OSI, TCP/IP, routing, switching, bảo mật mạng và thực hành cấu hình mạng LAN/WAN.',
+    date: '20 Tháng 2, 2025',
+    progress: 40,
+  },
+  {
+    id: '4',
+    title: 'Trí Tuệ Nhân Tạo',
+    description: 'Machine Learning cơ bản, neural networks, NLP và computer vision. Ứng dụng AI trong thực tế.',
+    date: '10 Tháng 3, 2025',
+    progress: 25,
   },
 ];
 
 export const sharedCourses: SharedCourse[] = [
   {
     id: '1',
-    title: 'Thiết kế nhân vật nâng cao',
+    title: 'Lập Trình Python Nâng Cao',
     sharedBy: 'Minh Anh',
     timeAgo: '2 giờ trước',
   },
   {
     id: '2',
-    title: 'Hướng dẫn bảng màu mùa đông',
-    sharedBy: 'Color Lab',
+    title: 'Thiết Kế Cơ Sở Dữ Liệu',
+    sharedBy: 'Hoàng Nam',
     timeAgo: 'Hôm qua',
   },
   {
     id: '3',
-    title: 'Mẫu bố cục Isometric',
-    sharedBy: 'Studio Grid',
+    title: 'Phát Triển Web Full-Stack',
+    sharedBy: 'Thu Hà',
     timeAgo: '3 ngày trước',
   },
 ];
@@ -119,7 +126,7 @@ export const contentCards: ContentCard[] = [
   {
     id: '1',
     type: 'video',
-    title: 'Quy trình thiết kế kiến trúc | 8 bước CHUẨN HÓA kiến...',
+    title: 'GUI vs CLI — So sánh chi tiết | Hệ Điều Hành và Linux',
     tags: [
       { label: 'AI hỏi đáp', color: 'green' },
       { label: 'Ôn tập', color: 'coral' },
@@ -128,7 +135,7 @@ export const contentCards: ContentCard[] = [
   {
     id: '2',
     type: 'pdf',
-    title: 'Quy trình thiết kế kiến trúc | 8 bước CHUẨN HÓA kiến...',
+    title: 'Lịch sử phát triển giao diện: từ CLI đến AR/VR',
     tags: [
       { label: 'AI hỏi đáp', color: 'green' },
       { label: 'Ôn tập', color: 'coral' },
@@ -159,15 +166,15 @@ export const defaultRoadmapEdges: RoadmapEdge[] = [
 
 // Dashboard stats
 export const dashboardStats: DashboardStat[] = [
-  { label: 'Phân tích', percentage: 85, color: '#818CF8' },
-  { label: 'Tổng hợp', percentage: 70, color: '#4CD964' },
-  { label: 'Phản biện', percentage: 45, color: '#F97316' },
-  { label: 'Phỏng vấn', percentage: 30, color: '#A78BFA' },
+  { label: 'Phân tích', percentage: 78, color: '#818CF8' },
+  { label: 'Tổng hợp', percentage: 65, color: '#4CD964' },
+  { label: 'Phản biện', percentage: 52, color: '#F97316' },
+  { label: 'Phỏng vấn', percentage: 40, color: '#A78BFA' },
 ];
 
 // Upcoming study sessions
 export const upcomingStudySessions: StudySession[] = [
-  { id: 's1', title: 'Quản Lý Tài Nguyên', date: 'Thứ 2, 25 Tháng 11', duration: '2 giờ', day: 'T2' },
-  { id: 's2', title: 'Lập Trình Shell', date: 'Thứ 4, 27 Tháng 11', duration: '1.5 giờ', day: 'T4' },
-  { id: 's3', title: 'Khởi Động và Debug', date: 'Thứ 6, 29 Tháng 11', duration: '2 giờ', day: 'T6' },
+  { id: 's1', title: 'Quản Lý Tiến Trình', date: 'Thứ 2, 08:00 - 10:00', duration: '2 giờ', day: 'T2' },
+  { id: 's2', title: 'Hệ Thống File Linux', date: 'Thứ 4, 14:00 - 16:00', duration: '2 giờ', day: 'T4' },
+  { id: 's3', title: 'Lập Trình Shell Bash', date: 'Thứ 6, 10:00 - 12:00', duration: '2 giờ', day: 'T6' },
 ];

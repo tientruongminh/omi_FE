@@ -162,18 +162,10 @@ function QuizTab() {
 // ─── Flashcard Tab ───────────────────────────────────────────
 
 function FlashcardTab() {
-  const cards = flashcards.slice(0, 3).map((fc, i) => ({
+  const cards = flashcards.slice(0, 5).map((fc) => ({
     id: fc.id,
-    front: [
-      'Desktop Metaphor là gì?',
-      'CLI là viết tắt của?',
-      'Xerox Alto ra đời năm nào?',
-    ][i],
-    back: [
-      'Phép ẩn dụ desktop — giao diện mô phỏng bàn làm việc thực tế với biểu tượng file, thư mục, thùng rác',
-      'Command Line Interface — giao diện dòng lệnh',
-      '1973 — tại Xerox PARC, Palo Alto',
-    ][i],
+    front: fc.front,
+    back: fc.back,
   }));
 
   const [idx, setIdx] = useState(0);
@@ -270,7 +262,7 @@ function EssayTab() {
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const feedback =
-    'Bài làm tốt! Bạn đã nêu được các điểm chính về sự khác biệt giữa GUI và CLI. Gợi ý bổ sung: Nên đề cập thêm về automation capabilities của CLI trong quản trị hệ thống. Điểm: 8/10';
+    'Bài làm tốt! Bạn đã nêu được các điểm chính về sự khác biệt giữa GUI và CLI. Gợi ý bổ sung: Nên đề cập thêm về automation capabilities của CLI — ví dụ một lệnh bash script có thể thay thế hàng chục thao tác GUI. Thêm ví dụ cụ thể như: "ssh user@server" không thể làm qua GUI từ xa. Điểm: 8/10 ⭐';
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -331,7 +323,7 @@ function TeachAITab() {
   const [explanation, setExplanation] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const feedback =
-    'Giải thích rõ ràng! Bạn đã nắm vững khái niệm này. Đặc biệt phần ví dụ về thùng rác và thư mục rất trực quan. Điểm: 9/10 ⭐';
+    'Giải thích tốt lắm! Bạn đã nắm được ý chính về Process Scheduling. Điểm đặc biệt hay: bạn so sánh được Round Robin vs Priority Scheduling. Gợi ý bổ sung: Thêm về CFS (Completely Fair Scheduler) — thuật toán Linux đang dùng, dùng red-black tree để đảm bảo fairness. Điểm: 9/10 ⭐';
 
   return (
     <div className="flex flex-col h-full gap-4">

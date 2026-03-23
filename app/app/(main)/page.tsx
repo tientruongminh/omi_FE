@@ -37,11 +37,11 @@ export default function HomePage() {
         <div className="mt-8 flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#4CD964]" />
-            <span className="text-[#9CA3AF] text-sm">3 Dự án</span>
+            <span className="text-[#9CA3AF] text-sm">4 Dự án</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#818CF8]" />
-            <span className="text-[#9CA3AF] text-sm">2 Đang học</span>
+            <span className="text-[#9CA3AF] text-sm">3 Đang học</span>
           </div>
         </div>
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
-type SubjectKey = 'kinhTe' | 'xacSuat' | 'baiTap' | 'marketing' | 'lapTrinh';
+type SubjectKey = 'heDieuHanh' | 'cauTrucDL' | 'mangMayTinh' | 'toanRoiRac' | 'lapTrinhWeb';
 
 interface SubjectInfo {
   label: string;
@@ -13,11 +13,11 @@ interface SubjectInfo {
 }
 
 const SUBJECTS: Record<SubjectKey, SubjectInfo> = {
-  kinhTe:    { label: 'Kinh tế vi mô', color: '#16A34A', dot: '#4CD964', bg: '#DCFCE7' },
-  xacSuat:   { label: 'Xác suất TK',   color: '#4338CA', dot: '#818CF8', bg: '#EEF2FF' },
-  baiTap:    { label: 'Bài tập lớn',   color: '#DC2626', dot: '#F08080', bg: '#FEE2E2' },
-  marketing: { label: 'Marketing',     color: '#C2410C', dot: '#F5A623', bg: '#FEF3C7' },
-  lapTrinh:  { label: 'Lập trình',     color: '#7E22CE', dot: '#A855F7', bg: '#F3E8FF' },
+  heDieuHanh:  { label: 'Hệ Điều Hành',     color: '#16A34A', dot: '#4CD964', bg: '#DCFCE7' },
+  cauTrucDL:   { label: 'Cấu Trúc DL',       color: '#4338CA', dot: '#818CF8', bg: '#EEF2FF' },
+  mangMayTinh: { label: 'Mạng Máy Tính',     color: '#DC2626', dot: '#F08080', bg: '#FEE2E2' },
+  toanRoiRac:  { label: 'Toán Rời Rạc',      color: '#C2410C', dot: '#F5A623', bg: '#FEF3C7' },
+  lapTrinhWeb: { label: 'Lập Trình Web',      color: '#7E22CE', dot: '#A855F7', bg: '#F3E8FF' },
 };
 
 type ScheduleCell = SubjectKey | null;
@@ -36,14 +36,14 @@ const TIME_SLOTS = ['08–10h', '10–12h', '14–16h', '19–21h'];
 
 // [timeSlot][dayIndex]
 const SCHEDULE: ScheduleCell[][] = [
-  // 08–10h: T2        T3        T4          T5          T6          T7          CN
-  [  'kinhTe',   null,     'baiTap',   null,       'kinhTe',   null,       null ],
+  // 08–10h: T2             T3            T4              T5              T6              T7    CN
+  [ 'heDieuHanh',   null,         'cauTrucDL',    null,           'heDieuHanh',   null, null ],
   // 10–12h
-  [  null,       'xacSuat', null,      'marketing', null,      'xacSuat',  null ],
+  [ null,            'toanRoiRac', null,           'mangMayTinh',  null,           'toanRoiRac', null ],
   // 14–16h
-  [  'lapTrinh', null,     'marketing', null,       'lapTrinh', null,       null ],
+  [ 'lapTrinhWeb',   null,         'mangMayTinh',  null,           'lapTrinhWeb',  null, null ],
   // 19–21h
-  [  null,       null,     null,        null,        null,       null,       null ],
+  [ null,            null,         null,           null,           null,           null, null ],
 ];
 
 export default function SchedulePage() {
