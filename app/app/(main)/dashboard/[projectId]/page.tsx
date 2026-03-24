@@ -2,9 +2,11 @@
 
 import { useState, use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Map, TrendingUp } from 'lucide-react';
-import { dashboardStats, upcomingStudySessions } from '@/entities/dashboard';
+import { ChevronRight, Map, TrendingUp, ChevronLeft } from 'lucide-react';
+import { dashboardStats } from '@/entities/dashboard';
+import { SUBJECTS, DAYS, TIME_SLOTS, SCHEDULE, SubjectKey } from '@/entities/schedule';
 import { useOmiLearnStore } from '@/entities/project';
 import AIStreamText from '@/shared/ui/AIStreamText';
 
@@ -19,8 +21,6 @@ Tiến độ: 13/20 đơn vị hoàn thành. Dự kiến hoàn thành toàn bộ
 Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script tự động backup file mỗi ngày để luyện tay. Sau đó chuyển sang phần Debug.
 
 So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
-
-const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 // Accent stripe colors for stat cards
 const STAT_ACCENTS = ['#4CD964', '#818CF8', '#F08080', '#F5A623'];
@@ -72,6 +72,8 @@ export default function ProjectDashboardPage({ params }: PageProps) {
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const router = useRouter();
 
   const handleAnalysis = () => {
     if (showAnalysis) {
@@ -147,66 +149,109 @@ export default function ProjectDashboardPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Calendar + Sessions */}
-      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 md:p-6 mb-8">
-        <h2 className="font-bold text-[#2D2D2D] text-lg mb-4">Lịch học sắp tới</h2>
-        
-        {/* Mini week view */}
-        <div className="grid grid-cols-7 gap-1.5 mb-6">
-          {DAYS.map((day) => {
-            const hasSession = upcomingStudySessions.some((s) => s.day === day);
-            return (
-              <div
-                key={day}
-                className={`rounded-xl p-2 text-center transition-all ${
-                  hasSession
-                    ? 'bg-[#2D2D2D] hover:bg-[#1a1a1a]'
-                    : 'bg-white border border-[#CCCCCC] hover:border-[#6B2D3E]/40'
-                }`}
-              >
-                <p className={`text-xs font-semibold ${hasSession ? 'text-white' : 'text-[#5A5C58]'}`}>{day}</p>
-                {hasSession && <div className="w-1.5 h-1.5 rounded-full bg-[#4CD964] mx-auto mt-1" />}
-              </div>
-            );
-          })}
+      {/* Schedule Grid — from /schedule */}
+      <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl overflow-hidden mb-8">
+        {/* Schedule header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b-2 border-[#333333]">
+          <h2 className="font-bold text-[#2D2D2D] text-lg">Lịch học tuần này</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekOffset((w) => w - 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#333333] hover:bg-[#2D2D2D] hover:text-white text-[#2D2D2D] transition-all cursor-pointer"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => setWeekOffset((w) => w + 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#333333] hover:bg-[#2D2D2D] hover:text-white text-[#2D2D2D] transition-all cursor-pointer"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
 
-        {/* Sessions list */}
-        <div className="space-y-3">
-          {upcomingStudySessions.map((session) => (
-            <Link
-              key={session.id}
-              href={session.unitId ? `/learn?unit=${session.unitId}&project=${projectId}` : `/learn?project=${projectId}`}
-              className="flex items-center justify-between px-4 py-3 bg-white border border-[#CCCCCC] rounded-xl hover:border-[#6B2D3E] hover:bg-[#FFF8F9] hover:shadow-sm active:scale-[0.99] transition-all group"
+        {/* Day headers */}
+        <div className="grid border-b-2 border-[#333333]" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
+          <div className="px-1 py-3 text-center border-r-2 border-[#333333]" />
+          {DAYS.map((day) => (
+            <div
+              key={day.key}
+              className={`px-1 py-2.5 text-center border-r border-[#E5E7EB] last:border-r-0 ${
+                day.weekend ? 'bg-[#FEE2E2]' : day.today ? 'bg-[#FFF9E6]' : ''
+              }`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#818CF8]/20 flex items-center justify-center">
-                  <span className="text-xs font-bold text-[#818CF8]">{session.day}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#2D2D2D] group-hover:text-[#6B2D3E] transition-colors">{session.title}</p>
-                  <p className="text-xs text-[#5A5C58]">{session.date}</p>
-                </div>
+              <div className={`text-[10px] font-black uppercase tracking-wider ${day.weekend ? 'text-[#DC2626]' : 'text-[#2D2D2D]'}`}>
+                {day.label}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-[#5A5C58] bg-[#F1F1EC] px-2 py-1 rounded-full">
-                  {session.duration}
-                </span>
-                <span className="text-xs text-[#6B2D3E] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                  Học →
-                </span>
+              <div className={`text-xs font-bold mt-0.5 ${day.weekend ? 'text-[#DC2626]' : 'text-[#5A5C58]'}`}>
+                {day.date}
               </div>
-            </Link>
+              {day.today && (
+                <div className="mt-1 flex items-center justify-center">
+                  <div className="bg-[#F5C542] text-[#2D2D2D] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full">
+                    HÔM NAY
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
-        {/* Quick action: Tiếp tục học */}
-        <div className="mt-4 pt-4 border-t border-dashed border-[#CCCCCC]">
+        {/* Time rows */}
+        {TIME_SLOTS.map((slot, rowIdx) => (
+          <div
+            key={slot}
+            className="grid border-b border-[#E5E7EB] last:border-b-0"
+            style={{ gridTemplateColumns: '56px repeat(7, 1fr)', minHeight: '56px' }}
+          >
+            <div className="flex items-center justify-end pr-1.5 border-r-2 border-[#333333]">
+              <span className="text-[9px] font-bold text-[#5A5C58] text-right leading-tight">{slot}</span>
+            </div>
+            {DAYS.map((day, colIdx) => {
+              const subject = SCHEDULE[rowIdx][colIdx];
+              const info = subject ? SUBJECTS[subject] : null;
+              return (
+                <div
+                  key={day.key}
+                  className={`flex items-center justify-center p-1 border-r border-[#E5E7EB] last:border-r-0 ${day.today ? 'bg-[#FFFBEB]/60' : ''}`}
+                >
+                  {info && subject && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => {
+                        const unitId = info.unitId;
+                        router.push(unitId ? `/learn?unit=${unitId}&project=${projectId}` : `/learn?project=${projectId}`);
+                      }}
+                      className="px-1.5 py-1 rounded-lg border-2 text-center cursor-pointer w-full transition-all hover:shadow-md"
+                      style={{ borderColor: info.color, backgroundColor: info.bg }}
+                    >
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-wide leading-tight block" style={{ color: info.color }}>
+                        {info.label}
+                      </span>
+                    </motion.button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Legend + "Tiếp tục học" */}
+        <div className="px-5 py-3 border-t-2 border-[#333333] flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {(Object.entries(SUBJECTS) as [SubjectKey, typeof SUBJECTS[SubjectKey]][]).map(([key, info]) => (
+              <div key={key} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: info.dot }} />
+                <span className="text-[10px] font-semibold" style={{ color: info.color }}>{info.label}</span>
+              </div>
+            ))}
+          </div>
           <Link
             href={`/learn?project=${projectId}`}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] active:scale-[0.99] transition-all"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#2D2D2D] text-white text-xs font-semibold hover:bg-[#1a1a1a] active:scale-95 transition-all"
           >
-            Tiếp tục học
+            Tiếp tục học →
           </Link>
         </div>
       </div>
