@@ -438,7 +438,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   }, []);
 
   // ── Create AI node from expanded view (keeps source panel open) ──
-  const handleCreateAINode = useCallback((nodeId: string, type: 'ai-response' | 'review') => {
+  const handleCreateAINode = useCallback((nodeId: string, type: 'ai-response' | 'review', selectedText?: string) => {
     const target = nodes.find((n) => n.id === nodeId);
     if (!target) return;
     
@@ -448,19 +448,32 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     const connectedNodes = nodes.filter((n) => connectedIds.includes(n.id));
     
     let contextText = '';
-    if (target.content) contextText += target.content;
+    if (selectedText) {
+      contextText = `"${selectedText}"`;
+    } else if (target.content) {
+      contextText = target.content;
+    }
     connectedNodes.forEach((cn) => {
       if (cn.content) contextText += `\n\n[${cn.title}]: ${cn.content}`;
     });
     
     const action = type === 'review' ? 'ai-review' : 'ai-chat';
     const paragraphs = target.docType === 'text' ? (documentTextContent[target.docId ?? ''] ?? []) : [videoTranscripts[target.docId ?? ''] ?? ''];
-    const aiText = action === 'ai-chat'
-      ? `AI đang phân tích "${target.title}"...\n\n${contextText || (paragraphs[0]?.slice(0, 200) ?? '')}...${connectedNodes.length > 0 ? `\n\n(Dựa trên ${connectedNodes.length} node liên kết)` : ''}`
-      : 'Nội dung ôn tập được tạo. Bao gồm quiz, flashcard và câu hỏi tự luận.';
+    
+    let aiText: string;
+    if (selectedText) {
+      aiText = action === 'ai-chat'
+        ? `AI đang phân tích đoạn trích từ "${target.title}":\n\n> "${selectedText.slice(0, 300)}${selectedText.length > 300 ? '...' : ''}"\n\n...`
+        : `Ôn tập đoạn trích từ "${target.title}":\n\n> "${selectedText.slice(0, 300)}${selectedText.length > 300 ? '...' : ''}"\n\nCâu hỏi ôn tập đang được tạo...`;
+    } else {
+      aiText = action === 'ai-chat'
+        ? `AI đang phân tích "${target.title}"...\n\n${contextText || (paragraphs[0]?.slice(0, 200) ?? '')}...${connectedNodes.length > 0 ? `\n\n(Dựa trên ${connectedNodes.length} node liên kết)` : ''}`
+        : 'Nội dung ôn tập được tạo. Bao gồm quiz, flashcard và câu hỏi tự luận.';
+    }
+    
     const newNode: CanvasNode = {
       id: genId(), type: 'ai-response',
-      title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${target.title.slice(0, 25)}`,
+      title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${selectedText ? selectedText.slice(0, 20) + '...' : target.title.slice(0, 25)}`,
       content: aiText,
       x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60,
       width: 190, height: 50, parentId: target.id,

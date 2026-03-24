@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CanvasNode, CanvasEdge } from '../model/types';
 import ExpandedDocContent from './ExpandedDocContent';
 import ExpandedNoteContent from './ExpandedNoteContent';
@@ -12,7 +12,7 @@ interface Props {
   allNodes: CanvasNode[];
   edges: CanvasEdge[];
   onClose: () => void;
-  onCreateAINode: (nodeId: string, type: 'ai-response' | 'review') => void;
+  onCreateAINode: (nodeId: string, type: 'ai-response' | 'review', selectedText?: string) => void;
   onUpdateContent?: (nodeId: string, content: string) => void;
 }
 
