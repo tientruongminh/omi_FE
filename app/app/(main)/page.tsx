@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { Folder, Users, ChevronRight, Plus } from 'lucide-react';
-import { sharedCourses } from '@/features/projects/data/projects-data';
-import { useOmiLearnStore } from '@/shared/lib/store';
+import { sharedCourses } from '@/entities/project';
+import { useOmiLearnStore } from '@/entities/project';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
-const CreateProjectModal = dynamic(() => import('@/features/projects/components/CreateProjectModal'), { ssr: false });
+const CreateProjectModal = dynamic(() => import('@/features/create-project/ui/CreateProjectModal'), { ssr: false });
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 16 },

@@ -4,9 +4,9 @@ import { useState, use } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Map, TrendingUp } from 'lucide-react';
-import { dashboardStats, upcomingStudySessions } from '@/features/dashboard/data/dashboard-data';
-import { useOmiLearnStore } from '@/shared/lib/store';
-import AIStreamText from '@/shared/components/AIStreamText';
+import { dashboardStats, upcomingStudySessions } from '@/entities/dashboard';
+import { useOmiLearnStore } from '@/entities/project';
+import AIStreamText from '@/shared/ui/AIStreamText';
 
 const ANALYSIS_TEXT = `Phân tích tiến độ — Hệ Điều Hành và Linux
 
