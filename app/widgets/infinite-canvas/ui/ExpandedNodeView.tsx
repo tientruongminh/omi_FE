@@ -5,6 +5,7 @@ import { CanvasNode, CanvasEdge } from '../model/types';
 import ExpandedDocContent from './ExpandedDocContent';
 import ExpandedNoteContent from './ExpandedNoteContent';
 import ExpandedAIContent from './ExpandedAIContent';
+import ExpandedReviewContent from './ExpandedReviewContent';
 import ExpandedSynthesisContent from './ExpandedSynthesisContent';
 
 interface Props {
@@ -29,8 +30,11 @@ export default function ExpandedNodeView({ node, allNodes, edges, onClose, onCre
       style={{ boxShadow: '0 12px 40px rgba(0,0,0,0.15)', width: 400 }}
     >
       {node.type === 'note' && <ExpandedNoteContent node={node} onClose={onClose} onUpdateContent={onUpdateContent} />}
-      {(node.type === 'ai-chat' || node.type === 'ai-review') && (
+      {node.type === 'ai-chat' && (
         <ExpandedAIContent node={node} onClose={onClose} onCreateAINode={onCreateAINode} />
+      )}
+      {node.type === 'ai-review' && (
+        <ExpandedReviewContent node={node} onClose={onClose} onCreateAINode={onCreateAINode} />
       )}
       {node.type === 'synthesis' && <ExpandedSynthesisContent node={node} allNodes={allNodes} edges={edges} onClose={onClose} onUpdateContent={onUpdateContent} />}
       {(node.type === 'document' || node.type === 'chapter' || node.type === 'topic') && (
