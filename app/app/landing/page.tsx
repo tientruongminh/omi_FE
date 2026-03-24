@@ -1,519 +1,249 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { motion, Variants, useInView } from 'framer-motion';
-import { ChevronDown, Menu, Star } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence, type Variants, type Easing } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 
+const EASE: Easing = 'easeOut';
+
 const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 24 },
   visible: (i: number = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: 'easeOut', delay: i * 0.1 },
+    transition: { duration: 0.5, ease: EASE, delay: i * 0.1 },
   }),
 };
 
-const fadeLeft: Variants = {
-  hidden: { opacity: 0, x: -28 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: 'easeOut' } },
-};
+// ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
-const fadeRight: Variants = {
-  hidden: { opacity: 0, x: 28 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: 'easeOut' } },
-};
-
-// ─── Count-up hook ────────────────────────────────────────────────────────────
-
-function useCountUp(target: number, duration = 1800, start = false) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    let startTime: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [start, target, duration]);
-  return count;
-}
-
-// ─── CTA Button ──────────────────────────────────────────────────────────────
-
-function CTAButton({ href = '/', className = '', light = false }: { href?: string; className?: string; light?: boolean }) {
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Link
-      href={href}
-      className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 ${className}`}
-      style={{
-        background: light ? '#FFFFFF' : '#2D2D2D',
-        color: light ? '#2D2D2D' : '#FFFFFF',
-        willChange: 'transform',
-      }}
-    >
-      Bắt đầu miễn phí
-    </Link>
+    <div className="border-b border-[#e5e7eb]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-4 text-left"
+      >
+        <span className="text-sm font-semibold text-[#1a1a1a]">{question}</span>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.22 }}>
+          <ChevronDown size={16} className="text-[#9ca3af]" />
+        </motion.div>
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        style={{ overflow: 'hidden' }}
+      >
+        <p className="pb-4 text-sm text-[#6b7280] leading-relaxed">{answer}</p>
+      </motion.div>
+    </div>
   );
 }
 
-// ─── Demo Section ────────────────────────────────────────────────────────────
+// ─── Robot illustration ───────────────────────────────────────────────────────
 
-const DEMO_SUBJECTS = [
-  {
-    id: 'giai-tich',
-    label: 'Giải Tích 1',
-    chapters: ['Giới hạn và Liên tục', 'Đạo hàm', 'Tích phân', 'Chuỗi số'],
-    stats: '4 chương • 12 bài • ~6 tuần',
-  },
-  {
-    id: 'vat-ly',
-    label: 'Vật Lý',
-    chapters: ['Cơ học', 'Nhiệt động lực học', 'Điện từ', 'Quang học'],
-    stats: '4 chương • 16 bài • ~8 tuần',
-  },
-  {
-    id: 'ctdl',
-    label: 'CTDL',
-    chapters: ['Mảng & Danh sách', 'Stack & Queue', 'Cây & Đồ thị', 'Sắp xếp & Tìm kiếm'],
-    stats: '4 chương • 14 bài • ~7 tuần',
-  },
+function RobotIllustration() {
+  return (
+    <div
+      className="relative rounded-2xl overflow-hidden"
+      style={{
+        minHeight: 480,
+      }}
+    >
+      {/* Grid overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'transparent 1px)',
+          backgroundSize: '32px 32px',
+        }}
+      />
+
+      {/* Robot image */}
+      <img
+        src="/robot.png"
+        alt="Omi AI Robot"
+        className="w-full h-full object-contain relative z-10"
+        style={{ minHeight: 480 }}
+      />
+    </div>
+  );
+}
+
+// ─── Testimonial Carousel ─────────────────────────────────────────────────────
+
+const TESTIMONIALS = [
+  { name: 'Minh Anh', school: 'ĐH Bách Khoa HN', avatar: '👩‍💻', avatarBg: '#fde8c0', quote: '"Omilearn giúp mình từ một người luôn nợ môn đến chân mới nhảy trở thành thủ khoa môn Kỹ thuật số. AI partner nhỏ nhẻ rất tâm lý!"' },
+  { name: 'Hoàng Nam', school: 'ĐH Kinh tế Quốc dân', avatar: '👨‍🎓', avatarBg: '#d1fae5', quote: '"Thư viện tài liệu cực xịn, mình không còn phải lang thang trên mạng cả tiếng đồng hồ để tìm slide cũ nữa. Cảm ơn Omilearn!"' },
+  { name: 'Thu Trang', school: 'ĐH Ngoại Thương', avatar: '👩‍🏫', avatarBg: '#e0e7ff', quote: '"Học Pomodoro cùng bạn bè trên đây vui lắm, cảm giác có động lực hẳn khi thấy mọi người cũng đang cố gắng giống mình."' },
+  { name: 'Đức Anh', school: 'ĐH Công nghệ - ĐHQGHN', avatar: '👨‍💻', avatarBg: '#fce7f3', quote: '"Mình dùng Omilearn ôn thi cuối kỳ trong 2 tuần, điểm tăng từ 6.5 lên 9.0. Lộ trình AI thiết kế rất hợp lý, không bị quá tải."' },
+  { name: 'Lan Phương', school: 'ĐH Y Hà Nội', avatar: '👩‍⚕️', avatarBg: '#d1fae5', quote: '"Học Y nhiều tài liệu lắm, Omilearn giúp mình tóm tắt và tạo flashcard siêu nhanh. Tiết kiệm được cả chục tiếng mỗi tuần!"' },
 ];
 
-function InteractiveDemo() {
-  type DEMO_SUBJECT = (typeof DEMO_SUBJECTS)[number];
-  const [demoState, setDemoState] = useState<'idle' | 'loading' | 'result'>('idle');
-  const [selectedSubject, setSelectedSubject] = useState<DEMO_SUBJECT | null>(null);
-  const [typeText, setTypeText] = useState('');
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handleSelectSubject = (subject: DEMO_SUBJECT) => {
-    setSelectedSubject(subject);
-    setDemoState('loading');
-    setTypeText('');
-
-    const text = `Đang phân tích tài liệu ${subject.label}...`;
-    let i = 0;
-    const interval = setInterval(() => {
-      setTypeText(text.slice(0, i + 1));
-      i++;
-      if (i >= text.length) {
-        clearInterval(interval);
-        setTimeout(() => setDemoState('result'), 600);
-      }
-    }, 40);
-  };
-
-  const handleReset = () => {
-    setDemoState('idle');
-    setSelectedSubject(null);
-    setTypeText('');
-  };
-
+function TestimonialCard({ t }: { t: typeof TESTIMONIALS[number] }) {
   return (
     <div
-      className="w-full rounded-2xl overflow-hidden transition-all duration-300"
+      className="flex flex-col gap-4 p-6 h-full"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #E5DDD5',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.07)',
-        minHeight: 340,
+        background: '#ffffff',
+        border: '2px solid #6B2D3E',
+        borderRadius: '20px',
+        boxShadow: '4px 4px 0px #6B2D3E',
+        minHeight: 220,
       }}
     >
-      {/* State: idle */}
-      {demoState === 'idle' && (
-        <div className="flex flex-col items-center justify-center p-8 gap-6 h-full" style={{ minHeight: 340 }}>
-          <div
-            className="w-full flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 px-4 transition-all"
-            style={{
-              borderColor: isDragOver ? '#3DBE7A' : '#C8C4BF',
-              background: isDragOver ? '#EDFAF4' : '#F9F6F2',
-              cursor: 'default',
-            }}
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragOver(false); }}
-          >
-            <span className="text-3xl">◎</span>
-            <p className="text-sm font-semibold text-center" style={{ color: '#5A5C58' }}>
-              Kéo thả tài liệu vào đây
-            </p>
-            <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>PDF, PPTX, DOCX...</p>
-          </div>
-
-          <div className="flex flex-col items-center gap-3 w-full">
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>hoặc thử ngay với:</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {DEMO_SUBJECTS.map((subject) => (
-                <button
-                  key={subject.id}
-                  onClick={() => handleSelectSubject(subject)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold border transition-all hover:border-[#2D2D2D] hover:text-[#2D2D2D] hover:-translate-y-0.5 active:scale-95"
-                  style={{ borderColor: '#E5DDD5', color: '#5A5C58', background: '#fff' }}
-                >
-                  {subject.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: t.avatarBg }}>
+          {t.avatar}
         </div>
-      )}
-
-      {/* State: loading */}
-      {demoState === 'loading' && (
-        <div className="flex flex-col items-center justify-center p-8 gap-5 h-full" style={{ minHeight: 340 }}>
-          <motion.div
-            className="w-12 h-12 rounded-full border-4"
-            style={{ borderColor: '#E5DDD5', borderTopColor: '#2D2D2D' }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-sm font-mono" style={{ color: '#5A5C58', minHeight: 24 }}>
-            {typeText}
-            <span className="animate-pulse">|</span>
-          </p>
+        <div>
+          <p className="font-bold text-sm" style={{ color: '#1a1a1a' }}>{t.name}</p>
+          <p className="text-xs" style={{ color: '#9ca3af' }}>{t.school}</p>
         </div>
-      )}
-
-      {/* State: result */}
-      {demoState === 'result' && selectedSubject && (
-        <motion.div
-          className="flex flex-col gap-4 p-6"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#3DBE7A', color: '#fff' }}>✓</div>
-              <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>
-                Lộ trình: {selectedSubject.label}
-              </p>
-            </div>
-            <button
-              onClick={handleReset}
-              className="text-xs px-3 py-1 rounded-full border transition-all hover:opacity-70"
-              style={{ color: '#9CA3AF', borderColor: '#E5DDD5' }}
-            >
-              ← Thử lại
-            </button>
-          </div>
-
-          <div
-            className="flex flex-col gap-1.5 rounded-xl p-4"
-            style={{ background: '#F9F6F2', border: '1px solid #E5DDD5' }}
-          >
-            {selectedSubject.chapters.map((ch, i) => (
-              <motion.div
-                key={ch}
-                className="flex items-center gap-3 py-1.5"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.09, duration: 0.3, ease: 'easeOut' }}
-              >
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                  style={{ background: '#3DBE7A', color: '#fff' }}
-                >
-                  {i + 1}
-                </div>
-                <span className="text-sm" style={{ color: '#2D2D2D' }}>{ch}</span>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between pt-1">
-            <p className="text-xs font-semibold" style={{ color: '#9CA3AF' }}>
-              {selectedSubject.stats}
-            </p>
-            <span
-              className="text-xs px-2 py-1 rounded-full font-semibold"
-              style={{ background: '#EDFAF4', color: '#1A6E3E' }}
-            >
-              Xong trong 30 giây
-            </span>
-          </div>
-
-          <Link
-            href="/"
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
-            style={{ background: '#2D2D2D' }}
-          >
-            Bắt đầu học ngay →
-          </Link>
-        </motion.div>
-      )}
+      </div>
+      <p className="text-sm leading-relaxed flex-1" style={{ color: '#4b5563' }}>{t.quote}</p>
+      <div className="flex gap-1">
+        {[...Array(5)].map((_, si) => <span key={si} style={{ color: '#f59e0b', fontSize: '18px' }}>★</span>)}
+      </div>
     </div>
   );
 }
 
-// ─── Mindmap Screenshot ───────────────────────────────────────────────────────
+function TestimonialCarousel() {
+  const [index, setIndex] = useState(0);
+  const perPage = 3;
+  const total = TESTIMONIALS.length;
+  const maxIndex = total - perPage;
 
-function MindmapScreenshot() {
+  const prev = () => setIndex(i => Math.max(0, i - 1));
+  const next = () => setIndex(i => Math.min(maxIndex, i + 1));
+
   return (
-    <div
-      className="rounded-xl p-5 h-full flex flex-col gap-4"
-      style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
-    >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>Bản đồ tư duy — Giải Tích 1</p>
-      <div className="flex flex-col items-center gap-3 flex-1 justify-center">
-        <div
-          className="px-5 py-2 rounded-full text-xs font-bold text-white text-center"
-          style={{ background: '#7C6FCD' }}
+    <div className="relative">
+      {/* Cards */}
+      <div className="overflow-hidden">
+        <motion.div
+          className="flex gap-6"
+          animate={{ x: `calc(-${index * (100 / perPage)}% - ${index * 24 / perPage}px)` }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          Giải Tích 1
-        </div>
-        <div className="w-px h-3" style={{ background: '#C8C4BF' }} />
-        <div className="grid grid-cols-2 gap-2 w-full">
-          {['Giới hạn', 'Đạo hàm', 'Tích phân', 'Chuỗi số'].map((node, i) => (
-            <div
-              key={node}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-center"
-              style={{
-                background: i % 2 === 0 ? '#EDFAF4' : '#F0EEFF',
-                border: `1.5px solid ${i % 2 === 0 ? '#3DBE7A' : '#7C6FCD'}`,
-                color: i % 2 === 0 ? '#1A6E3E' : '#4B3FA0',
-              }}
-            >
-              {node}
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="shrink-0" style={{ width: `calc((100% - ${(perPage - 1) * 24}px) / ${perPage})` }}>
+              <TestimonialCard t={t} />
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
-    </div>
-  );
-}
 
-// ─── Flashcard Screenshot ─────────────────────────────────────────────────────
-
-function FlashcardScreenshot() {
-  const [flipped, setFlipped] = useState(false);
-
-  return (
-    <div
-      className="rounded-xl p-5 h-full flex flex-col gap-4"
-      style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
-    >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>Flashcard — Đạo hàm cơ bản</p>
-      <div
-        className="flex-1 rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md p-4 text-center"
-        style={{
-          background: flipped ? '#2D2D2D' : '#FFFFFF',
-          border: '2px solid #E5DDD5',
-          minHeight: 100,
-        }}
-        onClick={() => setFlipped(!flipped)}
-      >
-        {!flipped ? (
-          <>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Câu hỏi</p>
-            <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>d/dx (sin x) = ?</p>
-            <p className="text-[10px]" style={{ color: '#C8C4BF' }}>Nhấn để xem đáp án</p>
-          </>
-        ) : (
-          <>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Đáp án</p>
-            <p className="text-sm font-bold text-white">cos x</p>
-            <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Nhấn để lật lại</p>
-          </>
-        )}
-      </div>
-      <div className="grid grid-cols-4 gap-1">
-        {[
-          { icon: 'Q', label: 'Quiz' },
-          { icon: 'F', label: 'Flashcard' },
-          { icon: 'T', label: 'Tự luận' },
-          { icon: 'D', label: 'Dạy AI' },
-        ].map((m, i) => (
-          <div
-            key={m.label}
-            className="flex flex-col items-center gap-1 py-2 rounded-lg"
-            style={{
-              background: i === 1 ? '#2D2D2D' : '#FFFFFF',
-              border: '1px solid #E5DDD5',
-            }}
-          >
-            <span className="text-[10px] font-black" style={{ color: i === 1 ? '#fff' : '#5A5C58' }}>{m.icon}</span>
-            <span className="text-[9px] font-semibold" style={{ color: i === 1 ? '#fff' : '#9CA3AF' }}>
-              {m.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Chat Screenshot ──────────────────────────────────────────────────────────
-
-function ChatScreenshot() {
-  return (
-    <div
-      className="rounded-xl p-5 h-full flex flex-col gap-3"
-      style={{ background: '#F9F6F2', border: '1px solid #E5DDD5', minHeight: 200 }}
-    >
-      <p className="text-xs font-bold" style={{ color: '#5A5C58' }}>AI Tutor — 24/7</p>
-      <div className="flex flex-col gap-3 flex-1">
-        <div className="flex justify-end">
-          <div
-            className="px-3 py-2 rounded-2xl rounded-tr-sm text-xs max-w-[80%]"
-            style={{ background: '#2D2D2D', color: '#fff' }}
-          >
-            Giải thích giới hạn bằng tiếng Việt đơn giản nhất?
-          </div>
-        </div>
-        <div className="flex justify-start gap-2">
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold"
-            style={{ background: '#7C6FCD', color: '#fff' }}
-          >
-            AI
-          </div>
-          <div
-            className="px-3 py-2 rounded-2xl rounded-tl-sm text-xs max-w-[80%] leading-relaxed"
-            style={{ background: '#FFFFFF', border: '1px solid #E5DDD5', color: '#2D2D2D' }}
-          >
-            Hãy tưởng tượng bạn đi dần đến một điểm mà không bao giờ đến hẳn — giới hạn là giá trị bạn &quot;tiến gần đến&quot;. 🎯
-          </div>
-        </div>
-      </div>
-      <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg"
-        style={{ background: '#FFFFFF', border: '1px solid #E5DDD5' }}
-      >
-        <p className="text-xs flex-1" style={{ color: '#C8C4BF' }}>Hỏi bất cứ điều gì...</p>
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center"
-          style={{ background: '#2D2D2D' }}
+      {/* Arrow buttons */}
+      <div className="flex items-center justify-center gap-4 mt-8">
+        <button
+          onClick={prev}
+          disabled={index === 0}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95"
+          style={{
+            background: index === 0 ? '#f3f4f6' : '#ffffff',
+            border: '2px solid #6B2D3E',
+            boxShadow: index === 0 ? 'none' : '3px 3px 0px #6B2D3E',
+            color: index === 0 ? '#d1d5db' : '#6B2D3E',
+            cursor: index === 0 ? 'not-allowed' : 'pointer',
+          }}
         >
-          <span className="text-[10px] text-white">→</span>
+          ←
+        </button>
+
+        {/* Dots */}
+        <div className="flex gap-2">
+          {Array.from({ length: maxIndex + 1 }).map((_, di) => (
+            <button
+              key={di}
+              onClick={() => setIndex(di)}
+              className="rounded-full transition-all"
+              style={{
+                width: di === index ? 20 : 8,
+                height: 8,
+                background: di === index ? '#6B2D3E' : '#d1d5db',
+              }}
+            />
+          ))}
         </div>
-      </div>
-    </div>
-  );
-}
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
-
-interface ProductCardProps {
-  title: string;
-  caption: string;
-  stat: string;
-  children: React.ReactNode;
-  tilt?: number;
-  delay?: number;
-  inView: boolean;
-}
-
-function ProductCard({ title, caption, stat, children, tilt = 0, delay = 0, inView }: ProductCardProps) {
-  return (
-    <motion.div
-      custom={delay}
-      variants={fadeUp}
-      initial="hidden"
-      animate={inView ? 'visible' : 'hidden'}
-      className="flex flex-col gap-4 group"
-      style={{ transformOrigin: 'center bottom' }}
-    >
-      <div
-        className="rounded-2xl overflow-hidden transition-all duration-300 group-hover:shadow-2xl"
-        style={{
-          transform: `rotate(${tilt}deg)`,
-          border: '2px solid #E5DDD5',
-          background: '#FFFFFF',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = 'rotate(0deg) translateY(-4px)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = `rotate(${tilt}deg)`;
-        }}
-      >
-        {children}
-      </div>
-      <div className="px-2">
-        <p className="text-sm font-bold mb-1" style={{ color: '#2D2D2D' }}>{title}</p>
-        <p className="text-xs leading-relaxed mb-2" style={{ color: '#5A5C58' }}>{caption}</p>
-        <span
-          className="inline-block text-xs font-bold px-2.5 py-1 rounded-full"
-          style={{ background: '#EDFAF4', color: '#1A6E3E' }}
+        <button
+          onClick={next}
+          disabled={index === maxIndex}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95"
+          style={{
+            background: index === maxIndex ? '#f3f4f6' : '#ffffff',
+            border: '2px solid #6B2D3E',
+            boxShadow: index === maxIndex ? 'none' : '3px 3px 0px #6B2D3E',
+            color: index === maxIndex ? '#d1d5db' : '#6B2D3E',
+            cursor: index === maxIndex ? 'not-allowed' : 'pointer',
+          }}
         >
-          {stat}
-        </span>
+          →
+        </button>
       </div>
-    </motion.div>
-  );
-}
-
-// ─── Stats Bar ────────────────────────────────────────────────────────────────
-
-interface StatItemProps {
-  value: number;
-  suffix: string;
-  label: string;
-  inView: boolean;
-}
-
-function StatItem({ value, suffix, label, inView }: StatItemProps) {
-  const count = useCountUp(value, 1600, inView);
-  return (
-    <div className="flex flex-col items-center gap-1 px-6 py-4">
-      <span className="text-2xl md:text-3xl font-extrabold text-white">
-        {count}{suffix}
-      </span>
-      <span className="text-xs md:text-sm text-center" style={{ color: 'rgba(255,255,255,0.6)' }}>
-        {label}
-      </span>
     </div>
   );
 }
 
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
-interface FAQItemProps {
-  question: string;
-  answer: string;
-}
+const FAQ_ITEMS = [
+  { q: 'AI của Omilearn có giống ChatGPT không?', a: 'Không hoàn toàn. AI của chúng mình được huấn luyện chuyên sâu để hiểu các giáo trình đại học tại Việt Nam, trả lời bám sát đề cương và phong cách ra đề của giảng viên.' },
+  { q: 'Dùng thử có tốn phí không?', a: 'Hoàn toàn miễn phí trong 14 ngày đầu. Không cần nhập thẻ tín dụng. Sau đó bạn có thể chọn gói phù hợp hoặc tiếp tục dùng gói Free với tính năng cơ bản.' },
+  { q: 'Tài liệu trên đây có tin cậy không?', a: 'Tất cả tài liệu đều được kiểm duyệt bởi đội ngũ học thuật của Omilearn và được đóng góp từ sinh viên xuất sắc của các trường đại học hàng đầu Việt Nam.' },
+  { q: 'Omilearn có hỗ trợ môn học nào?', a: 'Hiện tại Omilearn hỗ trợ hơn 200 môn học phổ biến tại 12+ trường đại học, bao gồm Giải tích, Vật lý, Lập trình, Kinh tế, Luật và nhiều hơn nữa.' },
+  { q: 'Dữ liệu cá nhân của mình có an toàn không?', a: 'Tuyệt đối an toàn. Chúng mình tuân thủ các tiêu chuẩn bảo mật quốc tế, mã hóa toàn bộ dữ liệu và không bao giờ chia sẻ thông tin cá nhân cho bên thứ ba.' },
+];
 
-function FAQItem({ question, answer }: FAQItemProps) {
-  const [open, setOpen] = useState(false);
-
+function FAQAccordion() {
+  const [open, setOpen] = useState<number | null>(0);
   return (
-    <div
-      className="rounded-xl overflow-hidden transition-all"
-      style={{ border: '1.5px solid #E5DDD5', background: '#FFFFFF' }}
-    >
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left transition-colors hover:bg-[#F9F6F2]"
-      >
-        <span className="text-sm font-bold" style={{ color: '#2D2D2D' }}>{question}</span>
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="flex-shrink-0 ml-3"
+    <div className="flex flex-col gap-3">
+      {FAQ_ITEMS.map((item, i) => (
+        <div
+          key={i}
+          className="overflow-hidden transition-all"
+          style={{
+            background: '#ffffff',
+            border: '1.5px solid #c9a0a8',
+            borderRadius: '14px',
+          }}
         >
-          <ChevronDown size={18} color="#9CA3AF" />
-        </motion.div>
-      </button>
-      <motion.div
-        initial={false}
-        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
-        transition={{ duration: 0.28, ease: 'easeOut' }}
-        style={{ overflow: 'hidden' }}
-      >
-        <p
-          className="px-6 pb-5 text-sm leading-relaxed"
-          style={{ color: '#5A5C58' }}
-        >
-          {answer}
-        </p>
-      </motion.div>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full flex items-center justify-between px-6 py-4 text-left"
+          >
+            <span className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>{item.q}</span>
+            <span className="text-lg shrink-0 ml-4 transition-transform" style={{ color: '#6B2D3E', transform: open === i ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              ⌄
+            </span>
+          </button>
+          <AnimatePresence initial={false}>
+            {open === i && (
+              <motion.div
+                key="content"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div className="border-t border-dashed px-6 pb-4 pt-3" style={{ borderColor: '#e5e0d8' }}>
+                  <p className="text-sm leading-relaxed" style={{ color: '#6b7280' }}>{item.a}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
     </div>
   );
 }
@@ -521,661 +251,653 @@ function FAQItem({ question, answer }: FAQItemProps) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const comparisonRef = useRef(null);
-  const showcaseRef = useRef(null);
-  const statsRef = useRef(null);
-  const testimonialsRef = useRef(null);
-  const manifestoRef = useRef(null);
-  const faqRef = useRef(null);
-  const ctaRef = useRef(null);
-
-  const comparisonInView = useInView(comparisonRef, { once: true, margin: '-80px' });
-  const showcaseInView = useInView(showcaseRef, { once: true, margin: '-80px' });
-  const statsInView = useInView(statsRef, { once: true, margin: '-80px' });
-  const testimonialsInView = useInView(testimonialsRef, { once: true, margin: '-80px' });
-  const manifestoInView = useInView(manifestoRef, { once: true, margin: '-80px' });
-  const faqInView = useInView(faqRef, { once: true, margin: '-80px' });
-  const ctaInView = useInView(ctaRef, { once: true, margin: '-80px' });
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F5F0EB' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#faf9f7' }}>
 
       {/* ── Navbar ──────────────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 w-full border-b border-black/8"
-        style={{ background: 'rgba(245,240,235,0.94)', backdropFilter: 'blur(14px)' }}
+        className="sticky top-0 z-50 w-full border-b"
+        style={{ background: 'rgba(250,249,247,0.97)', backdropFilter: 'blur(14px)', borderColor: '#e5e7eb' }}
       >
-        <div className="max-w-[1100px] mx-auto px-5 h-[62px] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/5 transition-colors"
-              aria-label="Menu"
-            >
-              <Menu size={20} color="#2D2D2D" />
-            </button>
-          </div>
-
+        <div className="max-w-[1100px] mx-auto px-5 h-[60px] flex items-center justify-between">
+          {/* Logo */}
           <span
-            className="text-xl italic"
-            style={{ fontFamily: 'Georgia, serif', color: '#6B2D3E', letterSpacing: '-0.01em' }}
+            className="text-xl font-black italic"
+            style={{ color: '#6B2D3E', fontFamily: 'Georgia, serif', letterSpacing: '-0.01em' }}
           >
             omilearn
           </span>
 
-          <div className="flex items-center gap-3">
+          {/* Nav links */}
+          <div className="hidden md:flex items-center gap-8">
+            {[
+              { label: 'Features', active: true },
+              { label: 'How it Works', active: false },
+              { label: 'Pricing', active: false },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href="#"
+                className="text-sm font-medium transition-colors hover:text-[#1a1a1a] flex flex-col items-center"
+                style={{ color: item.active ? '#6B2D3E' : '#6b7280' }}
+              >
+                {item.label}
+                {item.active && (
+                  <div className="mt-0.5 h-0.5 w-full rounded-full" style={{ background: '#6B2D3E' }} />
+                )}
+              </a>
+            ))}
+          </div>
+
+          {/* Auth buttons */}
+          <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-sm font-semibold transition-all hover:opacity-70"
-              style={{ color: '#5A5C58' }}
+              className="text-sm font-medium transition-colors hover:text-[#1a1a1a]"
+              style={{ color: '#6b7280' }}
             >
-              Đăng nhập
+              Sign In
             </Link>
-            <CTAButton className="text-xs py-2.5 px-5" />
+            <Link
+              href="/"
+              className="px-5 py-2 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
+              style={{
+                background: '#6B2D3E',
+                border: '2px solid #1a1a1a',
+                borderRadius: '10px',
+                boxShadow: '3px 3px 0px #1a1a1a',
+              }}
+            >
+              Sign Up
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 1 — HERO: Strong hook + Interactive demo
+          SECTION 1 — HERO
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="w-full max-w-[1100px] mx-auto px-5 pt-16 pb-24 flex flex-col md:flex-row items-start gap-14 md:gap-10">
+      <section className="w-full max-w-[1100px] mx-auto px-5 pt-14 pb-20 flex flex-col md:flex-row items-center gap-10 md:gap-14">
 
         {/* Left: text */}
         <motion.div
-          className="flex-1 flex flex-col items-start pt-2"
-          variants={fadeLeft}
-          initial="hidden"
-          animate="visible"
+          className="flex-1 flex flex-col items-start"
+          initial={{ opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
         >
           {/* Badge */}
           <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6"
-            style={{ background: '#EDFAF4', color: '#1A6E3E', border: '1.5px solid #3DBE7A' }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase mb-6"
+            style={{
+              background: '#fef08a',
+              color: '#1a1a1a',
+              border: '2px solid #1a1a1a',
+              transform: 'rotate(-2deg)',
+              boxShadow: '2px 2px 0px #1a1a1a',
+            }}
           >
-            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#3DBE7A' }} />
-            AI đang thay đổi cách học
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#f59e0b' }} />
+            Trợ lý AI thế hệ mới
           </div>
 
           {/* Headline */}
           <h1
-            className="font-extrabold leading-[1.2] mb-6"
-            style={{ fontSize: 'clamp(34px, 4.5vw, 50px)', color: '#2D2D2D' }}
+            className="font-extrabold leading-[1.18] mb-5"
+            style={{ fontSize: 'clamp(36px, 5vw, 54px)', color: '#1a1a1a', letterSpacing: '-0.02em' }}
           >
-            Sinh viên giỏi<br />
-            không học nhiều hơn.<br />
-            Họ học{' '}
-            <span style={{ color: '#E8887A', fontStyle: 'italic' }}>thông minh hơn.</span>
+            Học tập thông<br />
+            minh<br />
+            cùng{' '}
+            <span style={{ color: '#6B2D3E', fontStyle: 'italic' }}>AI<br />Partner</span>
           </h1>
 
           {/* Subtitle */}
-          <p
-            className="text-base mb-8 leading-relaxed"
-            style={{ color: '#5A5C58', maxWidth: 420 }}
-          >
-            Upload tài liệu → AI tạo lộ trình cá nhân → quiz, flashcard, mindmap sẵn sàng.{' '}
-            <strong style={{ color: '#2D2D2D' }}>Trong 30 giây.</strong>
+          <p className="text-sm mb-8 leading-relaxed" style={{ color: '#6b7280', maxWidth: 360 }}>
+            Omilearn giúp bạn lập kế hoạch, quản lý tài liệu và bứt phá kết
+            quả học tập với trợ lý AI cá nhân.
           </p>
 
           {/* CTA */}
-          <CTAButton className="mb-4 text-base py-4 px-8" />
-
-          {/* Trust line */}
-          <p className="text-sm" style={{ color: '#9CA3AF' }}>
-            Được sinh viên từ{' '}
-            <strong style={{ color: '#5A5C58' }}>Bách Khoa</strong>,{' '}
-            <strong style={{ color: '#5A5C58' }}>Kinh Tế</strong>,{' '}
-            <strong style={{ color: '#5A5C58' }}>FPT</strong>... tin dùng
-          </p>
-        </motion.div>
-
-        {/* Right: interactive demo */}
-        <motion.div
-          className="flex-shrink-0 w-full md:w-[420px]"
-          variants={fadeRight}
-          initial="hidden"
-          animate="visible"
-        >
-          <InteractiveDemo />
-        </motion.div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 2 — BEFORE vs AFTER
-      ══════════════════════════════════════════════════════════════════ */}
-      <section
-        ref={comparisonRef}
-        className="w-full max-w-[1100px] mx-auto px-5 pb-24"
-      >
-        <motion.div
-          className="text-center mb-12"
-          variants={fadeUp}
-          initial="hidden"
-          animate={comparisonInView ? 'visible' : 'hidden'}
-        >
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-3" style={{ color: '#2D2D2D' }}>
-            Bạn đang ở bên nào?
-          </h2>
-          <p className="text-base" style={{ color: '#5A5C58' }}>
-            Hai cách học. Hai kết quả khác nhau.
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-start">
-
-          {/* Left — Học kiểu cũ */}
-          <motion.div
-            custom={0}
-            variants={fadeUp}
-            initial="hidden"
-            animate={comparisonInView ? 'visible' : 'hidden'}
-            className="rounded-2xl p-6 md:p-8 flex flex-col gap-4"
-            style={{
-              background: '#F5F5F5',
-              border: '2px dashed #D1CCC6',
-            }}
-          >
-            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>
-              Học kiểu cũ
-            </p>
-            <div className="flex flex-col gap-3">
-              {[
-                { icon: '—', text: 'Đọc 200 trang → 2 ngày' },
-                { icon: '—', text: 'Tự tóm tắt → quên 80% sau 1 tuần' },
-                { icon: '—', text: 'Tự làm flashcard → mất 3 tiếng' },
-                { icon: '—', text: 'Ôn thi → không biết bắt đầu từ đâu' },
-              ].map((item) => (
-                <div key={item.text} className="flex items-start gap-3">
-                  <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
-                  <span className="text-sm" style={{ color: '#9CA3AF' }}>{item.text}</span>
-                </div>
-              ))}
-            </div>
-            <div
-              className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
-              style={{ background: '#EBEBEB', color: '#9CA3AF' }}
-            >
-              Kết quả: &quot;Hy vọng qua môn&quot;
-            </div>
-          </motion.div>
-
-          {/* Right — Học với Omilearn */}
-          <motion.div
-            custom={1}
-            variants={fadeUp}
-            initial="hidden"
-            animate={comparisonInView ? 'visible' : 'hidden'}
-            className="rounded-2xl p-6 md:p-8 flex flex-col gap-4"
-            style={{
-              background: '#FFFFFF',
-              border: '2px solid #3DBE7A',
-              boxShadow: '0 4px 32px rgba(61,190,122,0.12)',
-              transform: 'scale(1.02)',
-            }}
-          >
-            <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#3DBE7A' }}>
-              Học với Omilearn
-            </p>
-            <div className="flex flex-col gap-3">
-              {[
-                { icon: '→', text: 'AI tóm tắt 200 trang → 5 phút' },
-                { icon: '→', text: 'Spaced repetition → nhớ 95% sau 1 tháng' },
-                { icon: '→', text: 'Auto flashcard + quiz → sẵn sàng ngay' },
-                { icon: '→', text: 'Lộ trình cá nhân → biết chính xác học gì' },
-              ].map((item) => (
-                <div key={item.text} className="flex items-start gap-3">
-                  <span className="text-base flex-shrink-0 mt-0.5">{item.icon}</span>
-                  <span className="text-sm font-medium" style={{ color: '#2D2D2D' }}>{item.text}</span>
-                </div>
-              ))}
-            </div>
-            <div
-              className="mt-2 px-4 py-3 rounded-xl text-sm font-bold"
-              style={{ background: '#EDFAF4', color: '#1A6E3E' }}
-            >
-              Kết quả: &quot;Top 10% lớp&quot;
-            </div>
-          </motion.div>
-        </div>
-
-        {/* CTA below comparison */}
-        <motion.div
-          className="text-center mt-10"
-          custom={2}
-          variants={fadeUp}
-          initial="hidden"
-          animate={comparisonInView ? 'visible' : 'hidden'}
-        >
           <Link
             href="/"
-            className="text-sm font-semibold transition-all hover:opacity-60"
-            style={{ color: '#E8887A', textDecoration: 'underline', textUnderlineOffset: 4 }}
+            className="inline-flex items-center gap-2 px-7 py-3 text-sm font-bold text-white transition-all hover:opacity-90 hover:-translate-y-0.5 active:scale-95 mb-6"
+            style={{
+              background: '#2d5a3d',
+              border: '2.5px solid #1a1a1a',
+              borderRadius: '12px',
+              boxShadow: '3px 3px 0px #1a1a1a',
+            }}
           >
-            Chuyển sang bên phải →
+            Khám phá ngay
           </Link>
-        </motion.div>
-      </section>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 3 — PRODUCT SHOWCASE
-      ══════════════════════════════════════════════════════════════════ */}
-      <section
-        ref={showcaseRef}
-        className="w-full max-w-[1100px] mx-auto px-5 pb-24"
-      >
-        <motion.div
-          className="text-center mb-14"
-          variants={fadeUp}
-          initial="hidden"
-          animate={showcaseInView ? 'visible' : 'hidden'}
-        >
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-3" style={{ color: '#2D2D2D' }}>
-            Mọi thứ bạn cần, trong một nơi.
-          </h2>
-          <p className="text-base" style={{ color: '#5A5C58', lineHeight: 1.7 }}>
-            Đây là giao diện thật. Không phải mockup quảng cáo.
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 items-start">
-          <ProductCard
-            title="Mindmap thông minh"
-            caption="Tổ chức kiến thức trực quan"
-            stat="Hiểu sâu hơn 3x"
-            tilt={1}
-            delay={0}
-            inView={showcaseInView}
-          >
-            <MindmapScreenshot />
-          </ProductCard>
-
-          <ProductCard
-            title="Ôn tập 4 cách"
-            caption="Quiz • Flashcard • Tự luận • Dạy AI"
-            stat="Nhớ lâu hơn 95%"
-            tilt={-1}
-            delay={1}
-            inView={showcaseInView}
-          >
-            <FlashcardScreenshot />
-          </ProductCard>
-
-          <ProductCard
-            title="AI Tutor riêng"
-            caption="Hỏi bất cứ lúc nào, bất cứ điều gì"
-            stat="Tiết kiệm 4 giờ/tuần"
-            tilt={1}
-            delay={2}
-            inView={showcaseInView}
-          >
-            <ChatScreenshot />
-          </ProductCard>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 4 — SOCIAL PROOF: Stats + Testimonials
-      ══════════════════════════════════════════════════════════════════ */}
-
-      {/* Stats bar */}
-      <section ref={statsRef} className="w-full pb-16">
-        <div
-          className="w-full py-2"
-          style={{ background: '#2D2D2D' }}
-        >
-          <div className="max-w-[1100px] mx-auto px-5">
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
-              <StatItem value={12} suffix="+" label="trường đại học" inView={statsInView} />
-              <StatItem value={4} suffix=" giờ" label="tiết kiệm/tuần" inView={statsInView} />
-              <StatItem value={98} suffix="%" label="muốn giới thiệu" inView={statsInView} />
-              <StatItem value={10} suffix="%" label="top lớp trung bình" inView={statsInView} />
+          {/* Social proof */}
+          <div className="flex items-center gap-3">
+            {/* Avatar stack */}
+            <div className="flex -space-x-2">
+              {['#6B2D3E', '#7C6FCD', '#3DBE7A'].map((color, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white"
+                  style={{ background: color }}
+                >
+                  {['M', 'H', 'T'][i]}
+                </div>
+              ))}
             </div>
+            <p className="text-xs" style={{ color: '#9ca3af' }}>
+              Gia nhập cùng{' '}
+              <span className="font-semibold" style={{ color: '#6b7280' }}>10k+</span>{' '}
+              học viên
+            </p>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Right: robot illustration */}
+        <motion.div
+          className="flex-shrink-0 w-full md:w-[420px]"
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, ease: 'easeOut', delay: 0.1 }}
+        >
+          <RobotIllustration />
+        </motion.div>
       </section>
 
-      {/* Testimonials */}
-      <section
-        ref={testimonialsRef}
-        className="w-full max-w-[1100px] mx-auto px-5 pb-24"
-      >
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 2 — PAIN POINTS
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full py-16 px-5" style={{ background: '#FFF9EC' }}>
+        <div className="max-w-[1100px] mx-auto">
         <motion.div
           className="text-center mb-12"
           variants={fadeUp}
           initial="hidden"
-          animate={testimonialsInView ? 'visible' : 'hidden'}
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
         >
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-2" style={{ color: '#2D2D2D' }}>
-            Sinh viên thật. Kết quả thật.
+          <h2
+            className="font-extrabold"
+            style={{ fontSize: 'clamp(22px, 3vw, 34px)', color: '#6B2D3E', letterSpacing: '-0.01em' }}
+          >
+            Bạn có đang rơi vào vòng lặp này không?
           </h2>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             {
-              quote: 'Upload slide Giải Tích, 2 phút sau có lộ trình + flashcard. Trước mất cả buổi tối.',
-              name: 'Minh Anh',
-              school: 'Bách Khoa HN',
-              badge: 'Từ 6.5 → 8.7 điểm thi',
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="17" rx="3" fill="#c2185b" opacity="0.15" />
+                  <rect x="7" y="2" width="2" height="4" rx="1" fill="#c2185b" />
+                  <rect x="15" y="2" width="2" height="4" rx="1" fill="#c2185b" />
+                  <path d="M7 11h10M7 15h6" stroke="#c2185b" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              ),
+              iconBg: '#fce4ec',
+              title: 'Lcp kế hoạch xong… rồi thôi',
+              desc: 'Viết hàng dài To-do list nhưng cuối ngày nhìn lại vẫn chưa làm được gì vì quá ngợp.',
             },
             {
-              quote: 'Tính năng quiz tự động biến ôn thi thành game. Không thấy chán nữa.',
-              name: 'Hoàng Nam',
-              school: 'Kinh Tế QD',
-              badge: 'GPA 2.8 → 3.5',
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" fill="#f59e0b" opacity="0.15" />
+                  <circle cx="12" cy="12" r="9" stroke="#f59e0b" strokeWidth="1.8" />
+                  <path d="M12 8v4l3 2" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              ),
+              iconBg: '#fff8e1',
+              title: 'Dùng AI không hiệu quả',
+              desc: 'Hỏi ChatGPT nhưng câu trả lời quá chung chung, không sát với nội dung ôn tập thực tế.',
             },
             {
-              quote: "'Dạy lại cho AI' — phải giải thích bằng lời mình, mới thấy chỗ nào chưa hiểu.",
-              name: 'Thu Hà',
-              school: 'Bách Khoa ĐN',
-              badge: 'Đồ án nhóm 9.5/10',
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" fill="#0891b2" opacity="0.12" />
+                  <path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0z" fill="#0891b2" opacity="0.5" />
+                  <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="#0891b2" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              ),
+              iconBg: '#e0f7fa',
+              title: 'Mất buổi tìm tài liệu',
+              desc: 'Tài liệu nằm rải rác ở khắp nơi: Drive, Facebook, Group lớp… không thể quản lý tập trung.',
             },
-          ].map((t, i) => (
+          ].map((feature, i) => (
             <motion.div
-              key={t.name}
+              key={feature.title}
               custom={i}
               variants={fadeUp}
               initial="hidden"
-              animate={testimonialsInView ? 'visible' : 'hidden'}
-              className="flex flex-col gap-4 p-6 rounded-2xl transition-all hover:shadow-lg"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-60px' }}
+              className="flex flex-col gap-4 p-6 transition-all hover:-translate-y-1"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #E5DDD5',
+                background: '#fdfaf6',
+                border: '1.5px solid #c9a0a8',
+                borderRadius: '20px',
+                boxShadow: '4px 4px 0px #6B2D3E',
               }}
             >
-              <div className="flex items-center gap-0.5">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={13} fill="#F5C542" color="#F5C542" />
-                ))}
-              </div>
-
-              <p className="text-sm flex-1" style={{ color: '#5A5C58', lineHeight: 1.7 }}>
-                &ldquo;{t.quote}&rdquo;
-              </p>
-
-              {/* Green badge with result */}
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold"
-                style={{ background: '#EDFAF4', color: '#1A6E3E', border: '1px solid #3DBE7A' }}
+                className="w-12 h-12 flex items-center justify-center rounded-full"
+                style={{ background: feature.iconBg }}
               >
-                ✓ {t.badge}
+                {feature.icon}
               </div>
-
-              <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: '#F0EBE3' }}>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                  style={{ background: '#7C6FCD' }}
-                >
-                  {t.name[0]}
-                </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>{t.name}</p>
-                  <p className="text-xs" style={{ color: '#9CA3AF' }}>{t.school}</p>
-                </div>
+              <div>
+                <p className="text-base font-bold mb-2" style={{ color: '#1a1a1a' }}>
+                  {feature.title}
+                </p>
+                <p className="text-sm leading-relaxed" style={{ color: '#6b7280' }}>
+                  {feature.desc}
+                </p>
               </div>
             </motion.div>
           ))}
         </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 5 — MANIFESTO: Tại sao bây giờ? (cinematic reveal)
-      ══════════════════════════════════════════════════════════════════ */}
-      <section
-        ref={manifestoRef}
-        className="w-full py-32 relative overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, #F5F0EB 0%, #EDE5DB 50%, #F5F0EB 100%)' }}
-      >
-        {/* Decorative subtle lines */}
-        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.04 }}>
-          <div className="absolute top-1/4 left-0 right-0 h-px bg-[#2D2D2D]" />
-          <div className="absolute top-2/4 left-0 right-0 h-px bg-[#2D2D2D]" />
-          <div className="absolute top-3/4 left-0 right-0 h-px bg-[#2D2D2D]" />
-        </div>
-
-        <div className="max-w-[780px] mx-auto px-5 text-center relative z-10">
-          {(() => {
-            const lines = [
-              { text: 'Kỷ nguyên AI đã thay đổi mọi ngành nghề.', type: 'normal' as const },
-              { text: 'Giáo dục là ngành tiếp theo.', type: 'normal' as const },
-              { text: '', type: 'spacer' as const },
-              { text: 'Sinh viên giỏi nhất không phải người học nhiều nhất.', type: 'normal' as const },
-              { text: 'Mà là người biết dùng đúng công cụ.', type: 'bold' as const },
-              { text: '', type: 'spacer' as const },
-            ];
-            return lines.map((line, i) => {
-              if (line.type === 'spacer') return <div key={i} className="h-6" />;
-              return (
-                <motion.p
-                  key={i}
-                  className="italic"
-                  style={{
-                    fontFamily: 'Georgia, serif',
-                    fontSize: 'clamp(20px, 2.5vw, 28px)',
-                    color: '#2D2D2D',
-                    lineHeight: 2,
-                    fontWeight: line.type === 'bold' ? 600 : 400,
-                  }}
-                  initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
-                  animate={manifestoInView ? {
-                    opacity: 1,
-                    y: 0,
-                    filter: 'blur(0px)',
-                    transition: { duration: 0.8, delay: i * 0.3, ease: 'easeOut' },
-                  } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
-                >
-                  {line.text}
-                </motion.p>
-              );
-            });
-          })()}
-
-          {/* Last 2 lines with color highlights — extra delay */}
-          <div className="h-6" />
-          <motion.p
-            className="italic"
-            style={{
-              fontFamily: 'Georgia, serif',
-              fontSize: 'clamp(20px, 2.5vw, 28px)',
-              color: '#2D2D2D',
-              lineHeight: 2,
-            }}
-            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
-            animate={manifestoInView ? {
-              opacity: 1,
-              y: 0,
-              filter: 'blur(0px)',
-              transition: { duration: 0.8, delay: 1.8, ease: 'easeOut' },
-            } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
-          >
-            Bạn có{' '}
-            <motion.strong
-              style={{ fontStyle: 'normal', color: '#E8887A', position: 'relative', display: 'inline-block' }}
-              initial={{ opacity: 0 }}
-              animate={manifestoInView ? {
-                opacity: 1,
-                transition: { duration: 0.5, delay: 2.4 },
-              } : { opacity: 0 }}
-            >
-              168 giờ
-              <motion.span
-                className="absolute -bottom-1 left-0 h-[3px] rounded-full"
-                style={{ background: '#E8887A' }}
-                initial={{ width: '0%' }}
-                animate={manifestoInView ? {
-                  width: '100%',
-                  transition: { duration: 0.6, delay: 2.7, ease: 'easeOut' },
-                } : { width: '0%' }}
-              />
-            </motion.strong>{' '}
-            mỗi tuần.
-          </motion.p>
-
-          <motion.p
-            className="italic"
-            style={{
-              fontFamily: 'Georgia, serif',
-              fontSize: 'clamp(20px, 2.5vw, 28px)',
-              color: '#2D2D2D',
-              lineHeight: 2,
-            }}
-            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
-            animate={manifestoInView ? {
-              opacity: 1,
-              y: 0,
-              filter: 'blur(0px)',
-              transition: { duration: 0.8, delay: 2.1, ease: 'easeOut' },
-            } : { opacity: 0, y: 30, filter: 'blur(8px)' }}
-          >
-            Omilearn giúp mỗi giờ đáng giá{' '}
-            <motion.strong
-              style={{ fontStyle: 'normal', color: '#3DBE7A', position: 'relative', display: 'inline-block' }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={manifestoInView ? {
-                opacity: 1,
-                scale: 1,
-                transition: { duration: 0.5, delay: 3.0, ease: 'backOut' },
-              } : { opacity: 0, scale: 0.8 }}
-            >
-              gấp đôi.
-              <motion.span
-                className="absolute -bottom-1 left-0 h-[3px] rounded-full"
-                style={{ background: '#3DBE7A' }}
-                initial={{ width: '0%' }}
-                animate={manifestoInView ? {
-                  width: '100%',
-                  transition: { duration: 0.6, delay: 3.3, ease: 'easeOut' },
-                } : { width: '0%' }}
-              />
-            </motion.strong>
-          </motion.p>
-
-          {/* CTA fades in last */}
-          <motion.div
-            className="mt-14"
-            initial={{ opacity: 0 }}
-            animate={manifestoInView ? {
-              opacity: 1,
-              transition: { duration: 0.6, delay: 3.6 },
-            } : { opacity: 0 }}
-          >
-            <Link
-              href="/"
-              className="text-sm font-semibold transition-all hover:opacity-60"
-              style={{ color: '#2D2D2D', textDecoration: 'underline', textUnderlineOffset: 4 }}
-            >
-              Bắt đầu miễn phí →
-            </Link>
-          </motion.div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SECTION 6 — FAQ: Objection handler
+          SECTION 3 — HOW IT WORKS
       ══════════════════════════════════════════════════════════════════ */}
-      <section
-        ref={faqRef}
-        className="w-full max-w-[720px] mx-auto px-5 pb-24"
-      >
-        <motion.div
-          className="text-center mb-10"
-          variants={fadeUp}
-          initial="hidden"
-          animate={faqInView ? 'visible' : 'hidden'}
-        >
-          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#2D2D2D' }}>
-            Câu hỏi thường gặp
-          </h2>
-        </motion.div>
-
-        <motion.div
-          className="flex flex-col gap-3"
-          variants={fadeUp}
-          initial="hidden"
-          animate={faqInView ? 'visible' : 'hidden'}
-          custom={1}
-        >
-          <FAQItem
-            question="Tôi tự học cũng được mà?"
-            answer='Được. Nhưng bạn có 168 giờ/tuần. AI giúp mỗi giờ hiệu quả gấp đôi. Câu hỏi không phải "có cần không" — mà là "tại sao chưa?"'
-          />
-          <FAQItem
-            question="AI có thay thế việc học không?"
-            answer="Không. Omilearn không học hộ bạn. Bạn vẫn đọc, hiểu, ôn. AI chỉ loại bỏ phần lãng phí — tổng hợp tài liệu, tạo flashcard, lập kế hoạch. Phần khó vẫn là của bạn."
-          />
-          <FAQItem
-            question="Mình không giỏi công nghệ..."
-            answer="Upload file. Bấm nút. Xong. Nếu biết dùng Zalo, biết dùng Omilearn."
-          />
-        </motion.div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 7 — FINAL CTA: Confident close
-      ══════════════════════════════════════════════════════════════════ */}
-      <section
-        ref={ctaRef}
-        className="w-full px-5 pb-24"
-        style={{ background: 'linear-gradient(180deg, #F5F0EB 0%, #EDE5DB 100%)' }}
-      >
-        <div className="max-w-[1100px] mx-auto pt-8">
+      <section className="w-full py-20 px-5" style={{ background: '#FAF3E1' }}>
+        <div className="max-w-[1100px] mx-auto">
           <motion.div
+            className="text-center mb-12"
             variants={fadeUp}
             initial="hidden"
-            animate={ctaInView ? 'visible' : 'hidden'}
-            className="flex justify-center"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
           >
-            <div
-              className="w-full max-w-[520px] rounded-3xl px-10 py-14 flex flex-col items-center text-center gap-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+            <h2
+              className="font-black uppercase"
+              style={{ fontSize: 'clamp(26px, 4vw, 48px)', color: '#6C313F', letterSpacing: '-0.01em' }}
+            >
+              OMILEARN hoạt động như thế nào?
+            </h2>
+            <p className="text-sm leading-relaxed mt-3" style={{ color: '#6b7280', maxWidth: 480, margin: '12px auto 0' }}>
+              Chúng mình biến những kiến thức khô khan thành hành trình chinh phục đầy cảm hứng.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+            {[
+              { img: '/image1.png', title: 'AI lên lịch', titleColor: '#1a1a1a', desc: 'Chỉ cần nhập deadline, AI tự động chia nhỏ task và nhắc nhở bạn học mỗi ngày.' },
+              { img: '/image2.png', title: 'Học cùng AI', titleColor: '#6B2D3E', desc: 'Giải đáp mọi thắc mắc 24/7 theo đúng giáo trình và slide bài giảng của bạn.' },
+              { img: '/image3.png', title: 'Thư viện curated', titleColor: '#6B2D3E', desc: 'Tổng hợp tài liệu chất lượng nhất từ các anh chị khóa trên và giảng viên.' },
+              { img: '/image4.png', title: 'Pomodoro cùng bạn', titleColor: '#6B2D3E', desc: 'Phòng học co giúp bạn tập trung cao độ cùng cộng đồng sinh viên toàn quốc.' },
+            ].map((card, i) => (
+              <motion.div
+                key={card.title}
+                custom={i}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+                className="flex flex-col overflow-hidden transition-all hover:-translate-y-1"
+                style={{
+                  background: '#ffffff',
+                  border: '2px solid #6B2D3E',
+                  borderRadius: '20px',
+                  boxShadow: '4px 4px 0px #6B2D3E',
+                }}
+              >
+                <div style={{ aspectRatio: '4/3', overflow: 'hidden', borderRadius: '18px 18px 0 0' }}>
+                  <img src={card.img} alt={card.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-5 flex flex-col gap-2">
+                  <p className="font-black text-base" style={{ color: card.titleColor }}>{card.title}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: '#6b7280' }}>{card.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 4 — COMPARISON
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full py-20 px-5" style={{ background: '#FAF9F7' }}>
+        <div className="max-w-250 mx-auto">
+          {/* Title */}
+          <motion.h2
+            className="text-center font-black mb-12"
+            style={{ fontSize: 'clamp(22px, 3.5vw, 38px)', color: '#1a1a1a' }}
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+          >
+            Hai cách học. Hai kết quả khác nhau.
+          </motion.h2>
+
+          {/* Two columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+
+            {/* Left — Học kiểu cũ */}
+            <motion.div
+              variants={fadeUp}
+              custom={0}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-60px' }}
+              className="flex flex-col gap-5 p-7 h-full"
               style={{
-                background: '#2D2D2D',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
-                willChange: 'transform',
+                background: 'transparent',
+                border: '2px dashed #6B2D3E',
+                borderRadius: '20px',
               }}
             >
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white">
-                Sẵn sàng học thông minh hơn?
-              </h2>
-
-              <CTAButton light className="text-base py-4 px-8" />
-
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                Miễn phí. Không cần thẻ tín dụng.
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#6B2D3E' }}>
+                Học kiểu cũ
               </p>
-            </div>
-          </motion.div>
+              <ul className="flex flex-col gap-3">
+                {[
+                  'Đọc 200 trang → 2 ngày',
+                  'Tự tóm tắt → quên 80% sau 1 tuần',
+                  'Tự làm flashcard → mất 3 tiếng',
+                  'Ôn thi → không biết bắt đầu từ đâu',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm" style={{ color: '#6b7280' }}>
+                    <span className="mt-1.5 w-5 h-0.5 shrink-0 rounded-full" style={{ background: '#9ca3af' }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="mt-auto px-4 py-3 rounded-xl text-sm"
+                style={{ border: '1.5px dashed #d1d5db', color: '#9ca3af' }}
+              >
+                Kết quả: &quot;Hy vọng qua môn&quot;
+              </div>
+            </motion.div>
+
+            {/* Right — Học với Omilearn */}
+            <motion.div
+              variants={fadeUp}
+              custom={1}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-60px' }}
+              className="flex flex-col gap-5 p-7 h-full"
+              style={{
+                background: '#ffffff',
+                border: '2.5px solid #2d5a3d',
+                borderRadius: '20px',
+                boxShadow: '5px 5px 0px #2d5a3d',
+              }}
+            >
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#2d5a3d' }}>
+                Học với Omilearn
+              </p>
+              <ul className="flex flex-col gap-3">
+                {[
+                  'AI tóm tắt 200 trang → 5 phút',
+                  'Spaced repetition → nhớ 95% sau 1 tháng',
+                  'Auto flashcard + quiz → sẵn sàng ngay',
+                  'Lộ trình cá nhân → biết chính xác học gì',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm font-medium" style={{ color: '#1a1a1a' }}>
+                    <span className="mt-0.5 text-base shrink-0" style={{ color: '#2d5a3d' }}>→</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="mt-auto px-4 py-3 rounded-xl text-sm font-bold"
+                style={{ background: '#dcfce7', color: '#166534', border: '1.5px solid #86efac' }}
+              >
+                Kết quả: &quot;Top 10% lớp&quot;
+              </div>
+            </motion.div>
+
+          </div>
         </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 5 — 3 STEPS + STATS
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full overflow-hidden">
+        {/* Top — maroon bg + 3 steps */}
+        <div className="w-full px-5 pt-16 pb-24 relative" style={{ background: '#7d3f55' }}>
+          <div className="max-w-250 mx-auto">
+            <motion.h2
+              className="text-center font-black uppercase text-white mb-16"
+              style={{ fontSize: 'clamp(22px, 4vw, 42px)', letterSpacing: '0.02em' }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+            >
+              Bắt đầu chỉ trong 3 bước
+            </motion.h2>
+
+            {/* Steps + wavy line */}
+            <div className="relative">
+              {/* SVG wavy connector */}
+              <svg
+                className="absolute top-8 left-0 w-full"
+                height="40"
+                viewBox="0 0 1000 40"
+                preserveAspectRatio="none"
+                fill="none"
+              >
+                <path
+                  d="M0 30 Q250 0 500 20 Q750 40 1000 10"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </svg>
+
+              <div className="grid grid-cols-3 gap-6 relative z-10">
+                {[
+                  {
+                    num: '1',
+                    bg: '#b8e8c8',
+                    color: '#2d5a3d',
+                    title: 'Nhập deadline',
+                    desc: 'Tải file giáo trình hoặc nhập ngày thi của bạn vào hệ thống.',
+                  },
+                  {
+                    num: '2',
+                    bg: '#fde8c0',
+                    color: '#92400e',
+                    title: 'Học theo lộ trình',
+                    desc: 'Nhận bài học và bài tập hàng ngày được AI cá nhân hóa.',
+                  },
+                  {
+                    num: '3',
+                    bg: '#ffd6d6',
+                    color: '#9b1c1c',
+                    title: 'Weekly Review',
+                    desc: 'Đánh giá tiến độ hàng tuần để đảm bảo bạn luôn đi đúng hướng.',
+                  },
+                ].map((step, i) => (
+                  <motion.div
+                    key={step.num}
+                    custom={i}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: '-60px' }}
+                    className="flex flex-col items-center text-center gap-4"
+                  >
+                    {/* Number badge */}
+                    <div
+                      className="w-16 h-16 flex items-center justify-center text-2xl font-black"
+                      style={{
+                        background: step.bg,
+                        color: step.color,
+                        borderRadius: '14px',
+                        border: '2px solid rgba(255,255,255,0.3)',
+                      }}
+                    >
+                      {step.num}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-base mb-1">{step.title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{step.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom — dark stats bar */}
+        <div className="w-full px-5 py-14" style={{ background: '#1a1a1a' }}>
+          <div className="max-w-250 mx-auto grid grid-cols-2 md:grid-cols-4 gap-0">
+            {[
+              { value: '12+', label: 'TRƯỜNG ĐẠI HỌC' },
+              { value: '4 giờ', label: 'TIẾT KIỆM/TUẦN' },
+              { value: '98%', label: 'MUỐN GIỚI THIỆU' },
+              { value: '10%', label: 'TOP LỚP TRUNG BÌNH' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                custom={i}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+                className="flex flex-col items-center text-center px-6 py-2"
+                style={{
+                  borderRight: i < 3 ? '1.5px dashed rgba(255,255,255,0.15)' : 'none',
+                }}
+              >
+                <span
+                  className="font-black text-white mb-2"
+                  style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1 }}
+                >
+                  {stat.value}
+                </span>
+                <span
+                  className="text-[11px] font-bold uppercase tracking-widest"
+                  style={{ color: 'rgba(255,255,255,0.45)' }}
+                >
+                  {stat.label}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 6 — TESTIMONIALS
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full py-20 px-5" style={{ background: '#FAF3E1' }}>
+        <div className="max-w-250 mx-auto">
+          <motion.h2
+            className="text-center font-black uppercase mb-14"
+            style={{ fontSize: 'clamp(22px, 4vw, 42px)', color: '#1a1a1a', letterSpacing: '0.02em' }}
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+          >
+            Sinh viên thật kết quả thật
+          </motion.h2>
+
+          <TestimonialCarousel />
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 7 — FAQ
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full py-20 px-5" style={{ background: '#F5EFE6' }}>
+        <div className="max-w-180 mx-auto">
+          <motion.h2
+            className="text-center font-bold mb-12"
+            style={{ fontSize: 'clamp(22px, 3vw, 36px)', color: '#6B2D3E' }}
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+          >
+            Giải đáp thắc mắc
+          </motion.h2>
+          <FAQAccordion />
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SECTION 8 — FINAL CTA
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="w-full py-24 px-5 flex flex-col items-center" style={{ background: '#FAF9F7' }}>
+        {/* Stacked banner */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px' }}
+          className="relative mb-10"
+          style={{ width: 'min(600px, 90vw)' }}
+        >
+          <img
+            src="/image.png"
+            alt="Sẵn sàng bứt phá cùng Omilearn?"
+            className="w-full h-auto"
+            style={{ borderRadius: '12px' }}
+          />
+        </motion.div>
+
+        {/* Sub text */}
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px' }}
+          className="text-center font-bold uppercase tracking-widest mb-8 text-xs"
+          style={{ color: '#6B2D3E' }}
+        >
+          Tham gia cùng 10,000+ sinh viên đang học<br />tập hiệu quả mỗi ngày.
+        </motion.p>
+
+        {/* CTA Button */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px' }}
+        >
+          <Link
+            href="/"
+            className="inline-flex items-center px-12 py-4 font-black uppercase tracking-widest text-sm transition-all hover:opacity-90 active:scale-95"
+            style={{
+              background: '#2d5a3d',
+              color: '#ffffff',
+              border: '2.5px solid #632D3A',
+              borderRadius: '14px',
+              boxShadow: '5px 5px 0px #632D3A',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Đăng ký ngay – Miễn phí
+          </Link>
+        </motion.div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer
         className="w-full border-t"
-        style={{
-          borderColor: '#E5DDD5',
-          borderStyle: 'dashed',
-          background: '#F5F0EB',
-        }}
+        style={{ borderColor: '#e5e7eb', background: '#faf9f7' }}
       >
-        <div className="max-w-[1100px] mx-auto px-5 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col items-center md:items-start gap-1">
-            <span
-              className="text-lg italic"
-              style={{ fontFamily: 'Georgia, serif', color: '#6B2D3E' }}
-            >
-              omilearn
-            </span>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>
-              © 2025 Omilearn. Mọi quyền được bảo lưu.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-5 flex-wrap justify-center">
+        <div className="max-w-[1100px] mx-auto px-5 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <span className="text-base font-bold" style={{ color: '#1a1a1a' }}>omilearn</span>
+          <p className="text-xs" style={{ color: '#9ca3af' }}>© 2025 Omilearn. Mọi quyền được bảo lưu.</p>
+          <div className="flex items-center gap-5">
             {['Chính sách bảo mật', 'Điều khoản', 'Liên hệ'].map((link) => (
-              <a
-                key={link}
-                href="#"
-                className="text-xs transition-colors hover:text-[#2D2D2D]"
-                style={{ color: '#9CA3AF' }}
-              >
+              <a key={link} href="#" className="text-xs transition-colors hover:text-[#1a1a1a]" style={{ color: '#9ca3af' }}>
                 {link}
               </a>
             ))}
