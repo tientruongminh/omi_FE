@@ -437,24 +437,62 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     else setExpandedNodeIds([]);
   }, []);
 
-  // ── Create AI node from expanded view ───────────────────────
+  // ── Create AI node from expanded view (keeps source panel open) ──
   const handleCreateAINode = useCallback((nodeId: string, type: 'ai-response' | 'review') => {
-    handleContextAction(type === 'review' ? 'ai-review' : 'ai-chat', nodeId);
-  }, [handleContextAction]);
+    const target = nodes.find((n) => n.id === nodeId);
+    if (!target) return;
+    
+    const connectedIds = edges
+      .filter((e) => e.from === target.id || e.to === target.id)
+      .map((e) => e.from === target.id ? e.to : e.from);
+    const connectedNodes = nodes.filter((n) => connectedIds.includes(n.id));
+    
+    let contextText = '';
+    if (target.content) contextText += target.content;
+    connectedNodes.forEach((cn) => {
+      if (cn.content) contextText += `\n\n[${cn.title}]: ${cn.content}`;
+    });
+    
+    const action = type === 'review' ? 'ai-review' : 'ai-chat';
+    const paragraphs = target.docType === 'text' ? (documentTextContent[target.docId ?? ''] ?? []) : [videoTranscripts[target.docId ?? ''] ?? ''];
+    const aiText = action === 'ai-chat'
+      ? `AI đang phân tích "${target.title}"...\n\n${contextText || (paragraphs[0]?.slice(0, 200) ?? '')}...${connectedNodes.length > 0 ? `\n\n(Dựa trên ${connectedNodes.length} node liên kết)` : ''}`
+      : 'Nội dung ôn tập được tạo. Bao gồm quiz, flashcard và câu hỏi tự luận.';
+    const newNode: CanvasNode = {
+      id: genId(), type: 'ai-response',
+      title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${target.title.slice(0, 25)}`,
+      content: aiText,
+      x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60,
+      width: 190, height: 50, parentId: target.id,
+    };
+    setNodes((p) => [...p, newNode]);
+    setEdges((p) => [...p, { from: target.id, to: newNode.id }]);
+    
+    // Keep source node expanded on left, add AI node on right → 50/50 split
+    setExpandedNodeIds([nodeId, newNode.id]);
+    setFocusedNodeId(newNode.id);
+  }, [nodes, edges, genId]);
 
   const visibleNodes = useMemo(() => nodes.filter((n) => !isNodeHidden(n.id)), [nodes, isNodeHidden]);
   const expandedNodes = useMemo(() => expandedNodeIds.map((id) => nodes.find((n) => n.id === id)).filter(Boolean) as CanvasNode[], [expandedNodeIds, nodes]);
 
   const hasSidebar = sidebarNodeId !== null;
-  const hasExpanded = expandedNodes.length > 0;
+  const panelCount = expandedNodes.length + (hasSidebar ? 1 : 0);
+  // Canvas visibility: hide when 2+ panels open
+  const showCanvas = panelCount < 2;
 
   return (
     <div className="flex w-full h-full gap-3">
-      {/* Main canvas area */}
-      <div
-        ref={containerRef}
-        className="relative flex-1 overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB]"
-        style={{ cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab' }}
+      {/* Main canvas area — shrinks/hides based on panel count */}
+      {showCanvas && (
+        <div
+          ref={containerRef}
+          className="relative overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB] transition-all duration-300"
+          style={{
+            cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab',
+            flex: panelCount === 0 ? '1 1 100%' : '1 1 55%',
+            minWidth: 0,
+          }}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('[data-node-id]')) { setFocusedNodeId(null); setContextMenu(null); setSelectionToolbar(null); } }}
         onContextMenu={handleCanvasContextMenu}
@@ -529,8 +567,9 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
           )}
         </AnimatePresence>
       </div>
+      )}
 
-      {/* Expanded node panels */}
+      {/* Expanded node panels — each takes equal flex space */}
       <AnimatePresence>
         {expandedNodes.map((node) => (
           <ExpandedNodeView

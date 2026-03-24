@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { CanvasNode } from '../model/types';
 import { documentTextContent, videoTranscripts, mindmapNodes } from '@/entities/learning-content';
 import ExpandedHeader from './ExpandedHeader';
-import DocFooterActions from './DocFooterActions';
 import VideoPlayer from './VideoPlayer';
 import NodeAIChat from '@/features/node-ai-chat/ui/NodeAIChat';
 import NodeReview from '@/features/node-review/ui/NodeReview';
+import { MessageCircle, ClipboardList } from 'lucide-react';
 
 interface Props {
   node: CanvasNode;
@@ -16,8 +16,6 @@ interface Props {
 }
 
 export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Props) {
-  const [view, setView] = useState<'content' | 'ai' | 'review'>('content');
-
   const paragraphs = node.docType === 'text'
     ? (documentTextContent[node.docId ?? ''] ?? ['Nội dung đang được chuẩn bị.'])
     : [videoTranscripts[node.docId ?? ''] ?? '...nội dung video đang được tải...'];
@@ -34,7 +32,7 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
         onClose={onClose}
       />
 
-      {view === 'content' && node.docType === 'text' && (
+      {node.docType === 'text' && (
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="space-y-4 max-w-xl mx-auto">
             {paragraphs.map((para, i) => (
@@ -44,7 +42,7 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
         </div>
       )}
 
-      {view === 'content' && node.docType === 'video' && (
+      {node.docType === 'video' && (
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <VideoPlayer node={node} />
           <div className="p-4 bg-white rounded-xl border border-[#E5E5DF]">
@@ -54,19 +52,21 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
         </div>
       )}
 
-      {view === 'ai' && (
-        <div className="flex-1 overflow-hidden">
-          <NodeAIChat docId={node.docId ?? null} paragraphs={paragraphs} docTitle={node.title} onBack={() => setView('content')} />
-        </div>
-      )}
-
-      {view === 'review' && (
-        <div className="flex-1 overflow-hidden">
-          <NodeReview onBack={() => setView('content')} />
-        </div>
-      )}
-
-      {view === 'content' && <DocFooterActions onAI={() => setView('ai')} onReview={() => setView('review')} />}
+      {/* Footer: AI actions create NEW nodes instead of switching tab */}
+      <div className="flex gap-2.5 px-5 py-3.5 border-t-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
+        <button
+          onClick={() => onCreateAINode(node.id, 'ai-response')}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] text-[#065F46] font-bold text-[12px] hover:bg-[#A7F3D0] transition-colors cursor-pointer"
+        >
+          <MessageCircle size={13} /> AI hỏi đáp
+        </button>
+        <button
+          onClick={() => onCreateAINode(node.id, 'review')}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FEE2E2] border-2 border-[#FCA5A5] text-[#991B1B] font-bold text-[12px] hover:bg-[#FECACA] transition-colors cursor-pointer"
+        >
+          <ClipboardList size={13} /> Ôn tập
+        </button>
+      </div>
     </div>
   );
 }
