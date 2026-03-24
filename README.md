@@ -28,11 +28,21 @@ Nền tảng học tập thông minh với Infinite Canvas — biến tài liệ
 | Graph | @xyflow/react |
 | Language | TypeScript 5 |
 
+## Tài liệu
+
+> 📖 **[Tài liệu chi tiết →](docs/omilearn/_index.md)**
+
+| Tài liệu | Mô tả |
+|-----------|--------|
+| [Overview](docs/omilearn/overview.md) | Tổng quan hệ thống |
+| [Getting Started](docs/omilearn/getting-started.md) | Cài đặt & chạy |
+| [Architecture](docs/omilearn/architecture/_index.md) | Kiến trúc FSD |
+| [Entities](docs/omilearn/architecture/entities.md) | Tầng Entities |
+| [Features](docs/omilearn/architecture/features.md) | Tầng Features |
+| [Widgets](docs/omilearn/architecture/widgets.md) | Tầng Widgets |
+| [Shared](docs/omilearn/architecture/shared.md) | Tầng Shared |
+
 ## Kiến trúc — Feature-Sliced Design (FSD)
-
-> 📖 **[Tài liệu kiến trúc chi tiết →](docs/ARCHITECTURE.md)** — Dependency graph, import rules, hướng dẫn thêm feature/entity mới.
-
-> Tài liệu chi tiết: [Entities](docs/entities.md) · [Features](docs/features.md) · [Widgets](docs/widgets.md) · [Shared](docs/shared.md)
 
 ```
 app/                        # Layer 1: App Router (pages cực mỏng)
