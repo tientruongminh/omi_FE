@@ -1,5 +1,6 @@
-export { default as TopNavBar } from './ui/TopNavBar';
-export { default as Footer } from './ui/Footer';
+// Store convenience re-export
+// In FSD, import directly from entities: import { useOmiLearnStore } from '@/entities/project'
+// This file is kept for backward compatibility
 export { default as AIStreamText } from './ui/AIStreamText';
 export { default as PageTransition } from './ui/PageTransition';
 export { default as Badge } from './ui/Badge';

@@ -1,5 +1,5 @@
-import TopNavBar from "@/shared/ui/TopNavBar";
-import Footer from "@/shared/ui/Footer";
+import { TopNavBar } from "@/widgets/header";
+import { Footer } from "@/widgets/footer";
 import PageTransition from "@/shared/ui/PageTransition";
 
 export default function MainLayout({

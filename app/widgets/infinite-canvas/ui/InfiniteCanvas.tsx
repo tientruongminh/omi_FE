@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { mindmapNodes, documentTextContent, videoTranscripts, unitSummaries, additionalUnits } from '@/entities/learning-content';
 import { CanvasNode, CanvasEdge, ContextMenuState, SelectionToolbarState, ContentNodeUI } from '../model/types';
 import { CANVAS_W, CANVAS_H } from '../model/constants';
-import CanvasNodeComponent from './CanvasNode';
+import CanvasNodeComponent from '@/entities/node/ui/CanvasNode';
 import { EdgeLayer } from './CanvasEdge';
 import ZoomControls from './ZoomControls';
 import ZoomIndicator from './ZoomIndicator';

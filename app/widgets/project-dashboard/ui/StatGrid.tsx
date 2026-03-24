@@ -1,7 +1,7 @@
 'use client';
 
 import { DashboardStat } from '@/entities/dashboard';
-import StatCard from './StatCard';
+import StatCard from '@/entities/dashboard/ui/StatCard';
 
 const STAT_ACCENTS = ['#4CD964', '#818CF8', '#F08080', '#F5A623'];
 

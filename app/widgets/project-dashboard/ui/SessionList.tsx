@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { StudySession } from '@/entities/dashboard';
-import SessionCard from './SessionCard';
+import SessionCard from '@/entities/dashboard/ui/SessionCard';
 import WeekCalendar from './WeekCalendar';
 
 interface Props {
