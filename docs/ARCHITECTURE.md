@@ -377,3 +377,12 @@ export type { NewEntity } from './model/types';
 export { mockData } from './data/mock';
 export { default as NewEntityCard } from './ui/NewEntityCard';
 ```
+
+---
+
+## Tài liệu chi tiết từng layer
+
+- [Entities — Business Objects](entities.md)
+- [Features — User Interactions](features.md)
+- [Widgets — Composite Blocks](widgets.md)
+- [Shared — Atomic Infrastructure](shared.md)

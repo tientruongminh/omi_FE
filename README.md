@@ -32,6 +32,8 @@ Nền tảng học tập thông minh với Infinite Canvas — biến tài liệ
 
 > 📖 **[Tài liệu kiến trúc chi tiết →](docs/ARCHITECTURE.md)** — Dependency graph, import rules, hướng dẫn thêm feature/entity mới.
 
+> Tài liệu chi tiết: [Entities](docs/entities.md) · [Features](docs/features.md) · [Widgets](docs/widgets.md) · [Shared](docs/shared.md)
+
 ```
 app/                        # Layer 1: App Router (pages cực mỏng)
 ├── (main)/                 # Layout chính với TopNavBar + Footer
