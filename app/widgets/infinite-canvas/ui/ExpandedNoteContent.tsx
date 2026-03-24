@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Link2 } from 'lucide-react';
 import { CanvasNode } from '../model/types';
 import ExpandedHeader from './ExpandedHeader';
 
@@ -14,16 +14,17 @@ interface Props {
 
 export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: Props) {
   const [content, setContent] = useState(node.content ?? '');
+  const [title, setTitle] = useState(node.title);
   const [isPolishing, setIsPolishing] = useState(false);
   const [polished, setPolished] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setContent(node.content ?? '');
+    setTitle(node.title);
     setPolished(false);
-  }, [node.id, node.content]);
+  }, [node.id, node.content, node.title]);
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (el) {
@@ -31,6 +32,11 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
       el.style.height = Math.max(200, el.scrollHeight) + 'px';
     }
   }, [content]);
+
+  // Focus textarea on mount
+  useEffect(() => {
+    setTimeout(() => textareaRef.current?.focus(), 300);
+  }, [node.id]);
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -43,16 +49,12 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
     if (!content.trim() || isPolishing) return;
     setIsPolishing(true);
     
-    // Simulate AI polishing (in real app, call API)
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    // Simple polish: clean up, add structure
     const lines = content.split('\n').filter((l) => l.trim());
     const polishedLines = lines.map((line) => {
       let l = line.trim();
-      // Capitalize first letter
       if (l.length > 0) l = l[0].toUpperCase() + l.slice(1);
-      // Add period if missing
       if (l.length > 5 && !l.endsWith('.') && !l.endsWith('!') && !l.endsWith('?') && !l.endsWith(':')) l += '.';
       return l;
     });
@@ -67,17 +69,39 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
 
   return (
     <div className="flex flex-col h-full bg-[#FFFDE7]">
-      <ExpandedHeader icon="✎" title={node.title} onClose={onClose} />
+      <ExpandedHeader icon="✎" title={title} onClose={onClose} />
       
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      {/* Editable title */}
+      <div className="px-6 pt-4">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full bg-transparent text-[16px] font-bold text-[#78350F] outline-none border-b border-[#F59E0B]/30 pb-2 placeholder:text-[#C4A35A]/40"
+          placeholder="Tiêu đề ghi chú..."
+        />
+      </div>
+
+      {/* Editable content */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
         <textarea
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
-          placeholder="Ghi chú ý tưởng, insight của bạn tại đây..."
-          className="w-full bg-transparent text-[14px] text-[#78350F] leading-[1.9] font-serif resize-none outline-none placeholder:text-[#C4A35A]/50 min-h-[200px]"
+          placeholder="Ghi chú ý tưởng, insight của bạn tại đây...
+
+VD: Khái niệm process scheduling rất giống cách quản lý hàng đợi ở quầy giao dịch ngân hàng — priority queue...
+
+Nối node ghi chú này với node khác (kéo từ dấu chấm) để AI dựa trên nội dung đó trả lời câu hỏi."
+          className="w-full bg-transparent text-[14px] text-[#78350F] leading-[1.9] font-serif resize-none outline-none placeholder:text-[#C4A35A]/40 min-h-[200px]"
           style={{ border: 'none' }}
         />
+      </div>
+
+      {/* Connection hint */}
+      <div className="px-6 py-2 flex items-center gap-2 text-[11px] text-[#92400E]/50">
+        <Link2 size={12} />
+        <span>Kéo từ dấu chấm để nối với node khác — AI sẽ dựa nội dung đã nối để trả lời</span>
       </div>
 
       {/* AI Polish Button */}
@@ -90,7 +114,7 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
           whileTap={{ scale: 0.98 }}
           onClick={handleAIPolish}
           disabled={isPolishing || !content.trim()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all disabled:opacity-40"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all disabled:opacity-40 cursor-pointer"
           style={{
             backgroundColor: polished ? '#34D399' : '#FEF3C7',
             color: polished ? '#065F46' : '#92400E',

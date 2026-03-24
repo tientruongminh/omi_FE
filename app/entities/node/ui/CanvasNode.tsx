@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { CanvasNode } from '@/entities/node/model/types';
 import { NODE_STYLES } from '@/entities/node/model/types';
@@ -14,15 +14,17 @@ interface Props {
   onDrag: (id: string, dx: number, dy: number) => void;
   onClick: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: CanvasNode) => void;
+  onStartEdge?: (nodeId: string, side: 'left' | 'right' | 'top' | 'bottom', x: number, y: number) => void;
   scale: number;
   collapsedChildCount?: number;
 }
 
+const HANDLE_SIZE = 10;
+
 export default function CanvasNode({
-  node, isExpanded, isFocused, onDrag, onClick, onContextMenu, scale, collapsedChildCount = 0,
+  node, isExpanded, isFocused, onDrag, onClick, onContextMenu, onStartEdge, scale, collapsedChildCount = 0,
 }: Props) {
   const baseStyle = NODE_STYLES[node.type];
-  // Support custom colors (from color picker)
   const style = (node as any).customBg ? {
     bg: (node as any).customBg,
     border: (node as any).customBorder,
@@ -31,6 +33,7 @@ export default function CanvasNode({
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
+  const [hovered, setHovered] = useState(false);
   const isSynthesis = node.type === 'synthesis';
   const isMainTopic = node.type === 'topic' && !!node.summary;
 
@@ -41,6 +44,7 @@ export default function CanvasNode({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('[data-handle]')) return; // Don't drag when clicking handle
     e.stopPropagation();
     isDragging.current = true;
     hasMoved.current = false;
@@ -64,6 +68,21 @@ export default function CanvasNode({
     document.addEventListener('mouseup', handleUp);
   };
 
+  const handleHandleMouseDown = (side: 'left' | 'right' | 'top' | 'bottom') => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const cx = side === 'left' ? node.x : side === 'right' ? node.x + node.width : node.x + node.width / 2;
+    const cy = side === 'top' ? node.y : side === 'bottom' ? node.y + node.height : node.y + node.height / 2;
+    onStartEdge?.(node.id, side, cx, cy);
+  };
+
+  const handles: { side: 'left' | 'right' | 'top' | 'bottom'; style: React.CSSProperties }[] = [
+    { side: 'right', style: { right: -HANDLE_SIZE / 2, top: '50%', transform: 'translateY(-50%)' } },
+    { side: 'left', style: { left: -HANDLE_SIZE / 2, top: '50%', transform: 'translateY(-50%)' } },
+    { side: 'top', style: { top: -HANDLE_SIZE / 2, left: '50%', transform: 'translateX(-50%)' } },
+    { side: 'bottom', style: { bottom: -HANDLE_SIZE / 2, left: '50%', transform: 'translateX(-50%)' } },
+  ];
+
   return (
     <motion.div
       data-node-id={node.id}
@@ -86,9 +105,31 @@ export default function CanvasNode({
       transition={{ duration: 0.25, ease: 'easeOut' }}
       whileHover={{ scale: 1.03, boxShadow: '0 6px 24px rgba(0,0,0,0.14)' }}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) onClick(node.id); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, node); }}
     >
+      {/* Connection handles — visible on hover */}
+      {(hovered || isFocused) && handles.map((h) => (
+        <div
+          key={h.side}
+          data-handle={h.side}
+          className="absolute z-20 transition-opacity"
+          style={{
+            ...h.style,
+            width: HANDLE_SIZE,
+            height: HANDLE_SIZE,
+            borderRadius: '50%',
+            backgroundColor: '#fff',
+            border: `2px solid ${style.border}`,
+            cursor: 'crosshair',
+            opacity: hovered ? 1 : 0,
+          }}
+          onMouseDown={handleHandleMouseDown(h.side)}
+        />
+      ))}
+
       <div className="flex flex-col h-full px-3 py-2 overflow-hidden justify-center">
         <div className="flex items-center gap-2">
           <NodeIcon type={node.type} docType={node.docType} />
