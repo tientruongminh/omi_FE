@@ -1,28 +1,9 @@
-// ─── InfiniteCanvas Types ────────────────────────────────────
+// ─── InfiniteCanvas Widget Types ────────────────────────────────────
+// Entity types re-exported for convenience
+export type { CanvasNode, CanvasEdge } from '@/entities/node/model/types';
+export { NODE_STYLES, EDGE_COLORS } from '@/entities/node/model/types';
 
-export interface CanvasNode {
-  id: string;
-  type: 'topic' | 'chapter' | 'document' | 'ai-response' | 'note' | 'synthesis';
-  title: string;
-  content?: string;
-  summary?: string;
-  docType?: 'text' | 'video';
-  docId?: string;
-  nodeId?: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  parentId?: string;
-  color?: string;
-  synthSourceIds?: string[];
-}
-
-export interface CanvasEdge {
-  from: string;
-  to: string;
-}
-
+// Widget-specific UI state types
 export interface ContextMenuState {
   x: number;
   y: number;

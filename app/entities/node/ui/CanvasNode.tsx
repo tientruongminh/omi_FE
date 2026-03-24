@@ -2,8 +2,8 @@
 
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
-import type { CanvasNode } from '@/widgets/infinite-canvas/model/types';
-import { NODE_STYLES } from '@/widgets/infinite-canvas/model/constants';
+import type { CanvasNode } from '@/entities/node/model/types';
+import { NODE_STYLES } from '@/entities/node/model/types';
 import NodeIcon from './NodeIcon';
 import NodeBadge from './NodeBadge';
 

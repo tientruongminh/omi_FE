@@ -1,6 +1,6 @@
 'use client';
 
-import { CanvasNode } from '@/widgets/infinite-canvas/model/types';
+import { CanvasNode } from '@/entities/node/model/types';
 
 interface Props {
   type: CanvasNode['type'];
