@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { mindmapNodes, documentTextContent, videoTranscripts, unitSummaries, additionalUnits } from '@/entities/learning-content';
 import { CanvasNode, CanvasEdge, ContextMenuState, SelectionToolbarState, ContentNodeUI } from '../model/types';
 import { CANVAS_W, CANVAS_H } from '../model/constants';
@@ -490,22 +490,15 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   const expandedNodes = useMemo(() => expandedNodeIds.map((id) => nodes.find((n) => n.id === id)).filter(Boolean) as CanvasNode[], [expandedNodeIds, nodes]);
 
   const hasSidebar = sidebarNodeId !== null;
-  const panelCount = expandedNodes.length + (hasSidebar ? 1 : 0);
-  // Canvas visibility: hide when 2+ panels open
-  const showCanvas = panelCount < 2;
+  const hasExpanded = expandedNodes.length > 0;
 
   return (
-    <div className="flex w-full h-full gap-3">
-      {/* Main canvas area — shrinks/hides based on panel count */}
-      {showCanvas && (
-        <div
-          ref={containerRef}
-          className="relative overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB] transition-all duration-300"
-          style={{
-            cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab',
-            flex: panelCount === 0 ? '1 1 100%' : '1 1 55%',
-            minWidth: 0,
-          }}
+    <div className="relative w-full h-full">
+      {/* Canvas always fills full area */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0 overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB]"
+        style={{ cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab' }}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('[data-node-id]')) { setFocusedNodeId(null); setContextMenu(null); setSelectionToolbar(null); } }}
         onContextMenu={handleCanvasContextMenu}
@@ -552,7 +545,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
 
         <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} />
         <ZoomIndicator scale={transform.scale} />
-        <CanvasHint />
+        {!hasExpanded && !hasSidebar && <CanvasHint />}
 
         <AnimatePresence>
           {contextMenu && (
@@ -580,30 +573,65 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
           )}
         </AnimatePresence>
       </div>
-      )}
 
-      {/* Expanded node panels — each takes equal flex space */}
+      {/* Popup overlay — sits on top of canvas */}
       <AnimatePresence>
-        {expandedNodes.map((node) => (
-          <ExpandedNodeView
-            key={node.id}
-            node={node}
-            allNodes={nodes}
-            edges={edges}
-            onClose={() => handleCloseExpanded(node.id)}
-            onCreateAINode={handleCreateAINode}
-            onUpdateContent={handleUpdateContent}
-          />
-        ))}
+        {(hasExpanded || hasSidebar) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 z-30 flex items-stretch gap-3 p-4"
+            style={{ pointerEvents: 'none' }}
+          >
+            {/* Semi-transparent backdrop — click to close */}
+            <div
+              className="absolute inset-0 bg-black/20 rounded-2xl"
+              style={{ pointerEvents: 'auto' }}
+              onClick={() => { handleCloseExpanded(); setSidebarNodeId(null); }}
+            />
+
+            {/* Expanded panels */}
+            <div className="relative z-10 flex gap-3 w-full h-full items-stretch justify-center" style={{ pointerEvents: 'auto' }}>
+              {expandedNodes.map((node, i) => (
+                <ExpandedNodeView
+                  key={node.id}
+                  node={node}
+                  allNodes={nodes}
+                  edges={edges}
+                  onClose={() => handleCloseExpanded(node.id)}
+                  onCreateAINode={handleCreateAINode}
+                  onUpdateContent={handleUpdateContent}
+                  position={expandedNodes.length === 1 && !hasSidebar ? 'center' : i === 0 ? 'left' : 'right'}
+                />
+              ))}
+
+              {/* Document sidebar */}
+              {hasSidebar && (
+                <motion.div
+                  initial={{ opacity: 0, x: 60 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 60 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex-shrink-0"
+                  style={{ width: expandedNodes.length > 0 ? 340 : 400, minWidth: 0 }}
+                >
+                  <DocumentSidebar
+                    nodeId={sidebarNodeId}
+                    onClose={() => setSidebarNodeId(null)}
+                    onApply={handleSidebarApply}
+                    onOpenDocument={handleOpenDocument}
+                  />
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* Document sidebar */}
-      <DocumentSidebar
-        nodeId={sidebarNodeId}
-        onClose={() => setSidebarNodeId(null)}
-        onApply={handleSidebarApply}
-        onOpenDocument={handleOpenDocument}
-      />
+      {/* Document sidebar when no panels expanded — render without overlay */}
+      {hasSidebar && !hasExpanded && null}
     </div>
   );
 }

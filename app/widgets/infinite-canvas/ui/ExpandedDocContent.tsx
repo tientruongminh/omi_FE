@@ -14,14 +14,14 @@ interface Props {
   onCreateAINode: (nodeId: string, type: 'ai-response' | 'review', selectedText?: string) => void;
 }
 
-interface SelectionToolbar {
+interface FloatingMenu {
   x: number;
   y: number;
   text: string;
 }
 
 export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Props) {
-  const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbar | null>(null);
+  const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const paragraphs = node.docType === 'text'
@@ -31,25 +31,37 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
   const chapterNode = mindmapNodes.find((n) => n.id === node.nodeId);
   const doc = chapterNode?.documents.find((d) => d.id === node.docId);
 
-  // Detect text selection via mouseup
-  const handleMouseUp = useCallback(() => {
-    // Small delay so selection is finalized
+  // Show floating menu on text selection (mouseup) or right-click
+  const showMenuForSelection = useCallback((clientX: number, clientY: number) => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (!text || text.length < 3) return false;
+
+    const containerRect = contentRef.current?.getBoundingClientRect();
+    if (!containerRect) return false;
+
+    setFloatingMenu({
+      x: clientX - containerRect.left,
+      y: clientY - containerRect.top,
+      text,
+    });
+    return true;
+  }, []);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     setTimeout(() => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
       if (!text || text.length < 3) {
-        setSelectionToolbar(null);
+        setFloatingMenu(null);
         return;
       }
-
       const range = selection?.getRangeAt(0);
       if (!range) return;
-
       const rect = range.getBoundingClientRect();
       const containerRect = contentRef.current?.getBoundingClientRect();
       if (!containerRect) return;
-
-      setSelectionToolbar({
+      setFloatingMenu({
         x: rect.left + rect.width / 2 - containerRect.left,
         y: rect.top - containerRect.top - 8,
         text,
@@ -57,25 +69,40 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
     }, 10);
   }, []);
 
-  // Dismiss toolbar when clicking outside or selection changes
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.toString().trim().length < 3) {
-        setSelectionToolbar(null);
-      }
-    };
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  // Right-click on content: show AI menu (with selected text if any)
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const selection = window.getSelection();
+    const text = selection?.toString().trim() ?? '';
+    const containerRect = contentRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    setFloatingMenu({
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+      text,
+    });
   }, []);
 
-  const handleToolbarAction = useCallback((type: 'ai-response' | 'review') => {
-    if (selectionToolbar) {
-      onCreateAINode(node.id, type, selectionToolbar.text);
-      setSelectionToolbar(null);
-      window.getSelection()?.removeAllRanges();
-    }
-  }, [selectionToolbar, node.id, onCreateAINode]);
+  // Dismiss on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (floatingMenu && contentRef.current && !contentRef.current.contains(e.target as Node)) {
+        setFloatingMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [floatingMenu]);
+
+  const handleAction = useCallback((type: 'ai-response' | 'review') => {
+    const text = floatingMenu?.text || undefined;
+    onCreateAINode(node.id, type, text);
+    setFloatingMenu(null);
+    window.getSelection()?.removeAllRanges();
+  }, [floatingMenu, node.id, onCreateAINode]);
 
   return (
     <div className="flex flex-col h-full bg-[#F5F0EB]">
@@ -87,40 +114,50 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
       />
 
       {node.docType === 'text' && (
-        <div className="flex-1 overflow-y-auto px-6 py-5 relative" ref={contentRef} onMouseUp={handleMouseUp}>
+        <div
+          className="flex-1 overflow-y-auto px-6 py-5 relative"
+          ref={contentRef}
+          onMouseUp={handleMouseUp}
+          onContextMenu={handleContextMenu}
+        >
           <div className="space-y-4 max-w-xl mx-auto">
             {paragraphs.map((para, i) => (
               <p key={i} className="text-[13.5px] text-[#2D2D2D] leading-[1.9] font-serif select-text">{para}</p>
             ))}
           </div>
 
-          {/* Selection floating toolbar */}
+          {/* Floating AI menu — appears on selection or right-click */}
           <AnimatePresence>
-            {selectionToolbar && (
+            {floatingMenu && (
               <motion.div
                 initial={{ opacity: 0, y: 6, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 6, scale: 0.9 }}
                 transition={{ duration: 0.15 }}
-                className="absolute z-50 flex items-center gap-1.5 p-1.5 bg-[#2D2D2D] rounded-xl shadow-2xl"
+                className="absolute z-50 flex flex-col bg-[#2D2D2D] rounded-xl shadow-2xl overflow-hidden"
                 style={{
-                  left: selectionToolbar.x,
-                  top: selectionToolbar.y,
+                  left: floatingMenu.x,
+                  top: floatingMenu.y,
                   transform: 'translate(-50%, -100%)',
+                  minWidth: 180,
                 }}
               >
+                {floatingMenu.text && (
+                  <div className="px-3 py-2 text-[10px] text-white/50 border-b border-white/10 truncate max-w-[220px]">
+                    "{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}"
+                  </div>
+                )}
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); handleToolbarAction('ai-response'); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white hover:bg-white/15 transition-colors cursor-pointer whitespace-nowrap"
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-response'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
                 >
-                  <MessageCircle size={12} /> AI hỏi đáp
+                  <MessageCircle size={13} className="text-[#6EE7B7]" /> AI hỏi đáp
                 </button>
-                <div className="w-px h-4 bg-white/20" />
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); handleToolbarAction('review'); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white hover:bg-white/15 transition-colors cursor-pointer whitespace-nowrap"
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('review'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
                 >
-                  <ClipboardList size={12} /> Ôn tập
+                  <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
                 </button>
                 {/* Arrow */}
                 <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-[#2D2D2D] rotate-45" />
@@ -131,11 +168,11 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
       )}
 
       {node.docType === 'video' && (
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4" onContextMenu={handleContextMenu} ref={contentRef}>
           <VideoPlayer node={node} />
           <div className="p-4 bg-white rounded-xl border border-[#E5E5DF]">
             <p className="text-[11px] font-bold text-[#5A5C58] uppercase tracking-wide mb-2">Nội dung chính</p>
-            <p className="text-[13px] text-[#5A5C58] leading-relaxed italic">{paragraphs[0]}</p>
+            <p className="text-[13px] text-[#5A5C58] leading-relaxed italic select-text">{paragraphs[0]}</p>
           </div>
         </div>
       )}
