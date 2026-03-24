@@ -16,6 +16,7 @@ import SelectionToolbarComponent from './SelectionToolbar';
 import ColorPicker from './ColorPicker';
 import DocumentSidebar from './DocumentSidebar';
 import ExpandedNodeView from './ExpandedNodeView';
+import ExpandedNoteContent from './ExpandedNoteContent';
 
 // ─── Layout builders ────────────────────────────────────────
 
@@ -103,7 +104,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     const data = unitId ? buildUnitLayout(unitId) : buildInitialNodes();
     setNodes(data.nodes); setEdges(data.edges);
     setExpandedNodeIds([]); setFocusedNodeId(null); setCollapsedNodeIds(new Set());
-    setSidebarNodeId(null);
+    setSidebarNodeId(null); setNoteSidebarId(null);
   }, [unitId]);
 
   // ── Collapse helpers ────────────────────────────────────────
@@ -228,6 +229,9 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, color: border, customBg: bg, customBorder: border } : n));
   }, []);
 
+  // ── Note sidebar state ───────────────────────────────────────
+  const [noteSidebarId, setNoteSidebarId] = useState<string | null>(null);
+
   // ── Node click ──────────────────────────────────────────────
   const handleNodeClick = useCallback((id: string) => {
     const node = nodes.find((n) => n.id === id);
@@ -237,10 +241,19 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     if ((node.type === 'topic' || node.type === 'chapter') && node.nodeId) {
       setFocusedNodeId(id);
       setSidebarNodeId(node.nodeId);
+      setNoteSidebarId(null); // close note sidebar
       return;
     }
     
-    // Note, AI, synthesis, document → expand panel
+    // Note → open as sidebar (replaces DocumentSidebar)
+    if (node.type === 'note') {
+      setNoteSidebarId((prev) => prev === id ? null : id);
+      setSidebarNodeId(null); // close document sidebar
+      setFocusedNodeId(id);
+      return;
+    }
+    
+    // AI, document, synthesis, video → popup overlay (max 2, 50:50)
     setExpandedNodeIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 2) return [prev[1], id];
@@ -328,7 +341,14 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
       }
       case 'open-read': {
         if (target) {
-          setExpandedNodeIds((prev) => prev.includes(target.id) ? prev : [...prev.slice(-1), target.id]);
+          if (target.type === 'note') {
+            // Notes go to sidebar
+            setNoteSidebarId(target.id);
+            setSidebarNodeId(null);
+          } else {
+            // Everything else goes to popup
+            setExpandedNodeIds((prev) => prev.includes(target.id) ? prev : [...prev.slice(-1), target.id]);
+          }
           setFocusedNodeId(target.id);
         }
         break;
@@ -369,11 +389,9 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
       case 'add-note': {
         const n: CanvasNode = { id: genId(), type: 'note', title: 'Ghi chú mới', content: '', x: cx, y: cy, width: 160, height: 44 };
         setNodes((p) => [...p, n]);
-        // Auto-expand the note for editing
-        setExpandedNodeIds((prev) => {
-          if (prev.length >= 2) return [prev[1], n.id];
-          return [...prev, n.id];
-        });
+        // Open note in sidebar
+        setNoteSidebarId(n.id);
+        setSidebarNodeId(null);
         setFocusedNodeId(n.id);
         break;
       }
@@ -484,20 +502,21 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   const expandedNodes = useMemo(() => expandedNodeIds.map((id) => nodes.find((n) => n.id === id)).filter(Boolean) as CanvasNode[], [expandedNodeIds, nodes]);
 
   const hasSidebar = sidebarNodeId !== null;
+  const hasNoteSidebar = noteSidebarId !== null;
   const hasExpanded = expandedNodes.length > 0;
-  const sidebarCount = expandedNodes.length + (hasSidebar ? 1 : 0);
+  const hasRightSidebar = hasSidebar || hasNoteSidebar;
+  const noteSidebarNode = hasNoteSidebar ? nodes.find((n) => n.id === noteSidebarId) : null;
 
   return (
     <div className="flex w-full h-full gap-3">
-      {/* Canvas area — shrinks when sidebars open */}
+      {/* Canvas area — shrinks only for right sidebar */}
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB] transition-all duration-300"
         style={{
           cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab',
-          flex: sidebarCount === 0 ? '1 1 100%' : sidebarCount === 1 ? '1 1 55%' : '0 0 0%',
-          minWidth: sidebarCount >= 2 ? 0 : 300,
-          display: sidebarCount >= 2 ? 'none' : undefined,
+          flex: hasRightSidebar ? '1 1 calc(100% - 412px)' : '1 1 100%',
+          minWidth: 300,
         }}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('[data-node-id]')) { setFocusedNodeId(null); setContextMenu(null); setSelectionToolbar(null); } }}
@@ -545,7 +564,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
 
         <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} />
         <ZoomIndicator scale={transform.scale} />
-        {!hasExpanded && !hasSidebar && <CanvasHint />}
+        {!hasExpanded && !hasRightSidebar && <CanvasHint />}
 
         <AnimatePresence>
           {contextMenu && (
@@ -572,30 +591,75 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
             />
           )}
         </AnimatePresence>
+
+        {/* Popup overlay — AI, document, video, synthesis (centered on canvas) */}
+        <AnimatePresence>
+          {hasExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-[60] flex items-center justify-center"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setExpandedNodeIds([]);
+              }}
+            >
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+              
+              {/* Popup panels */}
+              <div className="relative z-10 flex gap-3 p-6" style={{
+                width: expandedNodes.length === 1 ? '55%' : '80%',
+                maxWidth: expandedNodes.length === 1 ? '600px' : '1100px',
+                height: '85%',
+                maxHeight: '700px',
+              }}>
+                {expandedNodes.map((node) => (
+                  <ExpandedNodeView
+                    key={node.id}
+                    node={node}
+                    allNodes={nodes}
+                    edges={edges}
+                    onClose={() => handleCloseExpanded(node.id)}
+                    onCreateAINode={handleCreateAINode}
+                    onUpdateContent={handleUpdateContent}
+                    isPopup
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Right sidebars — expanded nodes + document sidebar */}
-      <AnimatePresence>
-        {expandedNodes.map((node) => (
-          <ExpandedNodeView
-            key={node.id}
-            node={node}
-            allNodes={nodes}
-            edges={edges}
-            onClose={() => handleCloseExpanded(node.id)}
-            onCreateAINode={handleCreateAINode}
+      {/* Right sidebar — note OR document sidebar */}
+      {hasNoteSidebar && noteSidebarNode && (
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 40 }}
+          transition={{ duration: 0.25 }}
+          className="h-full rounded-2xl border-2 border-[#333333] shadow-xl overflow-hidden flex-shrink-0"
+          style={{ width: 400, boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}
+        >
+          <ExpandedNoteContent
+            node={noteSidebarNode}
+            onClose={() => setNoteSidebarId(null)}
             onUpdateContent={handleUpdateContent}
           />
-        ))}
-      </AnimatePresence>
+        </motion.div>
+      )}
 
-      {/* Document sidebar */}
-      <DocumentSidebar
-        nodeId={sidebarNodeId}
-        onClose={() => setSidebarNodeId(null)}
-        onApply={handleSidebarApply}
-        onOpenDocument={handleOpenDocument}
-      />
+      {/* Document sidebar (topic/chapter) */}
+      {!hasNoteSidebar && (
+        <DocumentSidebar
+          nodeId={sidebarNodeId}
+          onClose={() => setSidebarNodeId(null)}
+          onApply={handleSidebarApply}
+          onOpenDocument={handleOpenDocument}
+        />
+      )}
     </div>
   );
 }
