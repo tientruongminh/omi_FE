@@ -30,6 +30,8 @@ Nền tảng học tập thông minh với Infinite Canvas — biến tài liệ
 
 ## Kiến trúc — Feature-Sliced Design (FSD)
 
+> 📖 **[Tài liệu kiến trúc chi tiết →](docs/ARCHITECTURE.md)** — Dependency graph, import rules, hướng dẫn thêm feature/entity mới.
+
 ```
 app/                        # Layer 1: App Router (pages cực mỏng)
 ├── (main)/                 # Layout chính với TopNavBar + Footer
