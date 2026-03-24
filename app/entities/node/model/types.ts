@@ -41,6 +41,8 @@ export interface CanvasNode {
   height: number;
   parentId?: string;
   color?: string;
+  customBg?: string;
+  customBorder?: string;
   synthSourceIds?: string[];
 }
 

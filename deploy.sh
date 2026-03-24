@@ -18,7 +18,8 @@ git reset --hard origin/main >> $LOG 2>&1
 # Install deps (only if lockfile changed)
 npm ci --production=false >> $LOG 2>&1
 
-# Build
+# Clean build (avoid stale manifest errors)
+rm -rf .next
 npm run build >> $LOG 2>&1
 
 # Restart

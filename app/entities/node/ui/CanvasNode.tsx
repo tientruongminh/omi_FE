@@ -21,7 +21,13 @@ interface Props {
 export default function CanvasNode({
   node, isExpanded, isFocused, onDrag, onClick, onContextMenu, scale, collapsedChildCount = 0,
 }: Props) {
-  const style = NODE_STYLES[node.type];
+  const baseStyle = NODE_STYLES[node.type];
+  // Support custom colors (from color picker)
+  const style = (node as any).customBg ? {
+    bg: (node as any).customBg,
+    border: (node as any).customBorder,
+    textColor: baseStyle.textColor,
+  } : baseStyle;
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);

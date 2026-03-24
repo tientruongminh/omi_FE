@@ -13,6 +13,7 @@ import CanvasHint from './CanvasHint';
 import ContextMenuComponent from './ContextMenu';
 import AddUnitMenu from './AddUnitMenu';
 import SelectionToolbarComponent from './SelectionToolbar';
+import ColorPicker from './ColorPicker';
 
 // ─── Layout builders ────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
   const [addUnitMenuState, setAddUnitMenuState] = useState<{ x: number; y: number; canvasX: number; canvasY: number } | null>(null);
+  const [colorPicker, setColorPicker] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
@@ -139,6 +141,16 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   const handleNodeDrag = useCallback((id: string, dx: number, dy: number) =>
     setNodes((prev) => prev.map((n) => n.id === id ? { ...n, x: n.x + dx, y: n.y + dy } : n)), []);
 
+  // ── Update node content ─────────────────────────────────────
+  const handleUpdateContent = useCallback((nodeId: string, content: string) => {
+    setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, content } : n));
+  }, []);
+
+  // ── Change node color ───────────────────────────────────────
+  const handleChangeColor = useCallback((nodeId: string, bg: string, border: string) => {
+    setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, color: border, customBg: bg, customBorder: border } : n));
+  }, []);
+
   // ── Node click ──────────────────────────────────────────────
   const handleNodeClick = useCallback((id: string) => {
     const node = nodes.find((n) => n.id === id);
@@ -150,6 +162,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     }
     setExpandedNodeIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
+      // SplitView: max 2 expanded, newest on right, previous slides left
       if (prev.length >= 2) return [prev[1], id];
       return [...prev, id];
     });
@@ -176,14 +189,24 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     const cx = contextMenu?.canvasX ?? 500; const cy = contextMenu?.canvasY ?? 350;
     switch (action) {
       case 'add-document': if (target?.nodeId) onNodeClickForSidebar?.(target.nodeId, target.id); break;
-      case 'open-read': if (target) { setExpandedNodeIds([target.id]); setFocusedNodeId(target.id); } break;
+      case 'open-read': if (target) { setExpandedNodeIds((prev) => prev.includes(target.id) ? prev : [...prev.slice(-1), target.id]); setFocusedNodeId(target.id); } break;
+      case 'change-color': {
+        if (!nodeId) break;
+        setColorPicker({ x: contextMenu?.x ?? 300, y: contextMenu?.y ?? 300, nodeId });
+        break;
+      }
       case 'ai-chat': case 'ai-review': {
         if (!target) break;
         const paragraphs = target.docType === 'text' ? (documentTextContent[target.docId ?? ''] ?? []) : [videoTranscripts[target.docId ?? ''] ?? ''];
         const aiText = action === 'ai-chat' ? `AI đang phân tích "${target.title}"...\n\n${paragraphs[0]?.slice(0, 200) ?? ''}...` : 'Nội dung ôn tập được tạo. Bao gồm quiz, flashcard và câu hỏi tự luận.';
-        const newNode: CanvasNode = { id: genId(), type: 'ai-response', title: `${action === 'ai-chat' ? 'AI' : 'Ôn tập'}: ${target.title.slice(0, 25)}`, content: aiText, x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60, width: 190, height: 50, parentId: target.id };
+        const newNode: CanvasNode = { id: genId(), type: 'ai-response', title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${target.title.slice(0, 25)}`, content: aiText, x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60, width: 190, height: 50, parentId: target.id };
         setNodes((p) => [...p, newNode]); setEdges((p) => [...p, { from: target.id, to: newNode.id }]);
-        if (action === 'ai-review') { setExpandedNodeIds([newNode.id]); }
+        // Auto-expand new AI node, push old expanded to left
+        setExpandedNodeIds((prev) => {
+          if (prev.length >= 2) return [prev[prev.length - 1], newNode.id];
+          return [...prev, newNode.id];
+        });
+        setFocusedNodeId(newNode.id);
         break;
       }
       case 'create-child': {
@@ -192,7 +215,6 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
         setNodes((p) => [...p, child]); setEdges((p) => [...p, { from: target.id, to: child.id }]);
         break;
       }
-      case 'add-topic': { const n: CanvasNode = { id: genId(), type: 'chapter', title: 'Chủ đề mới', x: cx, y: cy, width: 180, height: 44 }; setNodes((p) => [...p, n]); break; }
       case 'add-note': { const n: CanvasNode = { id: genId(), type: 'note', title: 'Ghi chú mới', content: '', x: cx, y: cy, width: 160, height: 44 }; setNodes((p) => [...p, n]); break; }
       case 'add-synthesis': { const n: CanvasNode = { id: genId(), type: 'synthesis', title: 'Tổng hợp kiến thức', content: '', x: cx, y: cy, width: 220, height: 60, synthSourceIds: [] }; setNodes((p) => [...p, n]); break; }
       case 'collapse-node': case 'expand-node': if (nodeId) toggleCollapse(nodeId); break;
@@ -205,13 +227,51 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
         break;
       }
     }
-  }, [nodes, contextMenu, genId, focusedNodeId, toggleCollapse, onNodeClickForSidebar, documentTextContent, videoTranscripts]);
+  }, [nodes, contextMenu, genId, focusedNodeId, toggleCollapse, onNodeClickForSidebar]);
 
-  // ── Add unit from menu ──────────────────────────────────────
+  // ── Add unit from menu or submenu ───────────────────────────
   const handleAddUnit = useCallback((uid: string, label: string, cx: number, cy: number) => {
     const summary = unitSummaries[uid] ?? '';
     const mainNode: CanvasNode = { id: genId(), type: 'topic', title: label, summary, nodeId: uid, x: cx, y: cy, width: 220, height: 80 };
     setNodes((p) => [...p, mainNode]);
+  }, [genId]);
+
+  // ── Add unit directly from context menu submenu ─────────────
+  const handleAddUnitDirect = useCallback((uid: string, label: string, cx: number, cy: number) => {
+    const summary = unitSummaries[uid] ?? '';
+    // Create the topic node
+    const topicId = genId();
+    const topicNode: CanvasNode = { id: topicId, type: 'topic', title: label, summary, nodeId: uid, x: cx, y: cy, width: 220, height: 80 };
+    
+    // Also load its chapter children
+    const unit = mindmapNodes.find((n) => n.id === uid);
+    const newNodes: CanvasNode[] = [topicNode];
+    const newEdges: CanvasEdge[] = [];
+    
+    if (unit) {
+      // Add chapter children around the topic
+      unit.documents?.forEach((doc, i) => {
+        const angle = ((i * 360) / Math.max(unit.documents.length, 1) - 90) * (Math.PI / 180);
+        const docNode: CanvasNode = {
+          id: genId() + '-' + i,
+          type: 'document',
+          title: doc.title,
+          docId: doc.id,
+          docType: doc.type === 'video' ? 'video' : 'text',
+          nodeId: uid,
+          x: cx + Math.cos(angle) * 180,
+          y: cy + 80 + Math.sin(angle) * 100,
+          width: 180,
+          height: 44,
+          parentId: topicId,
+        };
+        newNodes.push(docNode);
+        newEdges.push({ from: topicId, to: docNode.id });
+      });
+    }
+    
+    setNodes((p) => [...p, ...newNodes]);
+    setEdges((p) => [...p, ...newEdges]);
   }, [genId]);
 
   // ── Sidebar apply ───────────────────────────────────────────
@@ -260,8 +320,12 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
 
       <AnimatePresence>
         {contextMenu && (
-          <ContextMenuComponent menu={contextMenu} onAction={handleContextAction} onClose={() => setContextMenu(null)}
+          <ContextMenuComponent
+            menu={contextMenu}
+            onAction={handleContextAction}
+            onClose={() => setContextMenu(null)}
             onShowAddUnit={() => { setAddUnitMenuState({ x: contextMenu.x, y: contextMenu.y, canvasX: contextMenu.canvasX ?? 500, canvasY: contextMenu.canvasY ?? 350 }); setContextMenu(null); }}
+            onAddUnitDirect={handleAddUnitDirect}
           />
         )}
         {addUnitMenuState && (
@@ -269,6 +333,15 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
         )}
         {selectionToolbar && (
           <SelectionToolbarComponent toolbar={selectionToolbar} onCreate={() => {}} onClose={() => setSelectionToolbar(null)} />
+        )}
+        {colorPicker && (
+          <ColorPicker
+            x={colorPicker.x}
+            y={colorPicker.y}
+            currentColor={nodes.find((n) => n.id === colorPicker.nodeId)?.color}
+            onSelectColor={(bg, border) => handleChangeColor(colorPicker.nodeId, bg, border)}
+            onClose={() => setColorPicker(null)}
+          />
         )}
       </AnimatePresence>
     </div>
