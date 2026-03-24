@@ -10,10 +10,12 @@ export default function MainLayout({
   return (
     <>
       <TopNavBar />
-      <main className="flex-1 pt-[62px] md:pt-[72px]">
+      <main className="flex-1 pt-[62px] md:pt-[72px] bg-[#FAF9F7]">
         <PageTransition>{children}</PageTransition>
       </main>
       <Footer />
     </>
   );
 }
+
+

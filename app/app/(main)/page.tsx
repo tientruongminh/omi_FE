@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Folder, Users, ChevronRight, Plus } from 'lucide-react';
-import { sharedCourses } from '@/entities/project';
+import { Users, ChevronRight, Plus } from 'lucide-react';
+import { sharedCourses, projectMembers } from '@/entities/project';
 import { useOmiLearnStore } from '@/entities/project';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -14,91 +14,105 @@ const cardVariants: Variants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.35, ease: 'easeOut' as const },
+    transition: { delay: i * 0.08, duration: 0.32, ease: 'easeOut' as const },
   }),
 };
 
-const pillVariants: Variants = {
-  hidden: { opacity: 0, x: -16 },
+const rowVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
   visible: (i: number) => ({
     opacity: 1,
-    x: 0,
-    transition: { delay: 0.1 + i * 0.08, duration: 0.3, ease: 'easeOut' as const },
+    y: 0,
+    transition: { delay: 0.1 + i * 0.07, duration: 0.28, ease: 'easeOut' as const },
   }),
 };
+
+// Dark photo-style avatar stack (matches design)
+function AvatarStack({ count = 2 }: { count?: number }) {
+  const shown = projectMembers.slice(0, Math.min(count, projectMembers.length));
+  const gradients = [
+    'linear-gradient(135deg, #2a4a4a 0%, #0e2a2e 100%)',
+    'linear-gradient(135deg, #1a3a4a 0%, #0a1e2e 100%)',
+    'linear-gradient(135deg, #2a3a4a 0%, #0e1e2a 100%)',
+  ];
+  return (
+    <div className="flex -space-x-3">
+      {shown.map((m, i) => (
+        <div
+          key={m.id}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+          style={{
+            background: gradients[i] ?? gradients[0],
+            border: '2px solid #1a1a1a',
+          }}
+        >
+          {m.initials}
+        </div>
+      ))}
+      {count > shown.length && (
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #2a3a2a 0%, #0e1e0e 100%)',
+            border: '2px solid #1a1a1a',
+            color: '#fff',
+          }}
+        >
+          +{count - shown.length}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const { projects, isCreateModalOpen, openCreateModal, closeCreateModal } = useOmiLearnStore();
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-8">
-      {/* Hero Welcome Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full bg-gradient-to-br from-[#2D2D2D] to-[#1a1a1a] rounded-2xl p-8 mb-8 relative overflow-hidden"
-        style={{ willChange: 'transform, opacity' }}
-      >
-        {/* Geometric decoration — subtle circles */}
-        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/[0.03] border border-white/[0.06]" />
-        <div className="absolute -right-4 -top-4 w-28 h-28 rounded-full bg-white/[0.04] border border-white/[0.08]" />
-        <div className="absolute right-16 bottom-0 w-36 h-36 rounded-full bg-[#6B2D3E]/10 border border-[#6B2D3E]/10" />
+    <div className="max-w-230 mx-auto px-6 py-10">
 
-        <div className="flex items-start justify-between relative z-10">
-          <div>
-            <p className="text-[#9CA3AF] text-sm mb-2 uppercase tracking-widest">Xin chào!</p>
-            <h1 className="text-white text-4xl font-bold leading-tight mb-3">
-              Sẵn sàng học điều mới<br />hôm nay?
-            </h1>
-            <p className="text-[#9CA3AF] text-base max-w-md">
-              Tiếp tục hành trình học tập với mindmap tương tác và nội dung khoá học được tuyển chọn.
-            </p>
-          </div>
-          <div className="hidden md:block">
-            <div className="w-32 h-32 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
-              <span className="text-5xl">◇</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="mt-8 flex items-center gap-6 relative z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#4CD964]" />
-            <span className="text-[#9CA3AF] text-sm">{projects.length} Dự án</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#818CF8]" />
-            <span className="text-[#9CA3AF] text-sm">{projects.filter(p => !p.isComplete).length} Đang học</span>
-          </div>
-        </div>
-
-        {/* Decorative dots */}
-        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-white/20" />
-        <div className="absolute top-8 right-8 w-1.5 h-1.5 rounded-full bg-white/10" />
-        <div className="absolute top-6 right-16 w-1 h-1 rounded-full bg-white/15" />
-      </motion.div>
-
-      {/* Top action row */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Folder size={20} className="text-[#2D2D2D]" />
-          <h2 className="text-xl font-bold text-[#2D2D2D]">Dự án của tôi</h2>
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between mb-10">
+        <div>
+          <h1
+            className="font-bold text-[#1a1a1a] mb-1.5"
+            style={{ fontSize: 'clamp(28px, 4vw, 42px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}
+          >
+            Project Hub
+          </h1>
+          <p className="text-sm" style={{ color: '#6b7280', lineHeight: 1.5 }}>
+            Your creative space for intentional &quot;wiggles&quot; and<br className="hidden sm:block" /> professional craftsmanship.
+          </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full hover:bg-[#1a1a1a] active:scale-95 transition-all cursor-pointer"
+          className="flex items-center gap-2.5 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 shrink-0"
+          style={{
+            background: '#2d5a3d',
+            borderRadius: '999px',
+            border: '2px solid #1a1a1a',
+            boxShadow: '3px 3px 0px #1a1a1a',
+          }}
         >
-          <span className="w-5 h-5 rounded-full bg-[#4CD964] flex items-center justify-center flex-shrink-0">
-            <Plus size={12} className="text-[#2D2D2D]" strokeWidth={3} />
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+            style={{ border: '1.5px solid rgba(255,255,255,0.5)' }}
+          >
+            <Plus size={11} strokeWidth={3} />
           </span>
-          <span className="text-sm font-medium">+ Dự án mới</span>
+          New Project
         </button>
       </div>
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+      {/* ── My Projects ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 mb-5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        <h2 className="text-lg font-bold text-[#1a1a1a]">My Projects</h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
         {projects.map((project, i) => (
           <motion.div
             key={project.id}
@@ -106,50 +120,59 @@ export default function HomePage() {
             variants={cardVariants}
             initial="hidden"
             animate="visible"
-            style={{ willChange: 'transform, opacity' }}
           >
             <Link
               href={`/dashboard/${project.id}`}
-              className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 flex flex-col gap-4 hover:border-[#6B2D3E] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99] transition-all cursor-pointer group block"
-              style={{ willChange: 'transform' }}
+              className="flex flex-col bg-white transition-all hover:-translate-y-0.5 active:scale-[0.99] group"
+              style={{
+                border: '1.5px solid #1a1a1a',
+                borderRadius: '16px',
+                padding: '20px',
+                minHeight: 190,
+              }}
             >
-              {/* Card header */}
-              <div>
-                <h3 className="font-bold text-[#2D2D2D] text-base mb-2 group-hover:text-[#6B2D3E] transition-colors">
+              {/* Title + desc */}
+              <div className="flex-1 mb-4">
+                <h3
+                  className="font-black text-[#1a1a1a] mb-2 leading-snug"
+                  style={{ fontSize: '20px' }}
+                >
                   {project.title}
                 </h3>
-                <p className="text-[#5A5C58] text-sm leading-relaxed">
+                <p className="text-[14px] leading-relaxed line-clamp-2" style={{ color: '#6b7280' }}>
                   {project.description}
                 </p>
               </div>
 
               {/* Dashed separator */}
-              <div className="border-t-2 border-dashed border-[#CCCCCC]" />
+              <div className="border-t border-dashed mb-3" style={{ borderColor: '#d1d5db' }} />
 
-              {/* Card footer */}
-              <div className="flex items-center justify-between">
-                <span className="text-[#5A5C58] text-xs font-medium uppercase tracking-wider">
+              {/* Footer */}
+              <div className={`flex justify-between gap-0.5 ${project.isComplete ? 'flex-row items-center' : 'flex-col'}`}>
+                <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#9ca3af' }}>
                   {project.date}
-                </span>
+                </div>
+
                 {project.isComplete ? (
                   <span
-                    className="text-[#2D2D2D] text-sm line-through"
-                    style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
+                    className="text-[11px] px-2.5 py-1 rounded-full font-semibold"
+                    style={{ background: '#dcfce7', color: '#16a34a' }}
                   >
-                    hoàn thành
+                    complete
                   </span>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 rounded-full bg-[#E5E7EB] overflow-hidden">
+                  <div className="flex items-center gap-3">
+                    {/* Progress bar */}
+                    <div className="w-35 h-3.5 rounded-full overflow-hidden border" style={{ background: '#e5e7eb' }}>
                       <motion.div
-                        className="h-full rounded-full bg-[#4CD964]"
+                        className="h-full rounded-full"
+                        style={{ background: '#4CD964' }}
                         initial={{ width: 0 }}
                         animate={{ width: `${project.progress ?? 0}%` }}
                         transition={{ duration: 0.8, delay: 0.2 + i * 0.1, ease: 'easeOut' }}
-                        style={{ willChange: 'width' }}
                       />
                     </div>
-                    <span className="text-[#5A5C58] text-xs">{project.progress}%</span>
+                    <AvatarStack count={3} />
                   </div>
                 )}
               </div>
@@ -158,10 +181,10 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Courses Shared with Me */}
-      <div className="flex items-center gap-2 mb-5">
-        <Users size={20} className="text-[#2D2D2D]" />
-        <h2 className="text-xl font-bold text-[#2D2D2D]">Khóa học được chia sẻ</h2>
+      {/* ── Courses Shared with Me ───────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 mb-5">
+        <Users size={20} style={{ color: '#6b7280' }} />
+        <h2 className="text-lg font-bold text-[#1a1a1a]">Courses shared with Me</h2>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -169,28 +192,32 @@ export default function HomePage() {
           <motion.div
             key={course.id}
             custom={i}
-            variants={pillVariants}
+            variants={rowVariants}
             initial="hidden"
             animate="visible"
-            style={{ willChange: 'transform, opacity' }}
           >
             <Link
               href="/learn"
-              className="flex items-center justify-between px-6 py-4 bg-[#F1F1EC] border-2 border-[#333333] rounded-full hover:border-[#2D2D2D] hover:bg-[#EBEBE5] transition-all group"
+              className="flex items-center justify-between transition-all hover:brightness-95 group"
+              style={{
+                background: '#f5f0eb',
+                border: '1.5px solid #1a1a1a',
+                borderRadius: '14px',
+                padding: '16px 20px',
+              }}
             >
               <div>
-                <span className="font-semibold text-[#2D2D2D] text-sm group-hover:text-[#6B2D3E] transition-colors">
+                <p className="font-bold text-[#1a1a1a]" style={{ fontSize: '15px' }}>
                   {course.title}
-                </span>
-                <span className="text-[#5A5C58] text-sm ml-3">
-                  Chia sẻ bởi <span className="font-medium">{course.sharedBy}</span> • {course.timeAgo}
-                </span>
+                </p>
+                <p className="text-[12px] mt-0.5" style={{ color: '#9ca3af' }}>
+                  Shared by {course.sharedBy} • {course.timeAgo}
+                </p>
               </div>
-              <ChevronRight
-                size={18}
-                className="text-[#5A5C58] group-hover:text-[#2D2D2D] group-hover:translate-x-1 transition-all flex-shrink-0"
-                style={{ willChange: 'transform' }}
-              />
+              <div className="flex items-center gap-3 shrink-0">
+                <AvatarStack count={i === 0 ? 3 : i === 1 ? 2 : 1} />
+                <ChevronRight size={18} style={{ color: '#9ca3af' }} />
+              </div>
             </Link>
           </motion.div>
         ))}
@@ -203,3 +230,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+

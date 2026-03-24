@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="mt-auto bg-white">
+    <footer className="mt-auto" style={{ background: '#FAF9F7' }}>
       {/* Dashed separator — matches design exactly */}
       <div className="border-t-2 border-dashed border-[#CCCCCC]" />
       
@@ -34,3 +34,4 @@ export default function Footer() {
     </footer>
   );
 }
+
