@@ -11,7 +11,7 @@ import { MessageCircle, ClipboardList } from 'lucide-react';
 interface Props {
   node: CanvasNode;
   onClose: () => void;
-  onCreateAINode: (nodeId: string, type: 'ai-response' | 'review', selectedText?: string) => void;
+  onCreateAINode: (nodeId: string, type: 'ai-chat' | 'ai-review', selectedText?: string) => void;
 }
 
 interface FloatingMenu {
@@ -97,7 +97,7 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
     return () => document.removeEventListener('mousedown', handleClick);
   }, [floatingMenu]);
 
-  const handleAction = useCallback((type: 'ai-response' | 'review') => {
+  const handleAction = useCallback((type: 'ai-chat' | 'ai-review') => {
     const text = floatingMenu?.text || undefined;
     onCreateAINode(node.id, type, text);
     setFloatingMenu(null);
@@ -148,13 +148,13 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
                   </div>
                 )}
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-response'); }}
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-chat'); }}
                   className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
                 >
                   <MessageCircle size={13} className="text-[#6EE7B7]" /> AI hỏi đáp
                 </button>
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); handleAction('review'); }}
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-review'); }}
                   className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
                 >
                   <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
@@ -180,13 +180,13 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
       {/* Footer: AI actions for full document */}
       <div className="flex gap-2.5 px-5 py-3.5 border-t-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
         <button
-          onClick={() => onCreateAINode(node.id, 'ai-response')}
+          onClick={() => onCreateAINode(node.id, 'ai-chat')}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] text-[#065F46] font-bold text-[12px] hover:bg-[#A7F3D0] transition-colors cursor-pointer"
         >
           <MessageCircle size={13} /> AI hỏi đáp
         </button>
         <button
-          onClick={() => onCreateAINode(node.id, 'review')}
+          onClick={() => onCreateAINode(node.id, 'ai-review')}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FEE2E2] border-2 border-[#FCA5A5] text-[#991B1B] font-bold text-[12px] hover:bg-[#FECACA] transition-colors cursor-pointer"
         >
           <ClipboardList size={13} /> Ôn tập

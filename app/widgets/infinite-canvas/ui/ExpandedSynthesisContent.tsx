@@ -88,7 +88,7 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
                 <div key={src.id} className="p-3 bg-[#F5F0EB] rounded-xl border border-[#E5E5DF]">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm">
-                      {src.type === 'note' ? '✎' : src.type === 'ai-response' ? '🤖' : src.docType === 'video' ? '▶' : '◎'}
+                      {src.type === 'note' ? '✎' : (src.type === 'ai-chat' || src.type === 'ai-review') ? '🤖' : src.docType === 'video' ? '▶' : '◎'}
                     </span>
                     <p className="text-[13px] font-semibold text-[#2D2D2D]">{src.title}</p>
                   </div>

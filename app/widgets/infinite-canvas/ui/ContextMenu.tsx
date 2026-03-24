@@ -36,7 +36,7 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
       case 'chapter': base.push({ label: 'Thêm tài liệu', action: 'add-document' }, { label: 'Đổi màu', action: 'change-color' }); break;
       case 'document': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'Mở đọc', action: 'open-read' }); break;
       case 'synthesis': base.push({ label: 'Mở tổng hợp', action: 'open-read' }); break;
-      case 'ai-response': case 'note': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'Tạo node kế thừa', action: 'create-child' }); break;
+      case 'ai-chat': case 'ai-review': case 'note': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }); break;
     }
     if (menu.hasChildren) {
       base.push(menu.isCollapsed ? { label: 'Mở rộng', action: 'expand-node' } : { label: 'Thu gọn', action: 'collapse-node' });

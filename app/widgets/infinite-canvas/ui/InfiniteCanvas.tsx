@@ -356,7 +356,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
         const aiText = action === 'ai-chat'
           ? `AI đang phân tích "${target.title}"...\n\n${contextText || (paragraphs[0]?.slice(0, 200) ?? '')}...${connectedNodes.length > 0 ? `\n\n(Dựa trên ${connectedNodes.length} node liên kết)` : ''}`
           : 'Nội dung ôn tập được tạo. Bao gồm quiz, flashcard và câu hỏi tự luận.';
-        const newNode: CanvasNode = { id: genId(), type: 'ai-response', title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${target.title.slice(0, 25)}`, content: aiText, x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60, width: 190, height: 50, parentId: target.id };
+        const newNode: CanvasNode = { id: genId(), type: action === 'ai-chat' ? 'ai-chat' : 'ai-review', title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${target.title.slice(0, 25)}`, content: aiText, x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60, width: 190, height: 50, parentId: target.id };
         setNodes((p) => [...p, newNode]);
         setEdges((p) => [...p, { from: target.id, to: newNode.id }]);
         setExpandedNodeIds((prev) => {
@@ -364,12 +364,6 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
           return [...prev, newNode.id];
         });
         setFocusedNodeId(newNode.id);
-        break;
-      }
-      case 'create-child': {
-        if (!target) break;
-        const child: CanvasNode = { id: genId(), type: target.type === 'ai-response' ? 'ai-response' : 'note', title: `Kế thừa từ: ${target.title.slice(0, 25)}`, content: '', x: target.x + 230, y: target.y + 30, width: 190, height: 50, parentId: target.id };
-        setNodes((p) => [...p, child]); setEdges((p) => [...p, { from: target.id, to: child.id }]);
         break;
       }
       case 'add-note': {
@@ -438,7 +432,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
   }, []);
 
   // ── Create AI node from expanded view (keeps source panel open) ──
-  const handleCreateAINode = useCallback((nodeId: string, type: 'ai-response' | 'review', selectedText?: string) => {
+  const handleCreateAINode = useCallback((nodeId: string, type: 'ai-chat' | 'ai-review', selectedText?: string) => {
     const target = nodes.find((n) => n.id === nodeId);
     if (!target) return;
     
@@ -457,7 +451,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
       if (cn.content) contextText += `\n\n[${cn.title}]: ${cn.content}`;
     });
     
-    const action = type === 'review' ? 'ai-review' : 'ai-chat';
+    const action = type;
     const paragraphs = target.docType === 'text' ? (documentTextContent[target.docId ?? ''] ?? []) : [videoTranscripts[target.docId ?? ''] ?? ''];
     
     let aiText: string;
@@ -472,7 +466,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     }
     
     const newNode: CanvasNode = {
-      id: genId(), type: 'ai-response',
+      id: genId(), type: action,
       title: `${action === 'ai-chat' ? 'AI Hỏi đáp' : 'AI Ôn tập'}: ${selectedText ? selectedText.slice(0, 20) + '...' : target.title.slice(0, 25)}`,
       content: aiText,
       x: target.x + 220, y: action === 'ai-review' ? target.y - 60 : target.y + 60,
@@ -491,14 +485,20 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
 
   const hasSidebar = sidebarNodeId !== null;
   const hasExpanded = expandedNodes.length > 0;
+  const sidebarCount = expandedNodes.length + (hasSidebar ? 1 : 0);
 
   return (
-    <div className="relative w-full h-full">
-      {/* Canvas always fills full area */}
+    <div className="flex w-full h-full gap-3">
+      {/* Canvas area — shrinks when sidebars open */}
       <div
         ref={containerRef}
-        className="absolute inset-0 overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB]"
-        style={{ cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab' }}
+        className="relative overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB] transition-all duration-300"
+        style={{
+          cursor: drawingEdge ? 'crosshair' : isPanning.current ? 'grabbing' : 'grab',
+          flex: sidebarCount === 0 ? '1 1 100%' : sidebarCount === 1 ? '1 1 55%' : '0 0 0%',
+          minWidth: sidebarCount >= 2 ? 0 : 300,
+          display: sidebarCount >= 2 ? 'none' : undefined,
+        }}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}
         onClick={(e) => { if (!(e.target as HTMLElement).closest('[data-node-id]')) { setFocusedNodeId(null); setContextMenu(null); setSelectionToolbar(null); } }}
         onContextMenu={handleCanvasContextMenu}
@@ -574,64 +574,28 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
         </AnimatePresence>
       </div>
 
-      {/* Popup overlay — sits on top of canvas */}
+      {/* Right sidebars — expanded nodes + document sidebar */}
       <AnimatePresence>
-        {(hasExpanded || hasSidebar) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 z-30 flex items-stretch gap-3 p-4"
-            style={{ pointerEvents: 'none' }}
-          >
-            {/* Semi-transparent backdrop — click to close */}
-            <div
-              className="absolute inset-0 bg-black/20 rounded-2xl"
-              style={{ pointerEvents: 'auto' }}
-              onClick={() => { handleCloseExpanded(); setSidebarNodeId(null); }}
-            />
-
-            {/* Expanded panels */}
-            <div className="relative z-10 flex gap-3 w-full h-full items-stretch justify-center" style={{ pointerEvents: 'auto' }}>
-              {expandedNodes.map((node, i) => (
-                <ExpandedNodeView
-                  key={node.id}
-                  node={node}
-                  allNodes={nodes}
-                  edges={edges}
-                  onClose={() => handleCloseExpanded(node.id)}
-                  onCreateAINode={handleCreateAINode}
-                  onUpdateContent={handleUpdateContent}
-                  position={expandedNodes.length === 1 && !hasSidebar ? 'center' : i === 0 ? 'left' : 'right'}
-                />
-              ))}
-
-              {/* Document sidebar */}
-              {hasSidebar && (
-                <motion.div
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 60 }}
-                  transition={{ duration: 0.25 }}
-                  className="flex-shrink-0"
-                  style={{ width: expandedNodes.length > 0 ? 340 : 400, minWidth: 0 }}
-                >
-                  <DocumentSidebar
-                    nodeId={sidebarNodeId}
-                    onClose={() => setSidebarNodeId(null)}
-                    onApply={handleSidebarApply}
-                    onOpenDocument={handleOpenDocument}
-                  />
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
+        {expandedNodes.map((node) => (
+          <ExpandedNodeView
+            key={node.id}
+            node={node}
+            allNodes={nodes}
+            edges={edges}
+            onClose={() => handleCloseExpanded(node.id)}
+            onCreateAINode={handleCreateAINode}
+            onUpdateContent={handleUpdateContent}
+          />
+        ))}
       </AnimatePresence>
 
-      {/* Document sidebar when no panels expanded — render without overlay */}
-      {hasSidebar && !hasExpanded && null}
+      {/* Document sidebar */}
+      <DocumentSidebar
+        nodeId={sidebarNodeId}
+        onClose={() => setSidebarNodeId(null)}
+        onApply={handleSidebarApply}
+        onOpenDocument={handleOpenDocument}
+      />
     </div>
   );
 }
