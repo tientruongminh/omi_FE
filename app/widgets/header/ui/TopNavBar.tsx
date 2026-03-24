@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { href: '/dashboard',  label: 'Dashboard' },
   { href: '/roadmap',    label: 'Roadmap'  },
   { href: '/learn',      label: 'Học tập'  },
-  { href: '/schedule',   label: 'Lịch học' },
+
   { href: '/workspace',  label: 'Tài liệu' },
 ];
 

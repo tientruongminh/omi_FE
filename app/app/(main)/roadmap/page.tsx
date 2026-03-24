@@ -96,10 +96,10 @@ function RoadmapContent() {
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             <Link
-              href="/schedule"
+              href="/dashboard"
               className="flex items-center gap-3 px-10 py-4 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-lg shadow-lg hover:bg-[#3bc453] hover:scale-105 active:scale-95 transition-all ring-4 ring-[#4CD964]/30"
             >
-              Xem lịch học
+              Xem Dashboard
             </Link>
           </motion.div>
         ) : (
