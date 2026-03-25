@@ -592,7 +592,7 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
           )}
         </AnimatePresence>
 
-        {/* Popup overlay — AI, document, video, synthesis (centered on canvas) */}
+        {/* Popup overlay — AI, document, video, synthesis (full screen) */}
         <AnimatePresence>
           {hasExpanded && (
             <motion.div
@@ -600,21 +600,16 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-[60] flex items-center justify-center"
+              className="absolute inset-0 z-[60] flex items-center justify-center p-4"
               onClick={(e) => {
                 if (e.target === e.currentTarget) setExpandedNodeIds([]);
               }}
             >
               {/* Backdrop */}
-              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setExpandedNodeIds([])} />
               
-              {/* Popup panels */}
-              <div className="relative z-10 flex gap-3 p-6" style={{
-                width: expandedNodes.length === 1 ? '55%' : '80%',
-                maxWidth: expandedNodes.length === 1 ? '600px' : '1100px',
-                height: '85%',
-                maxHeight: '700px',
-              }}>
+              {/* Popup panels — full size */}
+              <div className="relative z-10 flex gap-3 w-full h-full">
                 {expandedNodes.map((node) => (
                   <ExpandedNodeView
                     key={node.id}
