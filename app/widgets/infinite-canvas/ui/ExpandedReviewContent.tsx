@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, RotateCw, Send, ChevronLeft, ChevronRight, MessageCircle, ClipboardList } from 'lucide-react';
 import { CanvasNode } from '../model/types';
@@ -9,6 +9,12 @@ import ExpandedHeader from './ExpandedHeader';
 import AIStreamText from '@/shared/ui/AIStreamText';
 
 type ReviewTab = 'quiz' | 'flashcard' | 'essay' | 'teach';
+
+interface FloatingMenu {
+  x: number;
+  y: number;
+  text: string;
+}
 
 interface Props {
   node: CanvasNode;
@@ -25,6 +31,67 @@ const TABS: { key: ReviewTab; label: string; icon: string }[] = [
 
 export default function ExpandedReviewContent({ node, onClose, onCreateAINode }: Props) {
   const [activeTab, setActiveTab] = useState<ReviewTab>('quiz');
+  const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Right-click handler
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onCreateAINode) return;
+
+    const selection = window.getSelection();
+    const text = selection?.toString().trim() ?? '';
+    const containerRect = contentRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    setFloatingMenu({
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+      text,
+    });
+  }, [onCreateAINode]);
+
+  // Text selection handler
+  const handleMouseUp = useCallback(() => {
+    if (!onCreateAINode) return;
+    setTimeout(() => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+      if (!text || text.length < 3) {
+        setFloatingMenu(null);
+        return;
+      }
+      const range = selection?.getRangeAt(0);
+      if (!range) return;
+      const rect = range.getBoundingClientRect();
+      const containerRect = contentRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      setFloatingMenu({
+        x: rect.left + rect.width / 2 - containerRect.left,
+        y: rect.top - containerRect.top - 8,
+        text,
+      });
+    }, 10);
+  }, [onCreateAINode]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (floatingMenu && contentRef.current && !contentRef.current.contains(e.target as Node)) {
+        setFloatingMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [floatingMenu]);
+
+  const handleAction = useCallback((type: 'ai-chat' | 'ai-review') => {
+    const text = floatingMenu?.text || undefined;
+    onCreateAINode?.(node.id, type, text);
+    setFloatingMenu(null);
+    window.getSelection()?.removeAllRanges();
+  }, [floatingMenu, node.id, onCreateAINode]);
 
   return (
     <div className="flex flex-col h-full bg-[#FEE2E2]">
@@ -48,11 +115,49 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={contentRef}
+        className="flex-1 overflow-y-auto relative select-text"
+        onContextMenu={handleContextMenu}
+        onMouseUp={handleMouseUp}
+      >
         {activeTab === 'quiz' && <QuizTab />}
         {activeTab === 'flashcard' && <FlashcardTab />}
         {activeTab === 'essay' && <EssayTab />}
         {activeTab === 'teach' && <TeachAITab />}
+
+        {/* Floating AI menu on selection/right-click */}
+        <AnimatePresence>
+          {floatingMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.9 }}
+              transition={{ duration: 0.15 }}
+              className="absolute z-50 flex flex-col bg-[#2D2D2D] rounded-xl shadow-2xl overflow-hidden"
+              style={{ left: floatingMenu.x, top: floatingMenu.y, transform: 'translate(-50%, -100%)', minWidth: 180 }}
+            >
+              {floatingMenu.text && (
+                <div className="px-3 py-2 text-[10px] text-white/50 border-b border-white/10 truncate max-w-[220px]">
+                  &ldquo;{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}&rdquo;
+                </div>
+              )}
+              <button
+                onMouseDown={(e) => { e.preventDefault(); handleAction('ai-chat'); }}
+                className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
+              >
+                <MessageCircle size={13} className="text-[#6EE7B7]" /> AI hỏi đáp
+              </button>
+              <button
+                onMouseDown={(e) => { e.preventDefault(); handleAction('ai-review'); }}
+                className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
+              >
+                <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
+              </button>
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-[#2D2D2D] rotate-45" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Footer: create more nodes */}
