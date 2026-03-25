@@ -844,7 +844,7 @@ export default function LandingPage() {
           style={{ width: 'min(600px, 90vw)' }}
         >
           <img
-            src="/image.png"
+            src="/image5.png"
             alt="Sẵn sàng bứt phá cùng Omilearn?"
             className="w-full h-auto"
             style={{ borderRadius: '12px' }}
