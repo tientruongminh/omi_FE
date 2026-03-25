@@ -404,7 +404,7 @@ function RoadmapContent() {
           )}
         </div>
         <img
-          src="/image.png"
+          src="/image7.png"
           alt=""
           style={{ width: 72, height: 72, objectFit: 'contain', transform: 'rotate(-15deg)' }}
         />
