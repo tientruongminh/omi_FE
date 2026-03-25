@@ -4,10 +4,11 @@ import { useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, TrendingUp, Sparkles, Flower2, Star, BarChart3, Mic, Calendar } from 'lucide-react';
+import { ChevronRight, ChevronLeft, TrendingUp } from 'lucide-react';
 import { SUBJECTS, DAYS, TIME_SLOTS, SCHEDULE, SubjectKey } from '@/entities/schedule';
 import { useOmiLearnStore } from '@/entities/project';
 import AIStreamText from '@/shared/ui/AIStreamText';
+import Image from 'next/image';
 
 const ANALYSIS_TEXT = `Phân tích tiến độ — Hệ Điều Hành và Linux
 
@@ -21,13 +22,6 @@ Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script t�
 
 So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
 
-const ANALYTICS_CARDS = [
-  { label: 'Analysis', labelVi: 'PHÂN TÍCH', percentage: 85, bg: '#F8D7DA', border: '#F0B8C0', barColor: '#8B7355', iconBg: '#FCEAED', Icon: Flower2, rotate: -2 },
-  { label: 'Synthesis', labelVi: 'TỔNG HỢP', percentage: 70, bg: '#F5EDCB', border: '#E8DDB0', barColor: '#7A6B2E', iconBg: '#FAF5E0', Icon: Star, rotate: 1.5 },
-  { label: 'Critique', labelVi: 'PHẢN BIỆN', percentage: 60, bg: '#D4EDDA', border: '#C3E6CB', barColor: '#3D6B3D', iconBg: '#E8F5EC', Icon: BarChart3, rotate: -1 },
-  { label: 'Interviewing', labelVi: 'PHỎNG VẤN', percentage: 45, bg: '#E8E6E0', border: '#D8D6D0', barColor: '#4A4A4A', iconBg: '#F0EEEA', Icon: Mic, rotate: 2.5 },
-];
-
 interface PageProps {
   params: Promise<{ projectId: string }>;
 }
@@ -38,9 +32,6 @@ export default function ProjectDashboardPage({ params }: PageProps) {
   const project = storeProjects.find((p) => p.id === projectId);
   const projectTitle = project?.title ?? 'Mastering UI/UX Design';
   const projectDesc = project?.description ?? 'Hành trình trở thành chuyên gia thiết kế từ con số không. Tiếp tục bài học về Wireframing.';
-  const unitsComplete = 8;
-  const unitsTotal = 12;
-  const progressPercent = Math.round((unitsComplete / unitsTotal) * 100);
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0);
@@ -67,36 +58,19 @@ export default function ProjectDashboardPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* Right: progress card */}
+        {/* Right: progress card — exact SVG asset */}
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="rounded-2xl px-5 py-5 flex-shrink-0"
-          style={{ backgroundColor: '#F5F3F0', border: '1px solid #E0DCD6', width: 240 }}
+          className="flex-shrink-0"
         >
-          <p className="text-[11px] font-semibold text-[#444444] uppercase tracking-wider mb-2">Tiến độ dự án</p>
-          <div className="flex items-baseline gap-1 mb-4">
-            <span className="text-[36px] font-black text-[#1A1A1A] leading-none">{unitsComplete}/{unitsTotal}</span>
-            <span className="text-[16px] text-[#666] ml-1">Units</span>
-          </div>
-          {/* Striped progress bar */}
-          <div className="w-full h-[22px] rounded-full overflow-hidden" style={{ backgroundColor: '#E8E4DE' }}>
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${progressPercent}%`,
-                background: `repeating-linear-gradient(
-                  -45deg,
-                  #3D6B3D,
-                  #3D6B3D 6px,
-                  #4A7A4A 6px,
-                  #4A7A4A 12px
-                )`,
-              }}
-            />
-          </div>
-          <p className="text-[12px] text-[#777777] mt-2 text-right">Hoàn thành {progressPercent}%</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dashboard/background.svg"
+            alt="Tiến độ dự án"
+            className="w-[280px] md:w-[356px] h-auto"
+          />
         </motion.div>
       </div>
 
@@ -104,54 +78,34 @@ export default function ProjectDashboardPage({ params }: PageProps) {
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-5">
           <div className="w-5 h-5 rounded bg-[#333] flex items-center justify-center">
-            <BarChart3 size={12} className="text-white" />
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="5" width="2" height="6" rx="0.5" fill="white"/><rect x="5" y="3" width="2" height="8" rx="0.5" fill="white"/><rect x="9" y="1" width="2" height="10" rx="0.5" fill="white"/></svg>
           </div>
           <h2 className="text-[20px] font-bold text-[#1A1A1A]">AI Analytics Grid</h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {ANALYTICS_CARDS.map((card, i) => {
-            const CardIcon = card.Icon;
-            return (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, y: 15, rotate: 0 }}
-                animate={{ opacity: 1, y: 0, rotate: card.rotate }}
-                whileHover={{ rotate: 0, scale: 1.05, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
-                transition={{ delay: 0.1 + i * 0.08, duration: 0.35 }}
-                className="rounded-2xl p-5 flex flex-col gap-3 transition-all cursor-default"
-                style={{ backgroundColor: card.bg, border: `1px solid ${card.border}`, minHeight: 180 }}
-              >
-                {/* Top: icon + percentage */}
-                <div className="flex items-start justify-between">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: card.iconBg }}
-                  >
-                    <CardIcon size={18} className="text-[#3D5A3D]" />
-                  </div>
-                  <span className="text-[22px] font-bold text-[#2D2D2D]">{card.percentage}%</span>
-                </div>
-
-                {/* Title + Vietnamese label */}
-                <div className="mt-auto">
-                  <p className="text-[18px] font-bold text-[#1A1A1A]">{card.label}</p>
-                  <p className="text-[10px] font-medium text-[#777] uppercase tracking-wider mt-0.5">{card.labelVi}</p>
-                </div>
-
-                {/* Mini progress bar */}
-                <div className="w-full h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: `${card.border}80` }}>
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: card.barColor }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${card.percentage}%` }}
-                    transition={{ duration: 0.8, delay: 0.3 + i * 0.1, ease: 'easeOut' }}
-                  />
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+          {[
+            { src: '/dashboard/analysis.svg', alt: 'Analysis' },
+            { src: '/dashboard/synthesis.svg', alt: 'Synthesis' },
+            { src: '/dashboard/critique.svg', alt: 'Critique' },
+            { src: '/dashboard/interviewing.svg', alt: 'Interviewing' },
+          ].map((card, i) => (
+            <motion.div
+              key={card.alt}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ delay: 0.1 + i * 0.1, duration: 0.4 }}
+              className="cursor-default"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={card.src}
+                alt={card.alt}
+                className="w-full h-auto"
+              />
+            </motion.div>
+          ))}
         </div>
       </div>
 
