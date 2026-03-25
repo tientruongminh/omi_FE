@@ -642,42 +642,42 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
             />
           )}
         </AnimatePresence>
-
-        {/* Popup overlay — AI, document, video, synthesis (full screen) */}
-        <AnimatePresence>
-          {hasExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-[60] flex items-center justify-center p-4"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setExpandedNodeIds([]);
-              }}
-            >
-              {/* Backdrop */}
-              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setExpandedNodeIds([])} />
-              
-              {/* Popup panels — full size */}
-              <div className="relative z-10 flex gap-3 w-full h-full">
-                {expandedNodes.map((node) => (
-                  <ExpandedNodeView
-                    key={node.id}
-                    node={node}
-                    allNodes={nodes}
-                    edges={edges}
-                    onClose={() => handleCloseExpanded(node.id)}
-                    onCreateAINode={handleCreateAINode}
-                    onUpdateContent={handleUpdateContent}
-                    isPopup
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Popup overlay — AI, document, video, synthesis (fixed, covers viewport) */}
+      <AnimatePresence>
+        {hasExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setExpandedNodeIds([]);
+            }}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setExpandedNodeIds([])} />
+            
+            {/* Popup panels — centered, max size */}
+            <div className="relative z-10 flex gap-4 w-full h-full max-w-[1400px] max-h-[85vh]">
+              {expandedNodes.map((node) => (
+                <ExpandedNodeView
+                  key={node.id}
+                  node={node}
+                  allNodes={nodes}
+                  edges={edges}
+                  onClose={() => handleCloseExpanded(node.id)}
+                  onCreateAINode={handleCreateAINode}
+                  onUpdateContent={handleUpdateContent}
+                  isPopup
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Right sidebar — note OR document sidebar */}
       {hasNoteSidebar && noteSidebarNode && (
