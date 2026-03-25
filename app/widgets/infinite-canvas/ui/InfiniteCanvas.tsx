@@ -583,10 +583,9 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
           {/* Drawing edge preview */}
           {drawingEdge && (
             <svg width={CANVAS_W} height={CANVAS_H} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible', zIndex: 50 }}>
-              <line
-                x1={drawingEdge.fromX} y1={drawingEdge.fromY}
-                x2={drawingEdge.toX} y2={drawingEdge.toY}
-                stroke="#6366F1" strokeWidth={2} strokeDasharray="6 4" opacity={0.7}
+              <path
+                d={`M ${drawingEdge.fromX} ${drawingEdge.fromY} C ${(drawingEdge.fromX + drawingEdge.toX) / 2} ${drawingEdge.fromY}, ${(drawingEdge.fromX + drawingEdge.toX) / 2} ${drawingEdge.toY}, ${drawingEdge.toX} ${drawingEdge.toY}`}
+                stroke="#6366F1" strokeWidth={2} strokeDasharray="6 4" opacity={0.7} fill="none"
               />
               <circle cx={drawingEdge.toX} cy={drawingEdge.toY} r={5} fill="#6366F1" opacity={0.5} />
             </svg>
