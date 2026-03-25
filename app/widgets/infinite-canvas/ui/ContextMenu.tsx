@@ -36,7 +36,6 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
         base.push(
           { label: 'AI Hỏi đáp', action: 'ai-chat' },
           { label: 'AI Ôn tập', action: 'ai-review' },
-          { label: 'Thêm tài liệu', action: 'add-document' },
         );
         break;
       case 'document': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'Mở đọc', action: 'open-read' }); break;

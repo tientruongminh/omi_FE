@@ -168,12 +168,55 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
       )}
 
       {node.docType === 'video' && (
-        <div className="flex-1 overflow-y-auto px-5 py-4" onContextMenu={handleContextMenu} ref={contentRef}>
+        <div
+          className="flex-1 overflow-y-auto px-5 py-4 relative"
+          onContextMenu={handleContextMenu}
+          onMouseUp={handleMouseUp}
+          ref={contentRef}
+        >
           <VideoPlayer node={node} />
           <div className="p-4 bg-white rounded-xl border border-[#E5E5DF]">
             <p className="text-[11px] font-bold text-[#5A5C58] uppercase tracking-wide mb-2">Nội dung chính</p>
             <p className="text-[13px] text-[#5A5C58] leading-relaxed italic select-text">{paragraphs[0]}</p>
           </div>
+
+          {/* Floating AI menu — same as text view */}
+          <AnimatePresence>
+            {floatingMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.9 }}
+                transition={{ duration: 0.15 }}
+                className="absolute z-50 flex flex-col bg-[#2D2D2D] rounded-xl shadow-2xl overflow-hidden"
+                style={{
+                  left: floatingMenu.x,
+                  top: floatingMenu.y,
+                  transform: 'translate(-50%, -100%)',
+                  minWidth: 180,
+                }}
+              >
+                {floatingMenu.text && (
+                  <div className="px-3 py-2 text-[10px] text-white/50 border-b border-white/10 truncate max-w-[220px]">
+                    &ldquo;{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}&rdquo;
+                  </div>
+                )}
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-chat'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
+                >
+                  <MessageCircle size={13} className="text-[#6EE7B7]" /> AI hỏi đáp
+                </button>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-review'); }}
+                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
+                >
+                  <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
+                </button>
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-[#2D2D2D] rotate-45" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
