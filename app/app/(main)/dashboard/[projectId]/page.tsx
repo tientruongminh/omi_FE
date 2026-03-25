@@ -4,7 +4,7 @@ import { useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Map, TrendingUp, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, TrendingUp, Sparkles } from 'lucide-react';
 import { dashboardStats } from '@/entities/dashboard';
 import { SUBJECTS, DAYS, TIME_SLOTS, SCHEDULE, SubjectKey } from '@/entities/schedule';
 import { useOmiLearnStore } from '@/entities/project';
@@ -22,42 +22,13 @@ Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script t�
 
 So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
 
-// Accent stripe colors for stat cards
-const STAT_ACCENTS = ['#4CD964', '#818CF8', '#F08080', '#F5A623'];
-
-// Circular progress SVG
-function CircularProgress({ percentage, units, total }: { percentage: number; units: number; total: number }) {
-  const radius = 78;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center" style={{ width: 196, height: 196 }}>
-      <svg width="196" height="196" className="-rotate-90">
-        {/* Track */}
-        <circle cx="98" cy="98" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="14" />
-        {/* Progress */}
-        <motion.circle
-          cx="98"
-          cy="98"
-          r={radius}
-          fill="none"
-          stroke="#4CD964"
-          strokeWidth="14"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.4, ease: 'easeOut', delay: 0.3 }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold text-[#2D2D2D]">{percentage}%</span>
-        <span className="text-sm text-[#5A5C58] mt-1">{units}/{total} units</span>
-      </div>
-    </div>
-  );
-}
+// AI Analytics card colors matching design
+const ANALYTICS_CARDS = [
+  { label: 'Analysis', labelVi: 'Phân tích', percentage: 85, bg: '#FECDD3', border: '#FDA4AF', tag: 'mindACTIVE', tagBg: '#FEE2E2' },
+  { label: 'Synthesis', labelVi: 'Tổng hợp', percentage: 70, bg: '#FEF3C7', border: '#FCD34D', tag: 'CONNECTED', tagBg: '#FFFBEB' },
+  { label: 'Critique', labelVi: 'Phản biện', percentage: 60, bg: '#D1FAE5', border: '#6EE7B7', tag: 'GROWING', tagBg: '#ECFDF5' },
+  { label: 'Interviewing', labelVi: 'Phỏng vấn', percentage: 45, bg: '#D1FAE5', border: '#6EE7B7', tag: 'STARTER', tagBg: '#ECFDF5' },
+];
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -67,8 +38,11 @@ export default function ProjectDashboardPage({ params }: PageProps) {
   const { projectId } = use(params);
   const storeProjects = useOmiLearnStore((s) => s.projects);
   const project = storeProjects.find((p) => p.id === projectId);
-  const projectTitle = project?.title ?? 'Hệ Điều Hành và Linux';
-  const progress = project?.progress ?? 60;
+  const projectTitle = project?.title ?? 'Mastering UI/UX Design';
+  const projectDesc = project?.description ?? 'Hành trình trở thành chuyên gia thiết kế sẽ có ai không. Tiếp tục bài học và #hilearning.';
+  const progress = project?.progress ?? 67;
+  const unitsComplete = 8;
+  const unitsTotal = 12;
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0);
@@ -76,84 +50,112 @@ export default function ProjectDashboardPage({ params }: PageProps) {
   const router = useRouter();
 
   const handleAnalysis = () => {
-    if (showAnalysis) {
-      setAnalysisKey((k) => k + 1);
-    }
+    if (showAnalysis) setAnalysisKey((k) => k + 1);
     setShowAnalysis(true);
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-[#5A5C58] mb-6 flex-wrap">
-        <Link href="/" className="hover:text-[#2D2D2D] transition-colors">Dự án</Link>
-        <ChevronRight size={14} />
-        <span className="text-[#2D2D2D] font-semibold">{projectTitle}</span>
-        <ChevronRight size={14} />
-        <span className="text-[#6B2D3E]">Dashboard</span>
-      </div>
+    <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#2D2D2D]">{projectTitle}</h1>
-          <p className="text-[#5A5C58] mt-1">Theo dõi tiến độ học tập của bạn</p>
+      {/* ── Hero Banner ──────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        {/* Left: title + description */}
+        <div className="flex-1">
+          <h1 className="text-3xl md:text-[42px] font-black text-[#2D2D2D] leading-[1.15] tracking-tight">
+            {projectTitle}
+          </h1>
+          <p className="text-[#5A5C58] text-[15px] mt-3 max-w-md leading-relaxed">
+            {projectDesc}
+          </p>
+          <div className="flex items-center gap-3 mt-4">
+            <Link
+              href={`/learn?project=${projectId}`}
+              className="px-5 py-2.5 bg-[#2D2D2D] text-white rounded-full text-sm font-bold hover:bg-[#1a1a1a] active:scale-95 transition-all"
+            >
+              Tiếp tục học →
+            </Link>
+            <Link
+              href={`/roadmap?project=${projectId}`}
+              className="px-5 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] text-[#2D2D2D] rounded-full text-sm font-bold hover:border-[#6B2D3E] hover:text-[#6B2D3E] active:scale-95 transition-all"
+            >
+              Xem Roadmap
+            </Link>
+          </div>
         </div>
-        <Link
-          href={`/roadmap?project=${projectId}`}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#F1F1EC] border-2 border-[#333333] rounded-full hover:border-[#6B2D3E] hover:text-[#6B2D3E] active:scale-95 transition-all text-sm font-semibold text-[#2D2D2D] self-start"
+
+        {/* Right: progress card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="bg-[#ECFDF5] border-2 border-[#6EE7B7] rounded-2xl p-6 flex flex-col items-center gap-3 min-w-[200px]"
         >
-          <Map size={16} />
-          Xem Roadmap
-        </Link>
+          {/* Dot indicators */}
+          <div className="flex gap-1.5">
+            {Array.from({ length: unitsTotal }, (_, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full transition-colors"
+                style={{ backgroundColor: i < unitsComplete ? '#059669' : '#D1D5DB' }}
+              />
+            ))}
+          </div>
+          <div className="text-center">
+            <span className="text-4xl font-black text-[#2D2D2D]">{unitsComplete}</span>
+            <span className="text-xl text-[#5A5C58]">/{unitsTotal}</span>
+            <span className="text-sm text-[#5A5C58] ml-1">Units</span>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full h-3 rounded-full bg-[#D1D5DB] overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-[#059669]"
+              initial={{ width: 0 }}
+              animate={{ width: `${(unitsComplete / unitsTotal) * 100}%` }}
+              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.4 }}
+            />
+          </div>
+        </motion.div>
       </div>
 
-      {/* Progress + Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        {/* Circular progress */}
-        <div className="md:col-span-2 bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-6 flex flex-col items-center justify-center hover:border-[#6B2D3E]/40 transition-colors">
-          <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-4">Tiến độ tổng thể</p>
-          <CircularProgress percentage={progress} units={13} total={20} />
+      {/* ── AI Analytics Grid ────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-5">
+          <Sparkles size={18} className="text-[#6B2D3E]" />
+          <h2 className="text-lg font-black text-[#2D2D2D] tracking-tight">AI Analytics Grid</h2>
         </div>
 
-        {/* Stats cards */}
-        <div className="md:col-span-3 grid grid-cols-2 gap-4">
-          {dashboardStats.map((stat, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {ANALYTICS_CARDS.map((card, i) => (
             <motion.div
-              key={stat.label}
+              key={card.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
-              className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3 overflow-hidden relative hover:border-[#6B2D3E]/40 hover:shadow-md transition-all"
+              transition={{ delay: 0.1 + i * 0.1, duration: 0.4 }}
+              className="rounded-2xl p-5 flex flex-col gap-3 relative overflow-hidden border-2 hover:shadow-lg transition-all cursor-default"
+              style={{ backgroundColor: card.bg, borderColor: card.border }}
             >
-              {/* Accent stripe at top */}
-              <div
-                className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
-                style={{ backgroundColor: STAT_ACCENTS[i] ?? stat.color }}
-              />
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-sm font-semibold text-[#2D2D2D]">{stat.label}</span>
-                <span className="text-lg font-bold" style={{ color: stat.color }}>{stat.percentage}%</span>
+              <div className="flex items-center justify-between">
+                <span className="text-3xl md:text-4xl font-black text-[#2D2D2D]">{card.percentage}%</span>
               </div>
-              <div className="w-full h-2 rounded-full bg-[#E5E7EB] overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: stat.color }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${stat.percentage}%` }}
-                  transition={{ duration: 0.9, delay: 0.5 + i * 0.1, ease: 'easeOut' }}
-                />
+              <div>
+                <p className="text-sm font-bold text-[#2D2D2D]">{card.label}</p>
+                <p className="text-[11px] text-[#5A5C58]">{card.labelVi}</p>
+              </div>
+              <div
+                className="inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider"
+                style={{ backgroundColor: card.tagBg, color: '#5A5C58' }}
+              >
+                {card.tag}
               </div>
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* Schedule Grid — from /schedule */}
+      {/* ── Weekly Schedule ──────────────────────────────────── */}
       <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl overflow-hidden mb-8">
-        {/* Schedule header */}
         <div className="flex items-center justify-between px-5 py-4 border-b-2 border-[#333333]">
-          <h2 className="font-bold text-[#2D2D2D] text-lg">Lịch học tuần này</h2>
+          <h2 className="font-black text-[#2D2D2D] text-lg">Weekly Schedule (Lịch học)</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setWeekOffset((w) => w - 1)}
@@ -237,7 +239,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
           </div>
         ))}
 
-        {/* Legend + "Tiếp tục học" */}
+        {/* Legend */}
         <div className="px-5 py-3 border-t-2 border-[#333333] flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             {(Object.entries(SUBJECTS) as [SubjectKey, typeof SUBJECTS[SubjectKey]][]).map(([key, info]) => (
@@ -256,10 +258,10 @@ export default function ProjectDashboardPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Deep analysis — smooth accordion */}
+      {/* ── Deep Analysis ────────────────────────────────────── */}
       <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-5 md:p-6">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold text-[#2D2D2D] text-lg flex items-center gap-2">
+          <h2 className="font-black text-[#2D2D2D] text-lg flex items-center gap-2">
             <TrendingUp size={20} className="text-[#6B2D3E]" />
             Phân tích sâu
           </h2>
@@ -300,7 +302,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
               exit={{ opacity: 0 }}
               className="text-sm text-[#5A5C58] mt-2"
             >
-              Nhấn "Phân tích sâu" để AI đánh giá tiến độ học tập và đưa ra gợi ý cá nhân hóa.
+              Nhấn &ldquo;Phân tích sâu&rdquo; để AI đánh giá tiến độ học tập và đưa ra gợi ý cá nhân hóa.
             </motion.p>
           )}
         </AnimatePresence>
