@@ -27,7 +27,31 @@ export function buildUnitLayout(unitId: string): { nodes: CanvasNode[]; edges: C
     id: `unit-${unitId}`, type: 'topic', title: unit?.label ?? unitId,
     summary, nodeId: unitId, x: 370, y: 305, width: 260, height: 90,
   };
-  return { nodes: [mainNode], edges: [] };
+  const nodes: CanvasNode[] = [mainNode];
+  const edges: CanvasEdge[] = [];
+
+  // Auto-generate green document child nodes
+  const docs = unit?.documents ?? [];
+  docs.forEach((doc, di) => {
+    const angle = ((di - (docs.length - 1) / 2) * 0.6) + Math.PI / 2;
+    const docR = 160;
+    const docNode: CanvasNode = {
+      id: `doc-${unitId}-${doc.id}`,
+      type: 'document',
+      title: doc.title,
+      docId: doc.id,
+      docType: doc.type === 'video' ? 'video' : 'text',
+      nodeId: unitId,
+      x: 370 + 130 + Math.cos(angle) * docR - 85,
+      y: 305 + 45 + Math.sin(angle) * docR - 18,
+      width: 170, height: 36,
+      parentId: mainNode.id,
+    };
+    nodes.push(docNode);
+    edges.push({ from: mainNode.id, to: docNode.id });
+  });
+
+  return { nodes, edges };
 }
 
 export function buildInitialNodes(): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
@@ -42,14 +66,37 @@ export function buildInitialNodes(): { nodes: CanvasNode[]; edges: CanvasEdge[] 
   const edges: CanvasEdge[] = [];
   mindmapNodes.forEach((mn, i) => {
     const angle = (angles[i] ?? (i * 51.4)) * (Math.PI / 180);
+    const cx = CENTER_X + Math.cos(angle) * RADIUS;
+    const cy = CENTER_Y + Math.sin(angle) * RADIUS;
     const chapterNode: CanvasNode = {
       id: `chapter-${mn.id}`, type: 'chapter', title: mn.label, nodeId: mn.id,
-      x: CENTER_X + Math.cos(angle) * RADIUS - 90,
-      y: CENTER_Y + Math.sin(angle) * RADIUS - 22,
+      x: cx - 90, y: cy - 22,
       width: 180, height: 44,
     };
     nodes.push(chapterNode);
     edges.push({ from: 'topic-root', to: chapterNode.id });
+
+    // Auto-generate green document child nodes for each chapter
+    const docs = mn.documents ?? [];
+    const docCount = docs.length;
+    docs.forEach((doc, di) => {
+      const docAngle = angle + ((di - (docCount - 1) / 2) * 0.35);
+      const docR = 140;
+      const docNode: CanvasNode = {
+        id: `doc-${mn.id}-${doc.id}`,
+        type: 'document',
+        title: doc.title,
+        docId: doc.id,
+        docType: doc.type === 'video' ? 'video' : 'text',
+        nodeId: mn.id,
+        x: cx + Math.cos(docAngle) * docR - 85,
+        y: cy + Math.sin(docAngle) * docR - 18,
+        width: 170, height: 36,
+        parentId: chapterNode.id,
+      };
+      nodes.push(docNode);
+      edges.push({ from: chapterNode.id, to: docNode.id });
+    });
   });
   return { nodes, edges };
 }
@@ -336,7 +383,11 @@ export default function InfiniteCanvasCore({ unitId, projectId, onNodeClickForSi
     const cx = contextMenu?.canvasX ?? 500; const cy = contextMenu?.canvasY ?? 350;
     switch (action) {
       case 'add-document': {
-        if (target?.nodeId) setSidebarNodeId(target.nodeId);
+        const docNodeId = target?.nodeId ?? target?.id;
+        if (docNodeId) {
+          setSidebarNodeId(docNodeId);
+          setNoteSidebarId(null); // close note sidebar
+        }
         break;
       }
       case 'open-read': {

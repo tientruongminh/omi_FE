@@ -32,8 +32,13 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
     }
     const base: { label: string; action: string; danger?: boolean; hasSubmenu?: boolean }[] = [];
     switch (menu.nodeType) {
-      case 'topic': base.push({ label: 'Mở tài liệu', action: 'open-read' }); break;
-      case 'chapter': base.push({ label: 'Thêm tài liệu', action: 'add-document' }, { label: 'Đổi màu', action: 'change-color' }); break;
+      case 'topic': case 'chapter':
+        base.push(
+          { label: 'AI Hỏi đáp', action: 'ai-chat' },
+          { label: 'AI Ôn tập', action: 'ai-review' },
+          { label: 'Thêm tài liệu', action: 'add-document' },
+        );
+        break;
       case 'document': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'Mở đọc', action: 'open-read' }); break;
       case 'synthesis': base.push({ label: 'Mở tổng hợp', action: 'open-read' }); break;
       case 'ai-chat': case 'ai-review': case 'note': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }); break;
