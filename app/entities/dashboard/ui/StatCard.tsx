@@ -13,10 +13,11 @@ interface Props {
 export default function StatCard({ stat, index, accentColor }: Props) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
-      className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3 overflow-hidden relative hover:border-[#6B2D3E]/40 hover:shadow-md transition-all"
+      initial={{ opacity: 0, y: 20 }} // Start slightly below and transparent
+      animate={{ opacity: 1, y: 0 }}  // Animate to original position and full opacity
+      transition={{ delay: index * 0.1, // 
+         duration: 0.4 }}  // Stagger the animation based on index
+      className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3 overflow-hidden relative hover:border-[#6B2D3E]/40 hover:shadow-md transition-all" 
     >
       <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: accentColor }} />
       <div className="flex items-center justify-between mt-1">

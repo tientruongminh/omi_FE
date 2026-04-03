@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Moon, User, Menu } from 'lucide-react';
-import { useState } from 'react';
+import { Search, Moon, User, Menu, LogOut } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/entities/auth';
 
 const NAV_LINKS = [
-  { href: '/',           label: 'Dự án'    },
+  { href: '/project',    label: 'Dự án'    },
   { href: '/dashboard',  label: 'Dashboard' },
   { href: '/roadmap',    label: 'Roadmap'  },
   { href: '/learn',      label: 'Học tập'  },
@@ -16,7 +17,38 @@ const NAV_LINKS = [
 
 export default function TopNavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    setAvatarOpen(false);
+    await logout();
+    router.push('/landing');
+  }, [logout, router]);
+
+  // Build user initials from name or email
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? '';
 
   return (
     <header
@@ -58,13 +90,75 @@ export default function TopNavBar() {
             <Moon size={16} />
           </button>
 
-          {/* Avatar */}
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 transition-colors hover:border-[#6B2D3E]"
-            style={{ background: '#d6cfc8', borderColor: '#c9c2bb' }}
-          >
-            <User size={16} style={{ color: '#7a736c' }} />
-          </button>
+          {/* Avatar + dropdown */}
+          <div className="relative" ref={avatarRef}>
+            <button
+              onClick={() => setAvatarOpen((o) => !o)}
+              className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 transition-colors hover:border-[#6B2D3E]"
+              style={{ background: isAuthenticated && initials ? '#6B2D3E' : '#d6cfc8', borderColor: avatarOpen ? '#6B2D3E' : '#c9c2bb' }}
+            >
+              {isAuthenticated && initials ? (
+                <span className="text-xs font-bold text-white leading-none">{initials}</span>
+              ) : (
+                <User size={16} style={{ color: '#7a736c' }} />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {avatarOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 mt-2 w-56 rounded-xl border shadow-lg overflow-hidden"
+                  style={{ background: '#fff', borderColor: '#e5e7eb' }}
+                >
+                  {isAuthenticated && user ? (
+                    <>
+                      {/* User info */}
+                      <div className="px-4 py-3 border-b" style={{ borderColor: '#f3f4f6' }}>
+                        <p className="text-sm font-semibold text-[#1a1a1a] truncate">
+                          {user.name || 'Người dùng'}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: '#9ca3af' }}>
+                          {user.email}
+                        </p>
+                      </div>
+
+                      {/* Logout */}
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-red-50"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <LogOut size={15} />
+                        Đăng xuất
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/login"
+                        onClick={() => setAvatarOpen(false)}
+                        className="block px-4 py-3 text-sm font-medium text-[#1a1a1a] transition-colors hover:bg-black/5"
+                      >
+                        Đăng nhập
+                      </Link>
+                      <Link
+                        href="/register"
+                        onClick={() => setAvatarOpen(false)}
+                        className="block px-4 py-3 text-sm font-medium text-[#1a1a1a] transition-colors hover:bg-black/5 border-t"
+                        style={{ borderColor: '#f3f4f6' }}
+                      >
+                        Đăng ký
+                      </Link>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Hamburger — mobile only */}
           <button

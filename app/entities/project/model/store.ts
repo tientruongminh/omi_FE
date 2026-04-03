@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Project } from './types';
 
-// Vietnamese CS projects (initial mock data)
+// Tạo dữ liệu mẫu là mảng các object có kiểu dữ liệu là Project được định nghĩa trong types.ts
 const initialProjects: Project[] = [
   {
     id: '1',
@@ -33,6 +33,7 @@ const initialProjects: Project[] = [
   },
 ];
 
+// Định nghĩa interface cho state của store và các action để cập nhật state để phục vụ cho việc quản lý Projects trong ứng dụng OmiLearn (Đây là 1 store dùng chung cho toàn bộ app, có thể chứa nhiều state và action khác nhau, không chỉ riêng về Projects) mục đích là để quản lý danh sách các dự án, trạng thái của modals, và các hành động liên quan đến việc tạo và chọn dự án. Các action này sẽ được sử dụng trong các component khác nhau của ứng dụng để tương tác với state một cách dễ dàng và hiệu quả mà không cần phải truyền props qua nhiều cấp component hay sử dụng context.
 interface OmiLearnState {
   projects: Project[];
   currentProject: Project | null;
@@ -43,12 +44,14 @@ interface OmiLearnState {
   openCreateModal: () => void;
   closeCreateModal: () => void;
   createProject: (name: string, description: string) => string;
+  addProject: (project: Project) => void;
   setCurrentProject: (id: string) => void;
   openPlanModal: () => void;
   closePlanModal: () => void;
   setPlanComplete: () => void;
 }
 
+// Tạo store sử dụng Zustand với state và action đã định nghĩa ở trên. Store này sẽ được sử dụng trong toàn bộ ứng dụng để quản lý state liên quan đến Projects và các modals một cách tập trung và dễ dàng truy cập từ bất kỳ component nào cần thiết.
 export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
   projects: initialProjects,
   currentProject: null,
@@ -73,6 +76,13 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
       isCreateModalOpen: false,
     }));
     return id;
+  },
+
+  addProject: (project: Project) => {
+    set((state) => ({
+      projects: [project, ...state.projects],
+      isCreateModalOpen: false,
+    }));
   },
 
   setCurrentProject: (id: string) => {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./styles/globals.css";
+import AuthHydrator from "@/shared/ui/AuthHydrator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F5F0EB] min-h-screen flex flex-col`}
       >
+        <AuthHydrator />
         {children}
       </body>
     </html>

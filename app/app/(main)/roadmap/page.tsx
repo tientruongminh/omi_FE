@@ -1,371 +1,415 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, CheckCircle2 } from 'lucide-react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  Handle,
+  Position,
+  type NodeProps,
+  type Node,
+  type Edge,
+  MarkerType,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { useOmiLearnStore } from '@/entities/project';
+import { fetchRoadmapByProject, type Roadmap } from '@/entities/project/api/roadmap';
 import dynamic from 'next/dynamic';
 
 const PlanSurveyModal = dynamic(() => import('@/features/plan-survey/ui/PlanSurveyModal'), { ssr: false });
 
-// ─── Tree data ────────────────────────────────────────────────────────────────
+// ─── Layout constants ─────────────────────────────────────────────────────────
 
-interface LeafNode {
-  id: string;
-  label: string;
-  done?: boolean;
+// Nodes tự co giãn theo nội dung — chỉ cần min/max width
+const NODE_MIN_W = { root: 180, branch: 180, leaf: 160 };
+const NODE_MAX_W = { root: 320, branch: 340, leaf: 300 };
+const H_GAP = 80;   // horizontal gap between tiers
+const V_GAP = 28;   // vertical gap between siblings
+
+/**
+ * Ước tính chiều rộng node dựa trên độ dài text.
+ * Dùng cho layout positioning (buildGraph) vì ReactFlow cần tọa độ trước khi render.
+ */
+function estimateNodeWidth(text: string, type: 'root' | 'branch' | 'leaf'): number {
+  const charWidth = type === 'root' ? 9 : 7.5;
+  const padding = type === 'leaf' ? 50 : 56;
+  const estimated = text.length * charWidth + padding;
+  return Math.max(NODE_MIN_W[type], Math.min(NODE_MAX_W[type], estimated));
 }
 
-interface BranchNode {
-  id: string;
-  label: string;
-  done?: boolean;
-  leaves: LeafNode[];
+/** Ước tính chiều cao dựa trên text wrap */
+function estimateNodeHeight(text: string, type: 'root' | 'branch' | 'leaf'): number {
+  const w = estimateNodeWidth(text, type);
+  const innerW = w - (type === 'leaf' ? 50 : 56);
+  const charPerLine = Math.max(1, Math.floor(innerW / 7.5));
+  const lines = Math.ceil(text.length / charPerLine);
+  const lineH = type === 'root' ? 20 : 18;
+  const paddingY = type === 'root' ? 36 : type === 'branch' ? 28 : 24;
+  return Math.max(type === 'root' ? 56 : 40, lines * lineH + paddingY);
 }
 
-const TREE_DATA = {
-  root: { label: 'DevOps là gì?' },
-  branches: [
-    {
-      id: 'b1',
-      label: 'Thực hành Linux & Shell',
-      done: true,
-      leaves: [
-        { id: 'l1', label: 'DevOps là gì?', done: true },
-        { id: 'l2', label: 'DevOps là gì?', done: true },
-      ],
-    },
-    {
-      id: 'b2',
-      label: 'Thực hành Linux & Shell',
-      leaves: [
-        { id: 'l3', label: 'DevOps là gì?' },
-        { id: 'l4', label: 'DevOps là gì?' },
-      ],
-    },
-    {
-      id: 'b3',
-      label: 'Thực hành Linux & Shell',
-      leaves: [
-        { id: 'l5', label: 'DevOps là gì?' },
-        { id: 'l6', label: 'DevOps là gì?' },
-      ],
-    },
-  ] satisfies BranchNode[],
-};
+// ─── Custom node types ────────────────────────────────────────────────────────
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const BRANCH_H = 148;   // height per branch row (px)
-const LEAF_H   = 52;    // height per leaf pill (px)
-const LEAF_GAP = 12;    // gap between leaves (px)
-
-// total height of the leaf group for a branch
-const leafGroupH = (count: number) => count * LEAF_H + (count - 1) * LEAF_GAP;
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-function CheckIcon() {
+function RootNode({ data }: NodeProps) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <circle cx="8" cy="8" r="8" fill="#4CD964" />
-      <path d="M4.5 8.5l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ChevronIcon({ open, dark }: { open: boolean; dark?: boolean }) {
-  return (
-    <svg
-      width="14" height="14" viewBox="0 0 14 14" fill="none"
-      style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s ease' }}
-    >
-      <path d="M3 5l4 4 4-4" stroke={dark ? '#1a1a1a' : 'white'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// ─── Leaf node ────────────────────────────────────────────────────────────────
-
-function LeafNodeBox({ node, onClick }: { node: LeafNode; onClick?: () => void }) {
-  return (
-    <div className="relative" style={{ paddingRight: 13 }}>
-      <motion.button
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        onClick={onClick}
-        className="flex items-center px-5 text-sm font-semibold text-[#1a1a1a] cursor-pointer whitespace-nowrap"
+    <>
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <div
+        className="flex items-center justify-center text-center font-black text-sm px-5 py-4 leading-tight"
         style={{
-          background: '#fff',
-          border: '1.5px solid #1a1a1a',
-          borderRadius: '999px',
-          height: LEAF_H,
+          background: '#F5DF7A',
+          border: '2.5px solid #1a1a1a',
+          borderRadius: 16,
+          boxShadow: '4px 4px 0px #1a1a1a',
+          minWidth: NODE_MIN_W.root,
+          maxWidth: NODE_MAX_W.root,
+          width: 'fit-content',
+          color: '#1a1a1a',
         }}
       >
-        {node.label}
-      </motion.button>
-      {node.done && (
-        <span className="absolute top-1/2 -translate-y-1/2" style={{ right: 4 }}>
-          <CheckIcon />
-        </span>
-      )}
-    </div>
+        {data.label as string}
+      </div>
+    </>
   );
 }
 
-// ─── Branch row (with toggle) ─────────────────────────────────────────────────
+function BranchNode({ data }: NodeProps) {
+  const completed = data.completed as boolean;
+  const collapsed = data.collapsed as boolean;
+  const hasLeaves = data.hasLeaves as boolean;
+  const onToggle  = data.onToggle as () => void;
+  return (
+    <>
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <div
+        onClick={hasLeaves ? onToggle : undefined}
+        className="flex items-center justify-between gap-2 px-4 py-3 text-sm font-bold leading-tight select-none"
+        style={{
+          background: completed ? '#d1fae5' : '#2d6a4f',
+          border: `2px solid ${completed ? '#059669' : '#1a1a1a'}`,
+          borderRadius: 18,
+          boxShadow: '3px 3px 0px ' + (completed ? '#059669' : '#1a1a1a'),
+          minWidth: NODE_MIN_W.branch,
+          maxWidth: NODE_MAX_W.branch,
+          width: 'fit-content',
+          color: completed ? '#065f46' : '#fff',
+          cursor: hasLeaves ? 'pointer' : 'default',
+        }}
+      >
+        <span className="flex-1">{data.label as string}</span>
+        {completed && <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />}
+        {hasLeaves && (
+          <svg
+            width="14" height="14" viewBox="0 0 14 14" fill="none"
+            style={{ transition: 'transform 0.2s ease', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0 }}
+          >
+            <path d="M3 5l4 4 4-4" stroke={completed ? '#065f46' : 'white'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+    </>
+  );
+}
 
-function BranchRow({
-  branch,
-  isOpen,
-  onToggle,
-  onLeafClick,
-  animDelay,
-}: {
-  branch: BranchNode;
-  isOpen: boolean;
-  onToggle: () => void;
-  onLeafClick: (id: string) => void;
-  animDelay: number;
-}) {
-  const leavesH = leafGroupH(branch.leaves.length);
-  // vertical positions of each leaf center relative to the leaf group top
-  const leafCenters = branch.leaves.map((_, i) => i * (LEAF_H + LEAF_GAP) + LEAF_H / 2);
-  const topLeafY    = leafCenters[0];
-  const botLeafY    = leafCenters[leafCenters.length - 1];
+function LeafNode({ data }: NodeProps) {
+  const completed = data.completed as boolean;
+  const onClick = data.onClick as () => void;
+  return (
+    <>
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <motion.div
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={onClick}
+        className="flex items-center justify-between gap-2 px-4 py-2.5 cursor-pointer text-sm font-semibold leading-tight"
+        style={{
+          background: completed ? '#ecfdf5' : '#ffffff',
+          border: `1.5px solid ${completed ? '#10b981' : '#1a1a1a'}`,
+          borderRadius: 18,
+          boxShadow: '2px 2px 0px ' + (completed ? '#10b981' : '#d1d5db'),
+          minWidth: NODE_MIN_W.leaf,
+          maxWidth: NODE_MAX_W.leaf,
+          width: 'fit-content',
+          color: '#1a1a1a',
+        }}
+      >
+        <span className="flex-1 leading-tight">{data.label as string}</span>
+        {completed && <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />}
+      </motion.div>
+    </>
+  );
+}
+
+const nodeTypes = {
+  root: RootNode,
+  branch: BranchNode,
+  leaf: LeafNode,
+};
+
+// ─── Build ReactFlow nodes + edges from roadmap data ─────────────────────────
+
+function buildGraph(
+  roadmap: Roadmap,
+  projectId: string,
+  router: ReturnType<typeof useRouter>,
+  collapsed: Set<string>,
+  onToggle: (id: string) => void,
+): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  const root = roadmap.roadmap_nodes[0];
+  if (!root) return { nodes, edges };
+
+  const branches = root.children ?? [];
+  const rootW = estimateNodeWidth(root.title, 'root');
+  const rootH = estimateNodeHeight(root.title, 'root');
+
+  // Tính chiều cao mỗi branch slot dựa trên nội dung thực
+  const branchHeights = branches.map((b) => {
+    const leaves = b.children ?? [];
+    const branchH = estimateNodeHeight(b.title, 'branch');
+    if (leaves.length === 0 || collapsed.has(b.id)) return branchH;
+    const leavesH = leaves.reduce((sum, l) => sum + estimateNodeHeight(l.title, 'leaf'), 0);
+    return Math.max(branchH, leavesH + (leaves.length - 1) * V_GAP);
+  });
+  const totalBranchH = branchHeights.reduce((s, h) => s + h, 0) + (branches.length - 1) * 40;
+  const rootY = totalBranchH / 2 - rootH / 2;
+
+  nodes.push({
+    id: root.id,
+    type: 'root',
+    position: { x: 0, y: rootY },
+    data: { label: root.title },
+    draggable: false,
+  });
+
+  let branchOffsetY = 0;
+  branches.forEach((branch, bi) => {
+    const leaves      = branch.children ?? [];
+    const isCollapsed = collapsed.has(branch.id);
+    const branchH     = branchHeights[bi];
+    const branchNodeH = estimateNodeHeight(branch.title, 'branch');
+    const branchX     = rootW + H_GAP;
+    const branchY     = branchOffsetY + branchH / 2 - branchNodeH / 2;
+    const branchW     = estimateNodeWidth(branch.title, 'branch');
+
+    nodes.push({
+      id: branch.id,
+      type: 'branch',
+      position: { x: branchX, y: branchY },
+      data: {
+        label: branch.title,
+        completed: branch.is_completed,
+        collapsed: isCollapsed,
+        hasLeaves: leaves.length > 0,
+        onToggle: () => onToggle(branch.id),
+      },
+      draggable: false,
+    });
+
+    edges.push({
+      id: `e-root-${branch.id}`,
+      source: root.id,
+      target: branch.id,
+      type: 'smoothstep',
+      style: { stroke: '#9ca3af', strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af', width: 12, height: 12 },
+    });
+
+    if (leaves.length > 0 && !isCollapsed) {
+      const leafX = branchX + branchW + H_GAP;
+      let leafOffsetY = branchOffsetY;
+      leaves.forEach((leaf) => {
+        const leafH = estimateNodeHeight(leaf.title, 'leaf');
+        nodes.push({
+          id: leaf.id,
+          type: 'leaf',
+          position: { x: leafX, y: leafOffsetY },
+          data: {
+            label: leaf.title,
+            completed: leaf.is_completed,
+            onClick: () => router.push(`/learn?unit=${leaf.id}&project=${projectId}`),
+          },
+          draggable: false,
+        });
+        edges.push({
+          id: `e-${branch.id}-${leaf.id}`,
+          source: branch.id,
+          target: leaf.id,
+          type: 'smoothstep',
+          style: { stroke: '#d1d5db', strokeWidth: 1.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#d1d5db', width: 10, height: 10 },
+        });
+        leafOffsetY += leafH + V_GAP;
+      });
+    }
+
+    branchOffsetY += branchH + 40;
+  });
+
+  return { nodes, edges };
+}
+
+// ─── Flow canvas ──────────────────────────────────────────────────────────────
+
+function RoadmapFlow({ roadmap, projectId }: { roadmap: Roadmap; projectId: string }) {
+  const router = useRouter();
+
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const onToggle = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const { nodes: builtNodes, edges: builtEdges } = useMemo(
+    () => buildGraph(roadmap, projectId, router, collapsed, onToggle),
+    [roadmap, projectId, collapsed],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(builtNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(builtEdges);
+
+  // Sync nodes/edges khi collapsed thay đổi
+  useEffect(() => {
+    setNodes(builtNodes);
+    setEdges(builtEdges);
+  }, [builtNodes, builtEdges]);
 
   return (
-    <div className="flex items-center" style={{ height: BRANCH_H }}>
-      {/* Branch pill */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: animDelay, duration: 0.32 }}
-        className="shrink-0"
+    <div className="w-full overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: 500 }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.18 }}
+        minZoom={0.3}
+        maxZoom={1.6}
+        proOptions={{ hideAttribution: true }}
       >
-        <button
-          onClick={onToggle}
-          className="relative flex items-center gap-2 px-5 py-3 text-sm font-bold text-[#1a1a1a] cursor-pointer"
-          style={{
-            background: branch.done ? '#b8f0c0' : '#3a7a5a',
-            border: '1.5px solid #1a1a1a',
-            borderRadius: '999px',
-            minWidth: 210,
-            boxShadow: '2px 2px 0px #1a1a1a',
-            color: branch.done ? '#1a1a1a' : '#fff',
-          }}
-        >
-          {branch.label}
-          <span className="ml-auto">
-            <ChevronIcon open={isOpen} dark={branch.done} />
-          </span>
-          {branch.done && (
-            <span className="absolute -right-3 top-1/2 -translate-y-1/2">
-              <CheckIcon />
-            </span>
-          )}
-        </button>
-      </motion.div>
-
-      {/* Connector branch → leaves + leaves (animated) */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="flex items-center overflow-hidden"
-            style={{ height: BRANCH_H }}
-          >
-            {/* SVG connector: vertical spine + horizontals to each leaf */}
-            <svg
-              width="56"
-              height={BRANCH_H}
-              className="shrink-0"
-              style={{ overflow: 'visible' }}
-            >
-              {/* offset to align leaf group vertically centered in row */}
-              {(() => {
-                const offsetY = (BRANCH_H - leavesH) / 2;
-                const absTop  = offsetY + topLeafY;
-                const absBot  = offsetY + botLeafY;
-                return (
-                  <>
-                    {/* Vertical spine */}
-                    <line x1="28" y1={absTop} x2="28" y2={absBot} stroke="#1a1a1a" strokeWidth="1.5" />
-                    {/* Horizontals to each leaf */}
-                    {leafCenters.map((cy, i) => (
-                      <line
-                        key={i}
-                        x1="28" y1={offsetY + cy}
-                        x2="56" y2={offsetY + cy}
-                        stroke="#1a1a1a" strokeWidth="1.5"
-                      />
-                    ))}
-                    {/* Arrow heads */}
-                    {leafCenters.map((cy, i) => (
-                      <polygon
-                        key={`arr-${i}`}
-                        points={`48,${offsetY + cy - 4} 56,${offsetY + cy} 48,${offsetY + cy + 4}`}
-                        fill="#1a1a1a"
-                      />
-                    ))}
-                  </>
-                );
-              })()}
-            </svg>
-
-            {/* Leaf pills */}
-            <div
-              className="flex flex-col shrink-0"
-              style={{ gap: LEAF_GAP }}
-            >
-              {branch.leaves.map((leaf, li) => (
-                <motion.div
-                  key={leaf.id}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ delay: li * 0.06, duration: 0.22 }}
-                >
-                  <LeafNodeBox
-                    node={leaf}
-                    onClick={() => onLeafClick(leaf.id)}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <Background gap={22} size={1} />
+        <Controls showInteractive={false} className="border-[#e5e7eb]! shadow-sm!" />
+        <MiniMap
+          nodeColor={(n) =>
+            n.type === 'root' ? '#F5DF7A' : n.type === 'branch' ? '#2d6a4f' : '#ffffff'
+          }
+          maskColor="rgba(250,250,248,0.7)"
+          style={{ border: '1.5px solid #e5e7eb', borderRadius: 10 }}
+        />
+      </ReactFlow>
     </div>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function RoadmapSkeleton() {
+  return (
+    <div className="min-h-screen flex flex-col items-center" style={{ background: '#FAF9F7', paddingBottom: 80 }}>
+      <div className="w-full max-w-5xl flex flex-col items-center pt-14 pb-10 px-6 gap-3">
+        <div className="animate-pulse rounded-xl bg-[#e5e7eb]" style={{ width: 280, height: 40 }} />
+        <div className="animate-pulse rounded-lg bg-[#e5e7eb]" style={{ width: 360, height: 16 }} />
+      </div>
+      <div className="w-full max-w-5xl px-6">
+        <div className="animate-pulse rounded-2xl bg-[#e5e7eb] w-full" style={{ height: 700 }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main content ─────────────────────────────────────────────────────────────
 
 function RoadmapContent() {
-  const router      = useRouter();
   const searchParams = useSearchParams();
-  const projectId   = searchParams.get('project') ?? 'os-linux';
+  const projectId    = searchParams.get('project') ?? '';
+
   const { projects, isPlanModalOpen, hasPlan, openPlanModal, closePlanModal } = useOmiLearnStore();
+  const project = projects.find((p) => p.id === projectId);
 
-  const project      = projects.find((p) => p.id === projectId);
-  const projectTitle = project?.title ?? 'DevOps';
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
 
-  // open state per branch
-  const [openBranches, setOpenBranches] = useState<Record<string, boolean>>(
-    Object.fromEntries(TREE_DATA.branches.map((b) => [b.id, true]))
-  );
-  const toggle = (id: string) =>
-    setOpenBranches((prev) => ({ ...prev, [id]: !prev[id] }));
+  useEffect(() => {
+    if (!projectId) { setLoading(false); return; }
+    setLoading(true);
+    setError(null);
+    fetchRoadmapByProject(projectId)
+      .then(setRoadmap)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [projectId]);
 
-  const totalH = BRANCH_H * TREE_DATA.branches.length;
+  const projectTitle = project?.title ?? roadmap?.title ?? 'Roadmap';
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center"
-      style={{ background: '#FAF9F7', paddingBottom: 80 }}
-    >
+    <div className="min-h-screen flex flex-col" style={{ background: '#FAF9F7', paddingBottom: 80 }}>
+
       {/* ── Header ── */}
-      <div className="w-full max-w-175 flex flex-col items-center pt-14 pb-10 px-6 text-center relative">
+      <div className="w-full flex flex-col items-center pt-14 pb-8 px-6 text-center relative">
         <img
           src="/image6.png"
           alt=""
-          className="absolute object-contain"
-          style={{ width: 140, height: 140, top: 40, left: -10, opacity: 0.55 }}
+          className="absolute object-contain pointer-events-none"
+          style={{ width: 120, height: 120, top: 32, left: 0, opacity: 0.45 }}
         />
         <h1
           className="font-black uppercase mb-3"
-          style={{ fontSize: 'clamp(26px, 5vw, 40px)', letterSpacing: '0.02em', lineHeight: 1.15, color: '#6B2D3E' }}
+          style={{ fontSize: 'clamp(24px, 4vw, 36px)', letterSpacing: '0.02em', lineHeight: 1.15, color: '#6B2D3E' }}
         >
           Lộ trình học tập<br />{projectTitle}
         </h1>
-        <p className="text-sm text-center max-w-105" style={{ color: '#6b7280', lineHeight: 1.6 }}>
+        <p className="text-sm max-w-xl" style={{ color: '#6b7280', lineHeight: 1.6 }}>
           Khám phá hành trình chinh phục công nghệ của bạn thông qua các mốc quan trọng được thiết kế riêng.
         </p>
       </div>
 
-      {/* ── Tree ── */}
-      <div className="w-full px-6 overflow-x-auto">
-        <div className="flex items-center justify-center" style={{ minHeight: totalH, overflow: 'visible' }}>
+      {/* ── Flow / States ── */}
+      <div className="w-full px-4" style={{ flex: 1 }}>
+        {loading && (
+          <div className="animate-pulse rounded-2xl bg-[#e5e7eb] w-full" style={{ height: 'calc(100vh - 280px)', minHeight: 500 }} />
+        )}
 
-          {/* Root node */}
-          <div className="shrink-0 flex items-center" style={{ height: totalH }}>
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4 }}
-              className="px-6 py-4 font-black text-[#1a1a1a] text-sm text-center"
-              style={{
-                background: '#F5DF7A',
-                border: '2px solid #1a1a1a',
-                borderRadius: '14px',
-                boxShadow: '3px 3px 0px #1a1a1a',
-                minWidth: 130,
-              }}
-            >
-              {TREE_DATA.root.label}
-            </motion.div>
+        {!loading && error && (
+          <div className="flex flex-col items-center gap-3 py-20 text-center">
+            <p className="text-sm font-semibold" style={{ color: '#6B2D3E' }}>
+              Không thể tải roadmap. Vui lòng thử lại.
+            </p>
+            <p className="text-xs text-gray-400">{error}</p>
           </div>
+        )}
 
-          {/* SVG: root → branches connector */}
-          <svg
-            width="60"
-            height={totalH}
-            className="shrink-0"
-            style={{ overflow: 'visible' }}
+        {!loading && !error && !roadmap && (
+          <p className="text-center py-20 text-sm text-gray-400">Chưa có roadmap cho project này.</p>
+        )}
+
+        {!loading && !error && roadmap && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
           >
-            {/* Horizontal from root to spine */}
-            <line x1="0" y1={totalH / 2} x2="30" y2={totalH / 2} stroke="#1a1a1a" strokeWidth="1.5" />
-            {/* Vertical spine */}
-            <line
-              x1="30" y1={BRANCH_H * 0.5}
-              x2="30" y2={BRANCH_H * (TREE_DATA.branches.length - 0.5)}
-              stroke="#1a1a1a" strokeWidth="1.5"
-            />
-            {/* Horizontal arm to each branch */}
-            {TREE_DATA.branches.map((_, i) => (
-              <g key={i}>
-                <line
-                  x1="30" y1={BRANCH_H * (i + 0.5)}
-                  x2="60" y2={BRANCH_H * (i + 0.5)}
-                  stroke="#1a1a1a" strokeWidth="1.5"
-                />
-                {/* Arrow head */}
-                <polygon
-                  points={`52,${BRANCH_H * (i + 0.5) - 4} 60,${BRANCH_H * (i + 0.5)} 52,${BRANCH_H * (i + 0.5) + 4}`}
-                  fill="#1a1a1a"
-                />
-              </g>
-            ))}
-          </svg>
-
-          {/* Branches + leaves */}
-          <div className="flex flex-col shrink-0">
-            {TREE_DATA.branches.map((branch, i) => (
-              <BranchRow
-                key={branch.id}
-                branch={branch}
-                isOpen={openBranches[branch.id] ?? true}
-                onToggle={() => toggle(branch.id)}
-                onLeafClick={(leafId) =>
-                  router.push(`/learn?unit=${leafId}&project=${projectId}`)
-                }
-                animDelay={0.1 + i * 0.1}
-              />
-            ))}
-          </div>
-        </div>
+            <RoadmapFlow roadmap={roadmap} projectId={projectId} />
+          </motion.div>
+        )}
       </div>
 
       {/* ── CTA ── */}
-      <div className="mt-14 flex items-end gap-6">
-        <div style={{ width: 72, height: 72 }} />
-        <div className="flex flex-col items-center">
+      <div className="mt-12 w-full flex justify-center">
           {hasPlan ? (
             <Link
               href={`/dashboard/${projectId}`}
@@ -386,7 +430,7 @@ function RoadmapContent() {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               onClick={openPlanModal}
-              className="flex items-center gap-3 font-bold text-white transition-all cursor-pointer"
+              className="flex items-center gap-3 font-bold text-white cursor-pointer"
               style={{
                 background: '#7d3f55',
                 border: '2px solid #1a1a1a',
@@ -402,12 +446,6 @@ function RoadmapContent() {
               Lập kế hoạch học tập
             </motion.button>
           )}
-        </div>
-        <img
-          src="/image7.png"
-          alt=""
-          style={{ width: 72, height: 72, objectFit: 'contain', transform: 'rotate(-15deg)' }}
-        />
       </div>
 
       {/* Plan Modal */}
@@ -418,9 +456,11 @@ function RoadmapContent() {
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function RoadmapPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Đang tải...</div>}>
+    <Suspense fallback={<RoadmapSkeleton />}>
       <RoadmapContent />
     </Suspense>
   );

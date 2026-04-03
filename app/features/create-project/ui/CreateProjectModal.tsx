@@ -6,6 +6,7 @@ import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2 } from 'lucide-rea
 import { useRouter } from 'next/navigation';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
+import { apiFetch } from '@/shared/api/client';
 
 interface Props {
   onClose: () => void;
@@ -46,7 +47,7 @@ function resourceIcon(type: ResourceType) {
 
 export function CreateProjectModal({ onClose }: Props) {
   const router = useRouter();
-  const createProject = useOmiLearnStore((s) => s.createProject);
+  const addProject = useOmiLearnStore((s) => s.addProject); // Lấy action addProject từ store để thêm dự án mới vào state khi tạo thành công
 
   const [step, setStep] = useState(1);
   const [projectName, setProjectName] = useState('');
@@ -61,6 +62,8 @@ export function CreateProjectModal({ onClose }: Props) {
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set(['d1', 'd2', 'd3']));
   const [showDocs, setShowDocs] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,7 +72,7 @@ export function CreateProjectModal({ onClose }: Props) {
   };
 
   const updateResource = (id: string, field: keyof Resource, value: string) => {
-    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))); // Cập nhật trường cụ thể của resource có id trùng với id được truyền vào, nếu không thì giữ nguyên resource đó
   };
 
   const removeResource = (id: string) => {
@@ -115,10 +118,36 @@ export function CreateProjectModal({ onClose }: Props) {
 
   const totalResourceCount = selectedDocs.size + uploadedFiles.length + resources.filter(r => r.url.trim()).length;
 
-  const handleCreateProject = () => {
-    const id = createProject(projectName || 'Hệ Điều Hành và Linux', projectDesc);
-    router.push(`/roadmap?project=${id}`);
-    onClose();
+  const handleCreateProject = async () => {
+    setIsCreating(true);
+    setCreateError(null);
+    try {
+      const externalUrls = resources.filter((r) => r.url.trim()).map((r) => r.url.trim());
+      const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
+        method: 'POST',
+        body: JSON.stringify({
+          project_name: projectName || 'Dự án mới',
+          project_description: projectDesc || null,
+          external_urls: externalUrls,
+          minio_keys: [],
+        }),
+      });
+      const projectId = data.roadmap.project_id;
+      addProject({
+        id: projectId,
+        title: projectName,
+        description: projectDesc,
+        date: new Date().toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+        progress: 0,
+      });
+      router.push(`/roadmap?project=${projectId}`);
+      onClose();
+    } catch (e) {
+      const apiErr = e as { error?: string; status?: number };
+      setCreateError(apiErr.error || (e instanceof Error ? e.message : 'Đã có lỗi xảy ra.'));
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const fileTypeIcon = (name: string) => {
@@ -299,7 +328,10 @@ export function CreateProjectModal({ onClose }: Props) {
                     <AIStreamText text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục!`} speed={18} className="text-sm text-[#2D2D2D] leading-relaxed" />
                   </div>
                 </div>
-                <button onClick={handleCreateProject} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer">Tạo dự án 🎉</button>
+                <button onClick={handleCreateProject} disabled={isCreating} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                  {isCreating ? 'Đang tạo roadmap...' : 'Tạo dự án 🎉'}
+                </button>
+                {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
                 <button onClick={() => setStep(2)} className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer">← Quay lại</button>
               </motion.div>
             )}

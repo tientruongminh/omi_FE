@@ -268,38 +268,17 @@ export default function LandingPage() {
             omilearn
           </span>
 
-          {/* Nav links */}
-          <div className="hidden md:flex items-center gap-8">
-            {[
-              { label: 'Features', active: true },
-              { label: 'How it Works', active: false },
-              { label: 'Pricing', active: false },
-            ].map((item) => (
-              <a
-                key={item.label}
-                href="#"
-                className="text-sm font-medium transition-colors hover:text-[#1a1a1a] flex flex-col items-center"
-                style={{ color: item.active ? '#6B2D3E' : '#6b7280' }}
-              >
-                {item.label}
-                {item.active && (
-                  <div className="mt-0.5 h-0.5 w-full rounded-full" style={{ background: '#6B2D3E' }} />
-                )}
-              </a>
-            ))}
-          </div>
-
           {/* Auth buttons */}
           <div className="flex items-center gap-4">
             <Link
-              href="/"
+              href="/login"
               className="text-sm font-medium transition-colors hover:text-[#1a1a1a]"
               style={{ color: '#6b7280' }}
             >
               Sign In
             </Link>
             <Link
-              href="/"
+              href="/register"
               className="px-5 py-2 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
               style={{
                 background: '#6B2D3E',
@@ -360,7 +339,7 @@ export default function LandingPage() {
 
           {/* CTA */}
           <Link
-            href="/"
+            href="/register"
             className="inline-flex items-center gap-2 px-7 py-3 text-sm font-bold text-white transition-all hover:opacity-90 hover:-translate-y-0.5 active:scale-95 mb-6"
             style={{
               background: '#2d5a3d',
@@ -871,7 +850,7 @@ export default function LandingPage() {
           viewport={{ once: true, margin: '-60px' }}
         >
           <Link
-            href="/"
+            href="/register"
             className="inline-flex items-center px-12 py-4 font-black uppercase tracking-widest text-sm transition-all hover:opacity-90 active:scale-95"
             style={{
               background: '#2d5a3d',
