@@ -1,71 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, X, Star } from 'lucide-react';
-
-interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  specialty: string;
-  courses: number;
-  students: number;
-  rating: number;
-  status: 'active' | 'inactive';
-}
-
-const MOCK_TEACHERS: Teacher[] = [
-  { id: '1', name: 'TS. Nguyễn Minh Tuấn', email: 'tuan.nguyen@uni.edu.vn', specialty: 'Hệ Điều Hành', courses: 4, students: 456, rating: 4.8, status: 'active' },
-  { id: '2', name: 'ThS. Trần Thanh Hương', email: 'huong.tran@uni.edu.vn', specialty: 'UI/UX Design', courses: 3, students: 312, rating: 4.6, status: 'active' },
-  { id: '3', name: 'TS. Lê Quốc Bảo', email: 'bao.le@uni.edu.vn', specialty: 'Trí Tuệ Nhân Tạo', courses: 2, students: 287, rating: 4.9, status: 'active' },
-  { id: '4', name: 'ThS. Phạm Hồng Nhung', email: 'nhung.pham@uni.edu.vn', specialty: 'Mạng Máy Tính', courses: 3, students: 215, rating: 4.5, status: 'active' },
-  { id: '5', name: 'TS. Hoàng Văn Đức', email: 'duc.hoang@uni.edu.vn', specialty: 'CTDL & Giải Thuật', courses: 5, students: 523, rating: 4.7, status: 'active' },
-  { id: '6', name: 'ThS. Vũ Thị Mai', email: 'mai.vu@uni.edu.vn', specialty: 'Cơ Sở Dữ Liệu', courses: 2, students: 178, rating: 4.3, status: 'inactive' },
-];
+import { Search, Plus, X, Star, CheckCircle, Loader2 } from 'lucide-react';
+import { adminApi, type AdminTeacher } from '@/entities/admin/api';
 
 export default function AdminTeachersPage() {
-  const [teachers, setTeachers] = useState(MOCK_TEACHERS);
+  const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editTeacher, setEditTeacher] = useState<Teacher | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', specialty: '', status: 'active' as 'active' | 'inactive' });
+  const [verifying, setVerifying] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    adminApi.getTeachers()
+      .then((res) => setTeachers(res.teachers))
+      .catch((e) => setError(e?.error || 'Không thể tải danh sách giảng viên'))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = teachers.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
-    t.specialty.toLowerCase().includes(search.toLowerCase())
+    (t.specialty ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const openCreate = () => {
-    setEditTeacher(null);
-    setForm({ name: '', email: '', specialty: '', status: 'active' });
-    setShowModal(true);
-  };
-
-  const openEdit = (t: Teacher) => {
-    setEditTeacher(t);
-    setForm({ name: t.name, email: t.email, specialty: t.specialty, status: t.status });
-    setShowModal(true);
-  };
-
-  const handleSave = () => {
-    if (editTeacher) {
-      setTeachers(prev => prev.map(t => t.id === editTeacher.id ? { ...t, ...form } : t));
-    } else {
-      const newT: Teacher = {
-        id: String(Date.now()),
-        ...form,
-        courses: 0,
-        students: 0,
-        rating: 0,
-      };
-      setTeachers(prev => [...prev, newT]);
+  const handleVerify = async (teacherId: string) => {
+    setVerifying(teacherId);
+    try {
+      await adminApi.verifyTeacher(teacherId);
+      setTeachers(prev => prev.map(t => t.id === teacherId ? { ...t, verified: true } : t));
+    } catch (e: unknown) {
+      const err = e as { error?: string };
+      alert(err?.error || 'Xác minh thất bại');
+    } finally {
+      setVerifying(null);
     }
-    setShowModal(false);
-  };
-
-  const handleDelete = (id: string) => {
-    setTeachers(prev => prev.filter(t => t.id !== id));
   };
 
   return (
@@ -75,13 +45,6 @@ export default function AdminTeachersPage() {
           <h1 className="text-[28px] font-black text-[#1A1A1A]" style={{ fontFamily: 'Georgia, serif' }}>Giảng viên</h1>
           <p className="text-[13px] text-[#5A5C58] mt-0.5">{teachers.length} giảng viên trong hệ thống</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] transition-colors cursor-pointer"
-        >
-          <Plus size={16} />
-          Thêm giảng viên
-        </button>
       </div>
 
       <div className="relative mb-4">
@@ -95,118 +58,87 @@ export default function AdminTeachersPage() {
         />
       </div>
 
-      {/* Cards grid instead of table for teachers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((t, i) => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.3 }}
-            className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-5 hover:shadow-md transition-all"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#F5F0EB] flex items-center justify-center">
-                  <span className="text-[14px] font-bold text-[#6B2D3E]">
-                    {t.name.replace(/TS\.|ThS\.\s?/g, '').trim().split(' ').map(w => w[0]).join('').slice(0, 2)}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-[14px] font-bold text-[#1A1A1A]">{t.name}</p>
-                  <p className="text-[11px] text-[#5A5C58]">{t.specialty}</p>
-                </div>
-              </div>
-              <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                t.status === 'active' ? 'bg-[#D1FAE5] text-[#3B644E]' : 'bg-[#FEE2E2] text-[#DC2626]'
-              }`}>
-                {t.status === 'active' ? 'Hoạt động' : 'Ngừng'}
-              </span>
-            </div>
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-[#6B2D3E]" />
+        </div>
+      )}
 
-            <p className="text-[12px] text-[#5A5C58] mb-3">{t.email}</p>
+      {error && (
+        <div className="bg-[#FEE2E2] border border-[#FCA5A5] rounded-xl px-4 py-3 text-[13px] text-[#991B1B] mb-4">
+          {error}
+        </div>
+      )}
 
-            <div className="flex items-center gap-4 mb-3">
-              <div className="text-center">
-                <p className="text-[18px] font-black text-[#1A1A1A]">{t.courses}</p>
-                <p className="text-[10px] text-[#5A5C58]">Khóa học</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[18px] font-black text-[#1A1A1A]">{t.students}</p>
-                <p className="text-[10px] text-[#5A5C58]">Học viên</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Star size={14} className="text-[#FCD34D] fill-[#FCD34D]" />
-                <span className="text-[14px] font-bold text-[#1A1A1A]">{t.rating}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-3 border-t border-[#F0F0F0]">
-              <button onClick={() => openEdit(t)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#5A5C58] hover:bg-[#F5F0EB] transition-colors cursor-pointer">
-                <Pencil size={12} /> Sửa
-              </button>
-              <button onClick={() => handleDelete(t.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer">
-                <Trash2 size={12} /> Xóa
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-            onClick={() => setShowModal(false)}
-          >
+      {/* Cards grid */}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((t, i) => (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl border-2 border-[#E5E7EB] p-6 w-[420px] shadow-xl"
+              key={t.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05, duration: 0.3 }}
+              className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-5 hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-[18px] font-bold text-[#1A1A1A]">{editTeacher ? 'Sửa giảng viên' : 'Thêm giảng viên'}</h3>
-                <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer">
-                  <X size={18} className="text-[#5A5C58]" />
-                </button>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-[#F5F0EB] flex items-center justify-center">
+                    <span className="text-[14px] font-bold text-[#6B2D3E]">
+                      {t.name.replace(/TS\.|ThS\.\s?/g, '').trim().split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-[#1A1A1A]">{t.name}</p>
+                    {t.specialty && <p className="text-[11px] text-[#5A5C58]">{t.specialty}</p>}
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                  t.status === 'active' ? 'bg-[#D1FAE5] text-[#3B644E]' : 'bg-[#FEE2E2] text-[#DC2626]'
+                }`}>
+                  {t.status === 'active' ? 'Hoạt động' : 'Ngừng'}
+                </span>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Họ tên</label>
-                  <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" placeholder="TS. Nguyễn Văn A" />
+              <p className="text-[12px] text-[#5A5C58] mb-3">{t.email}</p>
+
+              <div className="flex items-center gap-4 mb-3">
+                <div className="text-center">
+                  <p className="text-[18px] font-black text-[#1A1A1A]">{t.course_count}</p>
+                  <p className="text-[10px] text-[#5A5C58]">Khóa học</p>
                 </div>
-                <div>
-                  <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Email</label>
-                  <input value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" placeholder="email@uni.edu.vn" />
+                <div className="text-center">
+                  <p className="text-[18px] font-black text-[#1A1A1A]">{t.student_count}</p>
+                  <p className="text-[10px] text-[#5A5C58]">Học viên</p>
                 </div>
-                <div>
-                  <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Chuyên ngành</label>
-                  <input value={form.specialty} onChange={(e) => setForm(f => ({ ...f, specialty: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" placeholder="Trí Tuệ Nhân Tạo" />
-                </div>
-                <div>
-                  <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Trạng thái</label>
-                  <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value as 'active' | 'inactive' }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E] bg-white cursor-pointer">
-                    <option value="active">Hoạt động</option>
-                    <option value="inactive">Ngừng hoạt động</option>
-                  </select>
-                </div>
+                {t.rating != null && (
+                  <div className="flex items-center gap-1">
+                    <Star size={14} className="text-[#FCD34D] fill-[#FCD34D]" />
+                    <span className="text-[14px] font-bold text-[#1A1A1A]">{t.rating}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl text-[13px] font-medium text-[#5A5C58] hover:bg-[#F5F0EB] transition-colors cursor-pointer">Hủy</button>
-                <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] transition-colors cursor-pointer">{editTeacher ? 'Lưu thay đổi' : 'Thêm mới'}</button>
+              <div className="flex items-center gap-2 pt-3 border-t border-[#F0F0F0]">
+                {!t.verified ? (
+                  <button
+                    onClick={() => handleVerify(t.id)}
+                    disabled={verifying === t.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#3B644E] bg-[#D1FAE5] hover:bg-[#A7F3D0] transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {verifying === t.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                    Xác minh
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#3B644E]">
+                    <CheckCircle size={12} className="text-[#3B644E]" /> Đã xác minh
+                  </span>
+                )}
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X } from 'lucide-react';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
-import { aiResponses, suggestedQuestions } from '@/entities/learning-content';
+import { aiApi } from '@/entities/ai';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Props {
   docId?: string | null;
@@ -14,6 +15,7 @@ interface Props {
   title?: string;
   content?: string;
   onClose?: () => void;
+  nodeId?: string;
 }
 
 interface Message {
@@ -23,11 +25,16 @@ interface Message {
   streaming?: boolean;
 }
 
-const SUGGESTED = suggestedQuestions.slice(0, 3);
+const SUGGESTED = [
+  'Tóm tắt nội dung chính',
+  'Giải thích khái niệm quan trọng',
+  'Gợi ý câu hỏi ôn tập',
+];
 
-export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content, onClose }: Props) {
+export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content, onClose, nodeId }: Props) {
   const displayTitle = docTitle ?? title ?? 'Tài liệu';
   const displayContent = paragraphs ? paragraphs.join('\n\n') : content ?? '';
+  const user = useAuthStore((s) => s.user);
 
   const [messages, setMessages] = useState<Message[]>([
     { id: 'init', role: 'ai', text: 'Tôi đã đọc tài liệu này. Bạn có câu hỏi gì không?' },
@@ -35,38 +42,76 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [showSuggested, setShowSuggested] = useState(true);
+  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load chat history from node if nodeId provided
+  useEffect(() => {
+    if (!nodeId) return;
+    aiApi.getNodeChats(nodeId)
+      .then((res) => {
+        if (res.chats.length > 0) {
+          const history: Message[] = res.chats.map((c) => ({
+            id: c.id,
+            role: c.role === 'user' ? 'user' : 'ai',
+            text: c.content,
+          }));
+          setMessages(history);
+          setShowSuggested(false);
+        }
+      })
+      .catch(() => {});
+  }, [nodeId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const getAIResponse = (q: string): string => {
-    const found = aiResponses.find(
-      (r) => r.question.toLowerCase().trim() === q.toLowerCase().trim()
-    );
-    if (found) return found.answer;
-    const partial = aiResponses.find((r) =>
-      q.toLowerCase().includes(r.question.toLowerCase().slice(0, 8)) ||
-      r.question.toLowerCase().includes(q.toLowerCase().slice(0, 8))
-    );
-    if (partial) return partial.answer;
-    return 'Câu hỏi hay! Theo tài liệu, ' + displayTitle + ' có nhiều khía cạnh thú vị. Bạn có thể hỏi cụ thể hơn về GUI, CLI, Xerox PARC, hay Desktop Metaphor không?';
-  };
-
-  const sendMessage = (text: string) => {
-    if (!text.trim() || streaming) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || streaming || loading) return;
     setShowSuggested(false);
     const userMsg: Message = { id: Date.now() + '-u', role: 'user', text: text.trim() };
     const aiMsgId = Date.now() + '-ai';
-    const aiText = getAIResponse(text.trim());
+
     setMessages((prev) => [
       ...prev,
       userMsg,
-      { id: aiMsgId, role: 'ai', text: aiText, streaming: true },
+      { id: aiMsgId, role: 'ai', text: '', streaming: true },
     ]);
     setInput('');
     setStreaming(true);
+    setLoading(true);
+
+    try {
+      let aiText = '';
+
+      if (nodeId) {
+        // Use node-specific chat
+        const res = await aiApi.sendNodeChat(nodeId, text.trim());
+        aiText = res.chat.content;
+      } else {
+        // Use general AI chat
+        const userId = user?.user_id ?? 'anonymous';
+        const contextMsg = displayContent
+          ? `Context: ${displayContent.slice(0, 500)}\n\nQuestion: ${text.trim()}`
+          : text.trim();
+        const res = await aiApi.chat(userId, contextMsg);
+        aiText = res.response;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) => m.id === aiMsgId ? { ...m, text: aiText, streaming: true } : m)
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) => m.id === aiMsgId
+          ? { ...m, text: 'Xin lỗi, không thể kết nối với AI. Vui lòng thử lại.', streaming: false }
+          : m)
+      );
+      setStreaming(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStreamComplete = (id: string) => {
@@ -78,6 +123,7 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
 
   return (
     <div className="flex h-full">
+      {/* Left: document content */}
       <div className="flex-1 overflow-y-auto border-r-2 border-[#333333]/15 bg-white/30 px-6 py-5">
         <div className="text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider mb-3">Nội dung tài liệu</div>
         <h3 className="font-bold text-[#2D2D2D] text-[14px] mb-4 leading-snug">{displayTitle}</h3>
@@ -92,6 +138,7 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
         )}
       </div>
 
+      {/* Right: AI chat */}
       <div className="w-[360px] flex-shrink-0 flex flex-col bg-[#F5F0EB]">
         <div className="flex items-center gap-2.5 px-4 py-3 border-b-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
           <span className="text-xl">AI</span>
@@ -124,8 +171,10 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
                 <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[12.5px] leading-relaxed ${
                   msg.role === 'user' ? 'bg-[#6B2D3E] text-white rounded-tr-sm' : 'bg-white border border-[#E5E5DF] text-[#2D2D2D] rounded-tl-sm'
                 }`}>
-                  {msg.streaming ? (
+                  {msg.streaming && msg.text ? (
                     <AIStreamText text={msg.text} speed={16} onComplete={() => handleStreamComplete(msg.id)} />
+                  ) : msg.streaming ? (
+                    <span className="animate-pulse">▋</span>
                   ) : msg.text}
                 </div>
               </motion.div>
@@ -152,15 +201,16 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(input); }}
               placeholder="Đặt câu hỏi..."
+              disabled={loading}
               className="flex-1 text-[13px] text-[#2D2D2D] bg-transparent outline-none placeholder-[#9CA3AF]"
             />
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || streaming}
+              disabled={!input.trim() || streaming || loading}
               className="w-7 h-7 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer disabled:cursor-not-allowed"
-              style={{ backgroundColor: input.trim() && !streaming ? '#6B2D3E' : '#E5E5DF' }}
+              style={{ backgroundColor: input.trim() && !streaming && !loading ? '#6B2D3E' : '#E5E5DF' }}
             >
-              <Send size={12} className={input.trim() && !streaming ? 'text-white' : 'text-[#9CA3AF]'} />
+              <Send size={12} className={input.trim() && !streaming && !loading ? 'text-white' : 'text-[#9CA3AF]'} />
             </button>
           </div>
         </div>

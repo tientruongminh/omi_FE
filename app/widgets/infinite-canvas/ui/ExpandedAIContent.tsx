@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AIStreamText from '@/shared/ui/AIStreamText';
 import { CanvasNode } from '../model/types';
 import ExpandedHeader from './ExpandedHeader';
+import { aiApi } from '@/entities/ai/api';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Props {
   node: CanvasNode;

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Send, X, Upload, Cloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { aiApi } from '@/entities/ai/api';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface FileItem {
   id: string;
@@ -117,14 +119,17 @@ function TypingIndicator() {
 }
 
 export default function WorkspacePage() {
+  const user = useAuthStore((s) => s.user);
   const [files, setFiles] = useState<FileItem[]>(INITIAL_FILES);
   const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([]);
   const [showTyping, setShowTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Animate messages in stagger on mount
+  // Animate initial messages in stagger on mount
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     let idx = 0;
@@ -156,10 +161,37 @@ export default function WorkspacePage() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [visibleMessages]);
+
   const toggleFile = (id: string) => {
     setFiles((prev) =>
       prev.map((f) => (f.id === id ? { ...f, checked: !f.checked } : f))
     );
+  };
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isSending) return;
+    const query = inputValue.trim();
+    const userMsg: ChatMessage = { id: String(Date.now()), role: 'user', content: query };
+    setVisibleMessages((prev) => [...prev, userMsg]);
+    setInputValue('');
+    setShowTyping(true);
+    setIsSending(true);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.chat(userId, query);
+      setShowTyping(false);
+      const aiMsg: ChatMessage = { id: String(Date.now() + 1), role: 'ai', content: res.response };
+      setVisibleMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      setShowTyping(false);
+      const errMsg: ChatMessage = { id: String(Date.now() + 1), role: 'ai', content: 'Xin lỗi, không thể kết nối AI lúc này. Vui lòng thử lại.' };
+      setVisibleMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const checkedCount = files.filter((f) => f.checked).length;
@@ -358,6 +390,7 @@ export default function WorkspacePage() {
                 </motion.div>
               )}
             </AnimatePresence>
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Chat input */}
@@ -370,12 +403,14 @@ export default function WorkspacePage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') setInputValue('');
+                  if (e.key === 'Enter') handleSend();
                 }}
+                disabled={isSending}
               />
               <button
-                className="w-8 h-8 rounded-full bg-[#6B2D3E] flex items-center justify-center hover:bg-[#5A2233] transition-colors flex-shrink-0 cursor-pointer"
-                onClick={() => setInputValue('')}
+                className="w-8 h-8 rounded-full bg-[#6B2D3E] flex items-center justify-center hover:bg-[#5A2233] transition-colors flex-shrink-0 cursor-pointer disabled:opacity-40"
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isSending}
               >
                 <Send size={14} className="text-white" />
               </button>

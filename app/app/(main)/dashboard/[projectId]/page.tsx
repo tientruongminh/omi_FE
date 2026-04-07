@@ -1,26 +1,14 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, TrendingUp } from 'lucide-react';
+import { ChevronRight, ChevronLeft, TrendingUp, Loader2 } from 'lucide-react';
 import { SUBJECTS, DAYS, TIME_SLOTS, SCHEDULE, SubjectKey } from '@/entities/schedule';
 import { useOmiLearnStore } from '@/entities/project';
+import { projectApi, ProgressSummaryResponse } from '@/entities/project/api/project';
 import AIStreamText from '@/shared/ui/AIStreamText';
-import Image from 'next/image';
-
-const ANALYSIS_TEXT = `Phân tích tiến độ — Hệ Điều Hành và Linux
-
-Điểm mạnh: Bạn nắm vững Khái Niệm Cơ Bản (95%) và Kiến Trúc Hệ Thống (88%). Phần quản lý tiến trình và bộ nhớ cũng khá tốt.
-
-Cần cải thiện: Lập Trình Shell (35%) — bạn mới chỉ hoàn thành phần lý thuyết, cần thêm thực hành viết script. Phần Debug và Khởi Động (20%) chưa bắt đầu.
-
-Tiến độ: 13/20 đơn vị hoàn thành. Dự kiến hoàn thành toàn bộ vào ngày 15 Tháng 4, 2025 nếu duy trì tốc độ hiện tại.
-
-Gợi ý: Tập trung vào Shell scripting tuần này. Thử viết 1 script tự động backup file mỗi ngày để luyện tay. Sau đó chuyển sang phần Debug.
-
-So với lớp: Bạn đang ở top 30% — giỏi hơn trung bình! Tiếp tục phát huy nhé.`;
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -29,36 +17,107 @@ interface PageProps {
 export default function ProjectDashboardPage({ params }: PageProps) {
   const { projectId } = use(params);
   const storeProjects = useOmiLearnStore((s) => s.projects);
-  const project = storeProjects.find((p) => p.id === projectId);
-  const projectTitle = project?.title ?? 'Mastering UI/UX Design';
-  const projectDesc = project?.description ?? 'Hành trình trở thành chuyên gia thiết kế từ con số không. Tiếp tục bài học về Wireframing.';
+  const fetchProjects = useOmiLearnStore((s) => s.fetchProjects);
 
+  const [project, setProject] = useState(storeProjects.find((p) => p.id === projectId) ?? null);
+  const [progressData, setProgressData] = useState<ProgressSummaryResponse | null>(null);
+  const [loadingProject, setLoadingProject] = useState(!project);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0);
+  const [analysisText, setAnalysisText] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
   const router = useRouter();
 
+  // Fetch project if not in store
+  useEffect(() => {
+    if (!project) {
+      setLoadingProject(true);
+      projectApi.get(projectId)
+        .then((res) => setProject({
+          id: res.project.id,
+          title: res.project.name,
+          description: res.project.description ?? '',
+          date: new Date(res.project.created_at).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+          progress: 0,
+        }))
+        .catch(() => {})
+        .finally(() => setLoadingProject(false));
+    }
+  }, [project, projectId]);
+
+  // Ensure store is populated
+  useEffect(() => {
+    if (storeProjects.length === 0) {
+      fetchProjects();
+    }
+  }, [storeProjects.length, fetchProjects]);
+
+  // Fetch progress summary
+  useEffect(() => {
+    projectApi.getProgressSummary(projectId)
+      .then(setProgressData)
+      .catch(() => {});
+  }, [projectId]);
+
+  const projectTitle = project?.title ?? 'Đang tải...';
+  const projectDesc = project?.description ?? '';
+  const progressPercent = progressData?.summary?.percentage ?? project?.progress ?? 0;
+
+  const buildAnalysisText = () => {
+    if (!progressData) {
+      return `Phân tích tiến độ — ${projectTitle}\n\nĐang tải dữ liệu phân tích...`;
+    }
+    const { summary, details } = progressData;
+    const completed = details?.filter((d) => d.status === 'completed') ?? [];
+    const pending = details?.filter((d) => d.status !== 'completed') ?? [];
+    return `Phân tích tiến độ — ${projectTitle}
+
+Tổng quan: ${summary.completed_nodes}/${summary.total_nodes} đơn vị hoàn thành (${Math.round(summary.percentage)}%).
+
+${completed.length > 0 ? `Điểm mạnh:\n${completed.slice(0, 3).map((d) => `• ${d.title}`).join('\n')}` : ''}
+
+${pending.length > 0 ? `\nCần tiếp tục:\n${pending.slice(0, 3).map((d) => `• ${d.title}`).join('\n')}` : ''}
+
+Gợi ý: Tiếp tục duy trì nhịp học để hoàn thành dự án đúng hạn.`;
+  };
+
   const handleAnalysis = () => {
+    const text = buildAnalysisText();
+    setAnalysisText(text);
     if (showAnalysis) setAnalysisKey((k) => k + 1);
     setShowAnalysis(true);
   };
+
+  if (loadingProject) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="animate-spin text-[#6B2D3E]" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8">
 
       {/* ── Hero Section ─────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-10 mb-10">
-        {/* Left: course title + description */}
         <div className="flex-1">
           <h1 className="text-3xl md:text-[48px] font-black text-[#1A1A1A] leading-[1.1] tracking-tight" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
             {projectTitle}
           </h1>
           <p className="text-[#666666] text-[15px] mt-4 max-w-[480px] leading-relaxed">
-            {projectDesc}
+            {projectDesc || 'Hành trình học tập của bạn đang chờ bắt đầu.'}
           </p>
+          {progressData && (
+            <div className="mt-4 flex items-center gap-3">
+              <div className="flex-1 max-w-[200px] h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
+                <div className="h-full bg-[#6B2D3E] rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+              </div>
+              <span className="text-sm font-bold text-[#6B2D3E]">{Math.round(progressPercent)}%</span>
+            </div>
+          )}
         </div>
 
-        {/* Right: progress card — exact SVG asset */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -99,17 +158,13 @@ export default function ProjectDashboardPage({ params }: PageProps) {
               className="cursor-default"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={card.src}
-                alt={card.alt}
-                className="w-full h-auto"
-              />
+              <img src={card.src} alt={card.alt} className="w-full h-auto" />
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* ── Weekly Schedule (grid — giữ nguyên) ──────────────── */}
+      {/* ── Weekly Schedule ──────────────────────────────────── */}
       <div className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl overflow-hidden mb-8">
         <div className="flex items-center justify-between px-5 py-4 border-b-2 border-[#333333]">
           <h2 className="font-black text-[#2D2D2D] text-lg">Weekly Schedule (Lịch học)</h2>
@@ -245,7 +300,7 @@ export default function ProjectDashboardPage({ params }: PageProps) {
               <div className="mt-4 bg-white border-2 border-[#CCCCCC] rounded-xl p-5">
                 <AIStreamText
                   key={analysisKey}
-                  text={ANALYSIS_TEXT}
+                  text={analysisText}
                   speed={18}
                   className="text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-line"
                 />

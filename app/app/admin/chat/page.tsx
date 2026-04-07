@@ -3,29 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { adminApi } from '@/entities/admin/api';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-}
-
-const SAMPLE_RESPONSES: Record<string, string> = {
-  'default': 'Xin chào! Tôi là trợ lý AI của OmiLearn. Bạn có thể hỏi tôi về dữ liệu học viên, khóa học, tiến độ, và nhiều thông tin khác trong hệ thống.',
-  'user': 'Hiện tại hệ thống có **1,247 học viên** đang hoạt động, 23 tài khoản ngừng hoạt động. Tỷ lệ hoàn thành trung bình: **67%**. Học viên mới nhất đăng ký: Đỗ Văn Khoa (14/02/2026).',
-  'khóa': 'Có **18 khóa học** trong hệ thống:\n- 15 khóa đang hoạt động\n- 2 khóa nháp\n- 1 khóa lưu trữ\n\nKhóa phổ biến nhất: **Hệ Điều Hành và Linux** (342 học viên, 72% hoàn thành).',
-  'tiến': 'Tiến độ trung bình theo khóa:\n- Hệ Điều Hành: **72%** ✅\n- CTDL & Giải Thuật: **58%** ⚠️\n- Mạng Máy Tính: **64%** ✅\n- Trí Tuệ Nhân Tạo: **41%** ⚠️\n- UI/UX Design: **35%** 🔴\n\nGợi ý: Cần tăng cường hỗ trợ cho UI/UX Design và AI.',
-  'giảng': 'Có **6 giảng viên** trong hệ thống. Đánh giá cao nhất: **TS. Lê Quốc Bảo** (4.9⭐, chuyên ngành AI). Giảng viên có nhiều học viên nhất: **TS. Hoàng Văn Đức** (523 học viên, CTDL).',
-};
-
-function getAIResponse(query: string): string {
-  const lower = query.toLowerCase();
-  if (lower.includes('học viên') || lower.includes('user') || lower.includes('bao nhiêu')) return SAMPLE_RESPONSES['user'];
-  if (lower.includes('khóa') || lower.includes('course')) return SAMPLE_RESPONSES['khóa'];
-  if (lower.includes('tiến độ') || lower.includes('progress') || lower.includes('hoàn thành')) return SAMPLE_RESPONSES['tiến'];
-  if (lower.includes('giảng viên') || lower.includes('teacher')) return SAMPLE_RESPONSES['giảng'];
-  return SAMPLE_RESPONSES['default'];
 }
 
 export default function AdminChatPage() {
@@ -45,8 +29,8 @@ export default function AdminChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
     const userMsg: Message = {
       id: String(Date.now()),
       role: 'user',
@@ -57,17 +41,26 @@ export default function AdminChatPage() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const res = await adminApi.sendAdminChat(userMsg.content);
       const aiMsg: Message = {
         id: String(Date.now() + 1),
         role: 'assistant',
-        content: getAIResponse(userMsg.content),
+        content: res.response,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiMsg]);
+    } catch {
+      const errMsg: Message = {
+        id: String(Date.now() + 1),
+        role: 'assistant',
+        content: 'Xin lỗi, không thể kết nối đến AI lúc này. Vui lòng thử lại.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errMsg]);
+    } finally {
       setIsTyping(false);
-    }, 800 + Math.random() * 1200);
+    }
   };
 
   const QUICK_QUESTIONS = [
@@ -159,7 +152,7 @@ export default function AdminChatPage() {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isTyping}
               className="w-10 h-10 rounded-xl bg-[#6B2D3E] text-white flex items-center justify-center hover:bg-[#5A2534] transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
             >
               <Send size={16} />

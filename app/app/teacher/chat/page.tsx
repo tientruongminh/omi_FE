@@ -3,27 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { aiApi } from '@/entities/ai/api';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Message { id: string; role: 'user' | 'assistant'; content: string }
 
-const RESPONSES: Record<string, string> = {
-  'default': 'Xin chào! Tôi là trợ lý AI. Hỏi tôi về học viên, khóa học, tiến độ, hoặc bất cứ điều gì trong workspace của bạn. 🤖',
-  'học viên': 'Bạn có **342 học viên** đang hoạt động trong 4 khóa học. Học viên mới nhất: Phạm Minh Dũng (10/01/2026). Top student: Ngô Quốc Phong (91% hoàn thành).',
-  'khóa': 'Bạn có **4 khóa học**:\n- Hệ Điều Hành và Linux (342 HV, 72%)\n- Mạng Máy Tính (215 HV, 64%)\n- Linux Administration (156 HV, 45%)\n- Cloud Computing (nháp)\n\nKhuyến nghị: Khóa Cloud Computing cần thêm nội dung.',
-  'tiến': 'Tiến độ trung bình: **67%**\n- Top: HĐH Linux (72%) ✅\n- Thấp nhất: Linux Admin (45%) ⚠️\n\n5 học viên chưa hoạt động >2 tuần. Gợi ý: gửi nhắc nhở.',
-};
-
-function getResponse(q: string): string {
-  const l = q.toLowerCase();
-  if (l.includes('học viên') || l.includes('student')) return RESPONSES['học viên'];
-  if (l.includes('khóa') || l.includes('course')) return RESPONSES['khóa'];
-  if (l.includes('tiến') || l.includes('progress')) return RESPONSES['tiến'];
-  return RESPONSES['default'];
-}
-
 export default function TeacherChatPage() {
+  const user = useAuthStore((s) => s.user);
   const [messages, setMessages] = useState<Message[]>([
-    { id: '0', role: 'assistant', content: RESPONSES['default'] },
+    { id: '0', role: 'assistant', content: 'Xin chào! Tôi là trợ lý AI. Hỏi tôi về học viên, khóa học, tiến độ, hoặc bất cứ điều gì trong workspace của bạn. 🤖' },
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -31,16 +19,21 @@ export default function TeacherChatPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const send = () => {
-    if (!input.trim()) return;
-    const q = input.trim();
-    setMessages(prev => [...prev, { id: String(Date.now()), role: 'user', content: q }]);
+  const send = async () => {
+    if (!input.trim() || typing) return;
+    const query = input.trim();
+    setMessages(prev => [...prev, { id: String(Date.now()), role: 'user', content: query }]);
     setInput('');
     setTyping(true);
-    setTimeout(() => {
-      setMessages(prev => [...prev, { id: String(Date.now() + 1), role: 'assistant', content: getResponse(q) }]);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.chat(userId, query);
+      setMessages(prev => [...prev, { id: String(Date.now() + 1), role: 'assistant', content: res.response }]);
+    } catch {
+      setMessages(prev => [...prev, { id: String(Date.now() + 1), role: 'assistant', content: 'Xin lỗi, không thể kết nối AI lúc này. Vui lòng thử lại.' }]);
+    } finally {
       setTyping(false);
-    }, 800 + Math.random() * 1000);
+    }
   };
 
   const QUICK = ['Bao nhiêu học viên?', 'Tiến độ các khóa?', 'Khóa nào cần cải thiện?'];
@@ -88,8 +81,9 @@ export default function TeacherChatPage() {
         </div>
         <div className="px-4 py-3 border-t border-[#E5E7EB] flex items-center gap-3">
           <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }}
-            placeholder="Hỏi về dữ liệu workspace..." className="flex-1 px-4 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" />
-          <button onClick={send} disabled={!input.trim()} className="w-10 h-10 rounded-xl bg-[#6B2D3E] text-white flex items-center justify-center hover:bg-[#5A2534] disabled:opacity-40 cursor-pointer">
+            placeholder="Hỏi về dữ liệu workspace..." disabled={typing}
+            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" />
+          <button onClick={send} disabled={!input.trim() || typing} className="w-10 h-10 rounded-xl bg-[#6B2D3E] text-white flex items-center justify-center hover:bg-[#5A2534] disabled:opacity-40 cursor-pointer">
             <Send size={16} />
           </button>
         </div>

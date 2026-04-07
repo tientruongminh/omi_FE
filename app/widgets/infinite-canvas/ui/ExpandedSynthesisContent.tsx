@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, Link2 } from 'lucide-react';
 import { CanvasNode } from '../model/types';
+import { aiApi } from '@/entities/ai/api';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Props {
   node: CanvasNode;
@@ -14,6 +16,7 @@ interface Props {
 }
 
 export default function ExpandedSynthesisContent({ node, allNodes, edges, onClose, onUpdateContent }: Props) {
+  const user = useAuthStore((s) => s.user);
   const [synthesizing, setSynthesizing] = useState(false);
   const [synthesized, setSynthesized] = useState(false);
   const [userPrompt, setUserPrompt] = useState('');
@@ -30,25 +33,35 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
     if (sourceDocs.length === 0 || synthesizing) return;
     setSynthesizing(true);
 
-    // Simulate AI synthesis
-    await new Promise((r) => setTimeout(r, 2000));
-
-    const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
-    const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
-    const synthesizedContent = `📋 **${prompt}**\n\n` +
-      `Dựa trên ${sourceDocs.length} nguồn:\n` +
-      sourceDocs.map((s, i) => `${i + 1}. ${s.title}`).join('\n') +
-      `\n\n---\n\n` +
-      sourceDocs.map((s) => {
-        const text = s.content ?? s.summary ?? '';
-        return `▸ **${s.title}**: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`;
-      }).join('\n\n');
-
-    onUpdateContent?.(node.id, synthesizedContent);
-    setSynthesizing(false);
-    setSynthesized(true);
-    setTimeout(() => setSynthesized(false), 3000);
-  }, [sourceDocs, synthesizing, userPrompt, node.id, onUpdateContent]);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
+      const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
+      const topic = `${prompt}\n\nNguồn:\n${sourceTexts}`;
+      const res = await aiApi.research(userId, topic, 'medium', 'vi');
+      const synthesizedContent = res.report;
+      onUpdateContent?.(node.id, synthesizedContent);
+      setSynthesized(true);
+      setTimeout(() => setSynthesized(false), 3000);
+    } catch {
+      // Fallback: local synthesis
+      const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
+      const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
+      const synthesizedContent = `📋 **${prompt}**\n\n` +
+        `Dựa trên ${sourceDocs.length} nguồn:\n` +
+        sourceDocs.map((s, i) => `${i + 1}. ${s.title}`).join('\n') +
+        `\n\n---\n\n` +
+        sourceDocs.map((s) => {
+          const text = s.content ?? s.summary ?? '';
+          return `▸ **${s.title}**: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`;
+        }).join('\n\n');
+      onUpdateContent?.(node.id, synthesizedContent);
+      setSynthesized(true);
+      setTimeout(() => setSynthesized(false), 3000);
+    } finally {
+      setSynthesizing(false);
+    }
+  }, [sourceDocs, synthesizing, userPrompt, node.id, onUpdateContent, user]);
 
   return (
     <div className="flex flex-col h-full bg-white">

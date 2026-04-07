@@ -1,29 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, X, Users, BookOpen, Eye } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, X, Users, BookOpen, Eye, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-
-interface Course {
-  id: string;
-  name: string;
-  teacher: string;
-  students: number;
-  units: number;
-  completion: number;
-  status: 'active' | 'draft' | 'archived';
-  createdAt: string;
-}
-
-const MOCK_COURSES: Course[] = [
-  { id: '1', name: 'Hệ Điều Hành và Linux', teacher: 'TS. Nguyễn Minh Tuấn', students: 342, units: 20, completion: 72, status: 'active', createdAt: '2025-06-15' },
-  { id: '2', name: 'CTDL & Giải Thuật', teacher: 'TS. Hoàng Văn Đức', students: 289, units: 25, completion: 58, status: 'active', createdAt: '2025-07-01' },
-  { id: '3', name: 'Mạng Máy Tính', teacher: 'ThS. Phạm Hồng Nhung', students: 215, units: 18, completion: 64, status: 'active', createdAt: '2025-08-10' },
-  { id: '4', name: 'Trí Tuệ Nhân Tạo', teacher: 'TS. Lê Quốc Bảo', students: 187, units: 22, completion: 41, status: 'active', createdAt: '2025-09-01' },
-  { id: '5', name: 'UI/UX Design Fundamentals', teacher: 'ThS. Trần Thanh Hương', students: 156, units: 15, completion: 35, status: 'active', createdAt: '2025-10-05' },
-  { id: '6', name: 'Cơ Sở Dữ Liệu Nâng Cao', teacher: 'ThS. Vũ Thị Mai', students: 0, units: 12, completion: 0, status: 'draft', createdAt: '2026-02-20' },
-];
+import { teacherApi, type TeacherCourse } from '@/entities/teacher/api';
 
 const STATUS_MAP = {
   active: { label: 'Hoạt động', bg: 'bg-[#D1FAE5]', text: 'text-[#3B644E]' },
@@ -31,16 +12,28 @@ const STATUS_MAP = {
   archived: { label: 'Lưu trữ', bg: 'bg-[#E8E6E0]', text: 'text-[#5A5C58]' },
 };
 
+type StatusKey = keyof typeof STATUS_MAP;
+
 export default function AdminCoursesPage() {
-  const [courses, setCourses] = useState(MOCK_COURSES);
+  const [courses, setCourses] = useState<TeacherCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editCourse, setEditCourse] = useState<Course | null>(null);
-  const [form, setForm] = useState({ name: '', teacher: '', status: 'draft' as Course['status'] });
+  const [editCourse, setEditCourse] = useState<TeacherCourse | null>(null);
+  const [form, setForm] = useState({ name: '', teacher: '', status: 'draft' as StatusKey });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    teacherApi.getCourses()
+      .then((res) => setCourses(res.courses))
+      .catch((e) => setError(e?.error || 'Không thể tải khóa học'))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = courses.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.teacher.toLowerCase().includes(search.toLowerCase())
+    c.title.toLowerCase().includes(search.toLowerCase())
   );
 
   const openCreate = () => {
@@ -49,33 +42,40 @@ export default function AdminCoursesPage() {
     setShowModal(true);
   };
 
-  const openEdit = (c: Course) => {
+  const openEdit = (c: TeacherCourse) => {
     setEditCourse(c);
-    setForm({ name: c.name, teacher: c.teacher, status: c.status });
+    setForm({ name: c.title, teacher: '', status: (c.status as StatusKey) ?? 'draft' });
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (editCourse) {
-      setCourses(prev => prev.map(c => c.id === editCourse.id ? { ...c, ...form } : c));
-    } else {
-      const newC: Course = {
-        id: String(Date.now()),
-        name: form.name,
-        teacher: form.teacher,
-        students: 0,
-        units: 0,
-        completion: 0,
-        status: form.status,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setCourses(prev => [...prev, newC]);
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      if (editCourse) {
+        const res = await teacherApi.updateCourse(editCourse.id, { title: form.name });
+        setCourses(prev => prev.map(c => c.id === editCourse.id ? res.course : c));
+      } else {
+        const res = await teacherApi.createCourse({ title: form.name, description: '' });
+        setCourses(prev => [...prev, res.course]);
+      }
+      setShowModal(false);
+    } catch (e: unknown) {
+      const err = e as { error?: string };
+      alert(err?.error || 'Lưu thất bại');
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    setCourses(prev => prev.filter(c => c.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await teacherApi.deleteCourse(id);
+      setCourses(prev => prev.filter(c => c.id !== id));
+    } catch (e: unknown) {
+      const err = e as { error?: string };
+      alert(err?.error || 'Xóa thất bại');
+    }
   };
 
   return (
@@ -105,67 +105,76 @@ export default function AdminCoursesPage() {
         />
       </div>
 
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-[#6B2D3E]" />
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-[#FEE2E2] border border-[#FCA5A5] rounded-xl px-4 py-3 text-[13px] text-[#991B1B] mb-4">
+          {error}
+        </div>
+      )}
+
       {/* Course cards */}
-      <div className="space-y-3">
-        {filtered.map((c, i) => {
-          const st = STATUS_MAP[c.status];
-          return (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.3 }}
-              className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-5 hover:shadow-md transition-all"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-[16px] font-bold text-[#1A1A1A]">{c.name}</h3>
-                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>
-                      {st.label}
-                    </span>
+      {!loading && (
+        <div className="space-y-3">
+          {filtered.map((c, i) => {
+            const statusKey = (c.status as StatusKey) ?? 'draft';
+            const st = STATUS_MAP[statusKey] ?? STATUS_MAP.draft;
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04, duration: 0.3 }}
+                className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-5 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-[16px] font-bold text-[#1A1A1A]">{c.title}</h3>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>
+                        {st.label}
+                      </span>
+                    </div>
+                    {c.subject && <p className="text-[12px] text-[#5A5C58]">Môn: {c.subject}</p>}
                   </div>
-                  <p className="text-[12px] text-[#5A5C58]">Giảng viên: {c.teacher}</p>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-6 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Users size={14} className="text-[#5A5C58]" />
-                  <span className="text-[13px] font-semibold text-[#2D2D2D]">{c.students}</span>
-                  <span className="text-[11px] text-[#5A5C58]">học viên</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <BookOpen size={14} className="text-[#5A5C58]" />
-                  <span className="text-[13px] font-semibold text-[#2D2D2D]">{c.units}</span>
-                  <span className="text-[11px] text-[#5A5C58]">bài học</span>
-                </div>
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="flex-1 h-2 rounded-full bg-[#E5E7EB] overflow-hidden max-w-[120px]">
-                    <div className="h-full rounded-full bg-[#3B644E]" style={{ width: `${c.completion}%` }} />
+                <div className="flex items-center gap-6 mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Users size={14} className="text-[#5A5C58]" />
+                    <span className="text-[13px] font-semibold text-[#2D2D2D]">{c.student_count ?? 0}</span>
+                    <span className="text-[11px] text-[#5A5C58]">học viên</span>
                   </div>
-                  <span className="text-[11px] font-bold text-[#3B644E]">{c.completion}%</span>
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-[#5A5C58]" />
+                    <span className="text-[13px] font-semibold text-[#2D2D2D]">{c.unit_count ?? 0}</span>
+                    <span className="text-[11px] text-[#5A5C58]">bài học</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-[#F0F0F0]">
-                <Link
-                  href={`/admin/courses/${c.id}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#6B2D3E] hover:bg-[#F5F0EB] transition-colors"
-                >
-                  <Eye size={12} /> Chi tiết & Roadmap
-                </Link>
-                <button onClick={() => openEdit(c)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#5A5C58] hover:bg-[#F5F0EB] transition-colors cursor-pointer">
-                  <Pencil size={12} /> Sửa
-                </button>
-                <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer">
-                  <Trash2 size={12} /> Xóa
-                </button>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+                <div className="flex items-center gap-2 pt-3 border-t border-[#F0F0F0]">
+                  <Link
+                    href={`/admin/courses/${c.id}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#6B2D3E] hover:bg-[#F5F0EB] transition-colors"
+                  >
+                    <Eye size={12} /> Chi tiết & Roadmap
+                  </Link>
+                  <button onClick={() => openEdit(c)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#5A5C58] hover:bg-[#F5F0EB] transition-colors cursor-pointer">
+                    <Pencil size={12} /> Sửa
+                  </button>
+                  <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer">
+                    <Trash2 size={12} /> Xóa
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>
@@ -197,12 +206,8 @@ export default function AdminCoursesPage() {
                   <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" placeholder="Nhập tên khóa học..." />
                 </div>
                 <div>
-                  <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Giảng viên</label>
-                  <input value={form.teacher} onChange={(e) => setForm(f => ({ ...f, teacher: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]" placeholder="Chọn giảng viên..." />
-                </div>
-                <div>
                   <label className="text-[12px] font-semibold text-[#5A5C58] mb-1 block">Trạng thái</label>
-                  <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value as Course['status'] }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E] bg-white cursor-pointer">
+                  <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value as StatusKey }))} className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E] bg-white cursor-pointer">
                     <option value="draft">Nháp</option>
                     <option value="active">Hoạt động</option>
                     <option value="archived">Lưu trữ</option>
@@ -214,7 +219,10 @@ export default function AdminCoursesPage() {
 
               <div className="flex items-center justify-end gap-3 mt-6">
                 <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl text-[13px] font-medium text-[#5A5C58] hover:bg-[#F5F0EB] transition-colors cursor-pointer">Hủy</button>
-                <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] transition-colors cursor-pointer">{editCourse ? 'Lưu thay đổi' : 'Tạo khóa học'}</button>
+                <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-2">
+                  {saving && <Loader2 size={13} className="animate-spin" />}
+                  {editCourse ? 'Lưu thay đổi' : 'Tạo khóa học'}
+                </button>
               </div>
             </motion.div>
           </motion.div>

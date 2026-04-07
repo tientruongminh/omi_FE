@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { quizQuestions, flashcards, essayQuestion, teachAIPrompt } from '@/entities/learning-content';
+import { aiApi } from '@/entities/ai';
+import { useAuthStore } from '@/entities/auth/store';
 
 type Tab = 'quiz' | 'flashcard' | 'essay' | 'teach';
 
@@ -13,9 +15,10 @@ interface Props {
   title?: string;
   onClose?: () => void;
   standalone?: boolean;
+  nodeContent?: string;
 }
 
-function QuizTab() {
+function QuizTab({ nodeContent }: { nodeContent?: string }) {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -134,27 +137,46 @@ function FlashcardTab() {
   );
 }
 
-function EssayTab() {
+function EssayTab({ nodeContent }: { nodeContent?: string }) {
+  const user = useAuthStore((s) => s.user);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const feedback = 'Bài làm tốt! Bạn đã nêu được các điểm chính về sự khác biệt giữa GUI và CLI. Gợi ý bổ sung: Nên đề cập thêm về automation capabilities của CLI — ví dụ một lệnh bash script có thể thay thế hàng chục thao tác GUI. Thêm ví dụ cụ thể như: "ssh user@server" không thể làm qua GUI từ xa. Điểm: 8/10 ⭐';
+  const [feedback, setFeedback] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const question = essayQuestion.question;
+
+  const handleSubmit = async () => {
+    if (!answer.trim()) return;
+    setSubmitting(true);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.evaluate(userId, question, answer);
+      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/10 ${res.grade}`);
+      setSubmitted(true);
+    } catch {
+      setFeedback('Không thể kết nối với AI đánh giá. Vui lòng thử lại.');
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="p-3.5 rounded-xl bg-[#EEF2FF] border-2 border-[#A5B4FC]">
-        <p className="text-[13px] text-[#2D2D2D] font-medium leading-relaxed">{essayQuestion.question}</p>
+        <p className="text-[13px] text-[#2D2D2D] font-medium leading-relaxed">{question}</p>
       </div>
-      <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={submitted} placeholder="Viết câu trả lời của bạn tại đây..." className="flex-1 w-full p-4 rounded-xl border-2 border-[#E5E5DF] bg-white text-[13px] text-[#2D2D2D] placeholder-[#9CA3AF] resize-none focus:outline-none focus:border-[#6B2D3E] transition-colors min-h-[180px]" />
+      <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={submitted || submitting} placeholder="Viết câu trả lời của bạn tại đây..." className="flex-1 w-full p-4 rounded-xl border-2 border-[#E5E5DF] bg-white text-[13px] text-[#2D2D2D] placeholder-[#9CA3AF] resize-none focus:outline-none focus:border-[#6B2D3E] transition-colors min-h-[180px]" />
       {!submitted && (
-        <button onClick={() => { if (answer.trim()) setSubmitted(true); }} disabled={!answer.trim()} className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: answer.trim() ? '#6B2D3E' : '#E5E5DF', color: answer.trim() ? 'white' : '#9CA3AF' }}>
-          Gửi bài
+        <button onClick={handleSubmit} disabled={!answer.trim() || submitting} className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: answer.trim() && !submitting ? '#6B2D3E' : '#E5E5DF', color: answer.trim() && !submitting ? 'white' : '#9CA3AF' }}>
+          {submitting ? 'Đang chấm...' : 'Gửi bài'}
         </button>
       )}
       <AnimatePresence>
-        {submitted && (
+        {submitted && feedback && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7]">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-base">AI</span>
               <span className="text-[11px] font-bold text-[#059669] uppercase tracking-wider">Phản hồi AI</span>
             </div>
             <p className="text-[13px] text-[#065F46] leading-relaxed">
@@ -167,27 +189,47 @@ function EssayTab() {
   );
 }
 
-function TeachAITab() {
+function TeachAITab({ nodeContent }: { nodeContent?: string }) {
+  const user = useAuthStore((s) => s.user);
   const [explanation, setExplanation] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const feedback = 'Giải thích tốt lắm! Bạn đã nắm được ý chính về Process Scheduling. Điểm đặc biệt hay: bạn so sánh được Round Robin vs Priority Scheduling. Gợi ý bổ sung: Thêm về CFS (Completely Fair Scheduler) — thuật toán Linux đang dùng, dùng red-black tree để đảm bảo fairness. Điểm: 9/10 ⭐';
+  const [feedback, setFeedback] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const question = teachAIPrompt.aiQuestion;
+
+  const handleSubmit = async () => {
+    if (!explanation.trim()) return;
+    setSubmitting(true);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.evaluate(userId, question, explanation);
+      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/10 ${res.grade}`);
+      setSubmitted(true);
+    } catch {
+      setFeedback('Không thể kết nối với AI đánh giá. Vui lòng thử lại.');
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] border-2 border-[#A5B4FC] flex items-center justify-center flex-shrink-0 text-lg">AI</div>
         <div className="flex-1 p-3.5 rounded-2xl rounded-tl-sm bg-[#EEF2FF] border-2 border-[#A5B4FC]">
-          <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{teachAIPrompt.aiQuestion}</p>
+          <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{question}</p>
         </div>
       </div>
-      <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} disabled={submitted} placeholder="Giải thích cho AI hiểu..." className="flex-1 w-full p-4 rounded-xl border-2 border-[#E5E5DF] bg-white text-[13px] text-[#2D2D2D] placeholder-[#9CA3AF] resize-none focus:outline-none focus:border-[#6B2D3E] transition-colors min-h-[150px]" />
+      <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} disabled={submitted || submitting} placeholder="Giải thích cho AI hiểu..." className="flex-1 w-full p-4 rounded-xl border-2 border-[#E5E5DF] bg-white text-[13px] text-[#2D2D2D] placeholder-[#9CA3AF] resize-none focus:outline-none focus:border-[#6B2D3E] transition-colors min-h-[150px]" />
       {!submitted && (
-        <button onClick={() => { if (explanation.trim()) setSubmitted(true); }} disabled={!explanation.trim()} className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: explanation.trim() ? '#6B2D3E' : '#E5E5DF', color: explanation.trim() ? 'white' : '#9CA3AF' }}>
-          Gửi
+        <button onClick={handleSubmit} disabled={!explanation.trim() || submitting} className="py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: explanation.trim() && !submitting ? '#6B2D3E' : '#E5E5DF', color: explanation.trim() && !submitting ? 'white' : '#9CA3AF' }}>
+          {submitting ? 'Đang đánh giá...' : 'Gửi'}
         </button>
       )}
       <AnimatePresence>
-        {submitted && (
+        {submitted && feedback && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#D1FAE5] border-2 border-[#6EE7B7] flex items-center justify-center flex-shrink-0 text-lg">AI</div>
             <div className="flex-1 p-3.5 rounded-2xl rounded-tl-sm bg-[#D1FAE5] border-2 border-[#6EE7B7]">
@@ -202,7 +244,7 @@ function TeachAITab() {
   );
 }
 
-export function NodeReview({ onBack, title, onClose, standalone }: Props) {
+export function NodeReview({ onBack, title, onClose, standalone, nodeContent }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('quiz');
 
   const tabs: { key: Tab; label: string }[] = [
@@ -237,10 +279,10 @@ export function NodeReview({ onBack, title, onClose, standalone }: Props) {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }} className="h-full">
-            {activeTab === 'quiz' && <QuizTab />}
+            {activeTab === 'quiz' && <QuizTab nodeContent={nodeContent} />}
             {activeTab === 'flashcard' && <FlashcardTab />}
-            {activeTab === 'essay' && <EssayTab />}
-            {activeTab === 'teach' && <TeachAITab />}
+            {activeTab === 'essay' && <EssayTab nodeContent={nodeContent} />}
+            {activeTab === 'teach' && <TeachAITab nodeContent={nodeContent} />}
           </motion.div>
         </AnimatePresence>
       </div>

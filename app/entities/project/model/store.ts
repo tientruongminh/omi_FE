@@ -1,68 +1,73 @@
 import { create } from 'zustand';
 import { Project } from './types';
+import { projectApi } from '../api/project';
 
-// Tạo dữ liệu mẫu là mảng các object có kiểu dữ liệu là Project được định nghĩa trong types.ts
-const initialProjects: Project[] = [
-  {
-    id: '1',
-    title: 'Hệ Điều Hành và Linux',
-    description: 'Nghiên cứu kiến trúc hệ điều hành, quản lý tiến trình, bộ nhớ và hệ thống file trên Linux.',
-    date: '15 Tháng 3, 2025',
-    progress: 65,
-  },
-  {
-    id: '2',
-    title: 'Cấu Trúc Dữ Liệu và Giải Thuật',
-    description: 'Tìm hiểu các cấu trúc dữ liệu cơ bản và nâng cao: mảng, danh sách liên kết, cây, đồ thị, và các thuật toán sắp xếp, tìm kiếm.',
-    date: '2 Tháng 3, 2025',
-    isComplete: true,
-  },
-  {
-    id: '3',
-    title: 'Mạng Máy Tính',
-    description: 'Mô hình OSI, TCP/IP, routing, switching, bảo mật mạng và thực hành cấu hình mạng LAN/WAN.',
-    date: '20 Tháng 2, 2025',
-    progress: 40,
-  },
-  {
-    id: '4',
-    title: 'Trí Tuệ Nhân Tạo',
-    description: 'Machine Learning cơ bản, neural networks, NLP và computer vision. Ứng dụng AI trong thực tế.',
-    date: '10 Tháng 3, 2025',
-    progress: 25,
-  },
-];
+// ─── Helper ─────────────────────────────────────────────────
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
-// Định nghĩa interface cho state của store và các action để cập nhật state để phục vụ cho việc quản lý Projects trong ứng dụng OmiLearn (Đây là 1 store dùng chung cho toàn bộ app, có thể chứa nhiều state và action khác nhau, không chỉ riêng về Projects) mục đích là để quản lý danh sách các dự án, trạng thái của modals, và các hành động liên quan đến việc tạo và chọn dự án. Các action này sẽ được sử dụng trong các component khác nhau của ứng dụng để tương tác với state một cách dễ dàng và hiệu quả mà không cần phải truyền props qua nhiều cấp component hay sử dụng context.
+function apiProjectToProject(p: { id: string; name: string; description: string | null; created_at: string }): Project {
+  return {
+    id: p.id,
+    title: p.name,
+    description: p.description ?? '',
+    date: formatDate(p.created_at),
+    progress: 0,
+  };
+}
+
+// ─── State ──────────────────────────────────────────────────
 interface OmiLearnState {
   projects: Project[];
   currentProject: Project | null;
   isCreateModalOpen: boolean;
   isPlanModalOpen: boolean;
   hasPlan: boolean;
+  isLoadingProjects: boolean;
+  projectsError: string | null;
+
   // Actions
+  fetchProjects: () => Promise<void>;
   openCreateModal: () => void;
   closeCreateModal: () => void;
   createProject: (name: string, description: string) => string;
   addProject: (project: Project) => void;
+  deleteProject: (id: string) => Promise<void>;
+  updateProject: (id: string, data: Partial<Project>) => Promise<void>;
   setCurrentProject: (id: string) => void;
   openPlanModal: () => void;
   closePlanModal: () => void;
   setPlanComplete: () => void;
 }
 
-// Tạo store sử dụng Zustand với state và action đã định nghĩa ở trên. Store này sẽ được sử dụng trong toàn bộ ứng dụng để quản lý state liên quan đến Projects và các modals một cách tập trung và dễ dàng truy cập từ bất kỳ component nào cần thiết.
 export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
-  projects: initialProjects,
+  projects: [],
   currentProject: null,
   isCreateModalOpen: false,
   isPlanModalOpen: false,
   hasPlan: false,
+  isLoadingProjects: false,
+  projectsError: null,
+
+  fetchProjects: async () => {
+    set({ isLoadingProjects: true, projectsError: null });
+    try {
+      const data = await projectApi.list();
+      const projects = data.projects.map(apiProjectToProject);
+      set({ projects, isLoadingProjects: false });
+    } catch (e) {
+      const err = e as { error?: string };
+      set({ isLoadingProjects: false, projectsError: err.error ?? 'Không thể tải dự án' });
+    }
+  },
 
   openCreateModal: () => set({ isCreateModalOpen: true }),
   closeCreateModal: () => set({ isCreateModalOpen: false }),
 
   createProject: (name: string, description: string) => {
+    // Optimistic local ID — real project creation is async in CreateProjectModal
     const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
     const newProject: Project = {
       id,
@@ -83,6 +88,33 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
       projects: [project, ...state.projects],
       isCreateModalOpen: false,
     }));
+  },
+
+  deleteProject: async (id: string) => {
+    // Optimistic delete
+    set((state) => ({ projects: state.projects.filter((p) => p.id !== id) }));
+    try {
+      await projectApi.delete(id);
+    } catch {
+      // Re-fetch on failure
+      get().fetchProjects();
+    }
+  },
+
+  updateProject: async (id: string, data: Partial<Project>) => {
+    // Optimistic update
+    set((state) => ({
+      projects: state.projects.map((p) => p.id === id ? { ...p, ...data } : p),
+    }));
+    try {
+      await projectApi.update(id, {
+        name: data.title,
+        description: data.description,
+      });
+    } catch {
+      // Re-fetch on failure
+      get().fetchProjects();
+    }
   },
 
   setCurrentProject: (id: string) => {
