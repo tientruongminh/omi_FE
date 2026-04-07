@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2, Link2 } from 'lucide-react';
+import { Sparkles, Loader2, Link2, Check } from 'lucide-react';
 import { CanvasNode } from '../model/types';
 import ExpandedHeader from './ExpandedHeader';
+import { aiApi } from '@/entities/ai';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Props {
   node: CanvasNode;
@@ -13,11 +15,15 @@ interface Props {
 }
 
 export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: Props) {
+  const user = useAuthStore((s) => s.user);
   const [content, setContent] = useState(node.content ?? '');
   const [title, setTitle] = useState(node.title);
   const [isPolishing, setIsPolishing] = useState(false);
   const [polished, setPolished] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setContent(node.content ?? '');
@@ -33,9 +39,25 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
     }
   }, [content]);
 
-  // Focus textarea on mount
   useEffect(() => {
     setTimeout(() => textareaRef.current?.focus(), 300);
+  }, [node.id]);
+
+  // Debounced save to backend
+  const saveToBackend = useCallback((newContent: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        await aiApi.updateNodeContent(node.id, newContent);
+        setSavedOk(true);
+        setTimeout(() => setSavedOk(false), 2000);
+      } catch {
+        // Silently fail — local state still updated
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1200);
   }, [node.id]);
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -43,34 +65,48 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
     setContent(newContent);
     setPolished(false);
     onUpdateContent?.(node.id, newContent);
-  }, [node.id, onUpdateContent]);
+    saveToBackend(newContent);
+  }, [node.id, onUpdateContent, saveToBackend]);
 
   const handleAIPolish = useCallback(async () => {
     if (!content.trim() || isPolishing) return;
     setIsPolishing(true);
-    
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const lines = content.split('\n').filter((l) => l.trim());
-    const polishedLines = lines.map((line) => {
-      let l = line.trim();
-      if (l.length > 0) l = l[0].toUpperCase() + l.slice(1);
-      if (l.length > 5 && !l.endsWith('.') && !l.endsWith('!') && !l.endsWith('?') && !l.endsWith(':')) l += '.';
-      return l;
-    });
-    
-    const polishedText = polishedLines.join('\n');
-    setContent(polishedText);
-    onUpdateContent?.(node.id, polishedText);
-    setIsPolishing(false);
-    setPolished(true);
-    setTimeout(() => setPolished(false), 3000);
-  }, [content, isPolishing, node.id, onUpdateContent]);
+
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.chat(
+        userId,
+        `Hãy hoàn thiện và cải thiện đoạn ghi chú sau, giữ nguyên ý nghĩa, sửa lỗi chính tả và văn phong. Chỉ trả về nội dung đã hoàn thiện, không thêm chú thích:\n\n${content}`,
+      );
+      const polishedText = res.response;
+      setContent(polishedText);
+      onUpdateContent?.(node.id, polishedText);
+      saveToBackend(polishedText);
+      setPolished(true);
+      setTimeout(() => setPolished(false), 3000);
+    } catch {
+      // Fallback: basic local polish
+      const lines = content.split('\n').filter((l) => l.trim());
+      const polishedLines = lines.map((line) => {
+        let l = line.trim();
+        if (l.length > 0) l = l[0].toUpperCase() + l.slice(1);
+        if (l.length > 5 && !l.endsWith('.') && !l.endsWith('!') && !l.endsWith('?') && !l.endsWith(':')) l += '.';
+        return l;
+      });
+      const polishedText = polishedLines.join('\n');
+      setContent(polishedText);
+      onUpdateContent?.(node.id, polishedText);
+      setPolished(true);
+      setTimeout(() => setPolished(false), 3000);
+    } finally {
+      setIsPolishing(false);
+    }
+  }, [content, isPolishing, node.id, onUpdateContent, user, saveToBackend]);
 
   return (
     <div className="flex flex-col h-full bg-[#FFFDE7]">
       <ExpandedHeader icon="✎" title={title} onClose={onClose} />
-      
+
       {/* Editable title */}
       <div className="px-6 pt-4">
         <input
@@ -104,9 +140,11 @@ Nối node ghi chú này với node khác (kéo từ dấu chấm) để AI dự
         <span>Kéo từ dấu chấm để nối với node khác — AI sẽ dựa nội dung đã nối để trả lời</span>
       </div>
 
-      {/* AI Polish Button */}
+      {/* Footer */}
       <div className="px-6 py-4 border-t border-[#F59E0B]/20 flex items-center justify-between">
-        <span className="text-[11px] text-[#92400E]/60">
+        <span className="text-[11px] text-[#92400E]/60 flex items-center gap-2">
+          {isSaving && <Loader2 size={10} className="animate-spin" />}
+          {savedOk && <Check size={10} className="text-green-600" />}
           {content.length} ký tự
         </span>
         <motion.button

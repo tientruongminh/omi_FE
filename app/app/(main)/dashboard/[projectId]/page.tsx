@@ -419,13 +419,6 @@ export default function ProjectDashboardPage({ params }: PageProps) {
           <p className="text-[#666666] text-[15px] mt-4 max-w-[480px] leading-relaxed">
             {projectDesc}
           </p>
-          <Link
-            href={`/roadmap?project=${projectId}`}
-            className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full border-2 border-[#333333] text-[#2D2D2D] text-sm font-semibold hover:bg-[#2D2D2D] hover:text-white transition-all"
-          >
-            <ChevronLeft size={15} />
-            Back to Roadmap
-          </Link>
         </div>
 
         <motion.div

@@ -2,11 +2,13 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, RotateCw, Send, ChevronLeft, ChevronRight, MessageCircle, ClipboardList } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCw, Send, ChevronLeft, ChevronRight, MessageCircle, ClipboardList, Loader2 } from 'lucide-react';
 import { CanvasNode } from '../model/types';
 import { quizQuestions, flashcards, essayQuestion, teachAIPrompt } from '@/entities/learning-content';
 import ExpandedHeader from './ExpandedHeader';
 import AIStreamText from '@/shared/ui/AIStreamText';
+import { aiApi } from '@/entities/ai/api';
+import { useAuthStore } from '@/entities/auth/store';
 
 type ReviewTab = 'quiz' | 'flashcard' | 'essay' | 'teach';
 
@@ -415,22 +417,33 @@ function FlashcardTab() {
 // ─── Essay Tab ───────────────────────────────────────────────
 
 function EssayTab() {
+  const user = useAuthStore((s) => s.user);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!answer.trim()) return;
-    setSubmitted(true);
-    setFeedback(
-      `Bạn đã trả lời tốt về phần so sánh GUI/CLI. Điểm mạnh: nêu được ví dụ cụ thể. Cần cải thiện: phân tích sâu hơn về automation với CLI — ví dụ cron jobs, piping, script chaining. Thêm so sánh về resource usage (CLI nhẹ hơn nhiều trên server không có GPU). Điểm: 7.5/10`
-    );
+    setSubmitting(true);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const res = await aiApi.evaluate(userId, essayQuestion.question, answer, 'vi');
+      const feedbackText = `${res.feedback}\n\nĐiểm: ${res.score}/10 (${res.grade})\n${res.suggestions?.length ? '\nGợi ý: ' + res.suggestions.join('; ') : ''}`;
+      setFeedback(feedbackText);
+    } catch {
+      setFeedback('Không thể nhận xét lúc này. Hãy thử lại sau.');
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
   };
 
   const handleReset = () => {
     setAnswer('');
     setSubmitted(false);
     setFeedback('');
+    setSubmitting(false);
   };
 
   return (
@@ -454,10 +467,11 @@ function EssayTab() {
             <span className="text-[10px] text-[#9CA3AF]">{answer.length} ký tự</span>
             <button
               onClick={handleSubmit}
-              disabled={answer.trim().length < 20}
+              disabled={answer.trim().length < 20 || submitting}
               className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#991B1B] text-white text-[12px] font-bold hover:bg-[#7F1D1D] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
-              <Send size={12} /> Nộp bài
+              {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              {submitting ? 'Đang chấm...' : 'Nộp bài'}
             </button>
           </div>
         </>
@@ -472,7 +486,7 @@ function EssayTab() {
           {/* AI feedback */}
           <div className="bg-white rounded-xl border-2 border-[#F59E0B] p-4">
             <p className="text-[9px] font-bold text-[#92400E] uppercase tracking-widest mb-2">NHẬN XÉT CỦA AI</p>
-            <AIStreamText text={feedback} speed={15} className="text-[12px] text-[#2D2D2D] leading-relaxed" />
+            <AIStreamText text={feedback} speed={15} className="text-[12px] text-[#2D2D2D] leading-relaxed whitespace-pre-line" />
           </div>
 
           <button
@@ -490,18 +504,30 @@ function EssayTab() {
 // ─── Teach AI Tab ────────────────────────────────────────────
 
 function TeachAITab() {
+  const user = useAuthStore((s) => s.user);
   const [teaching, setTeaching] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [score, setScore] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!teaching.trim()) return;
-    setSubmitted(true);
-    setScore(85);
-    setAiResponse(
-      `Cảm ơn bạn đã giải thích! Tôi đã hiểu hơn về ${teachAIPrompt.topic}.\n\n✅ Bạn giải thích đúng: FCFS và Round Robin là hai thuật toán cơ bản.\n✅ Phần CFS giải thích khá rõ về fair scheduling.\n\n⚠️ Nhưng tôi vẫn thắc mắc:\n- Time quantum trong Round Robin ảnh hưởng thế nào? Nhỏ quá vs lớn quá?\n- CFS dùng red-black tree cụ thể thế nào? Vruntime là gì?\n\n💡 Gợi ý: Thử giải thích thêm về context switch cost khi time quantum quá nhỏ.\n\nĐộ chính xác giải thích: 85%`
-    );
+    setSubmitting(true);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const question = `Hãy đánh giá cách giải thích sau về chủ đề "${teachAIPrompt.topic}": "${teachAIPrompt.aiQuestion}"`;
+      const res = await aiApi.evaluate(userId, question, teaching, 'vi');
+      setScore(res.score * 10); // score is /10, convert to %
+      const responseText = `Cảm ơn bạn đã giải thích!\n\n${res.feedback}${res.suggestions?.length ? '\n\n💡 Gợi ý: ' + res.suggestions.join('; ') : ''}\n\nĐộ chính xác giải thích: ${res.score * 10}%`;
+      setAiResponse(responseText);
+    } catch {
+      setScore(75);
+      setAiResponse(`Cảm ơn bạn đã giải thích về ${teachAIPrompt.topic}! Bài giải thích khá tốt. Hãy thử lại để nhận phản hồi chi tiết hơn từ AI.`);
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
   };
 
   const handleReset = () => {
@@ -509,6 +535,7 @@ function TeachAITab() {
     setSubmitted(false);
     setAiResponse('');
     setScore(0);
+    setSubmitting(false);
   };
 
   return (
@@ -542,10 +569,11 @@ function TeachAITab() {
             <span className="text-[10px] text-[#9CA3AF]">{teaching.length} ký tự</span>
             <button
               onClick={handleSubmit}
-              disabled={teaching.trim().length < 30}
+              disabled={teaching.trim().length < 30 || submitting}
               className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4338CA] text-white text-[12px] font-bold hover:bg-[#3730A3] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
-              🎓 Dạy AI
+              {submitting ? <Loader2 size={12} className="animate-spin" /> : null}
+              {submitting ? 'Đang chấm...' : '🎓 Dạy AI'}
             </button>
           </div>
         </>

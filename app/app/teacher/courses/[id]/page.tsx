@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, FileVideo, FileText, Book, Trash2, Sparkles, ArrowLeft, Mail } from 'lucide-react';
+import { Upload, FileVideo, FileText, Book, Trash2, Sparkles, ArrowLeft, Mail, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { teacherApi, TeacherCourse, CourseUnit, CourseStudent } from '@/entities/teacher/api';
 import { RoadmapNode, RoadmapEdge, defaultRoadmapNodes, defaultRoadmapEdges } from '@/entities/node';
 import dynamic from 'next/dynamic';
 
@@ -17,18 +18,8 @@ interface Resource {
   size: string;
 }
 
-/* ── Mock ─── */
-const MOCK_RESOURCES: Resource[] = [
-  { id: 'r1', name: 'Bài giảng 01 - Giới thiệu HĐH.mp4', type: 'video', size: '245 MB' },
-  { id: 'r2', name: 'Bài giảng 02 - Quản lý Tiến trình.mp4', type: 'video', size: '312 MB' },
-  { id: 'r3', name: 'Slide - Kiến trúc Hệ thống.pdf', type: 'pdf', size: '8.2 MB' },
-  { id: 'r4', name: 'Sách - Operating Systems Concepts.pdf', type: 'book', size: '45 MB' },
-  { id: 'r5', name: 'Bài tập thực hành Linux.pdf', type: 'pdf', size: '2.1 MB' },
-  { id: 'r6', name: 'Bài giảng 03 - Bộ nhớ & File System.mp4', type: 'video', size: '287 MB' },
-];
-
-const FILE_ICONS: Record<string, typeof FileVideo> = { video: FileVideo, pdf: FileText, book: Book };
-const FILE_COLORS: Record<string, { bg: string; text: string }> = {
+const FILE_ICONS: Record<Resource['type'], typeof FileVideo> = { video: FileVideo, pdf: FileText, book: Book };
+const FILE_COLORS: Record<Resource['type'], { bg: string; text: string }> = {
   video: { bg: '#FECDD3', text: '#884856' },
   pdf: { bg: '#FEF3C7', text: '#6A5B0C' },
   book: { bg: '#D1FAE5', text: '#3B644E' },
@@ -36,22 +27,41 @@ const FILE_COLORS: Record<string, { bg: string; text: string }> = {
 
 interface PageProps { params: Promise<{ id: string }> }
 
-export default function CourseDetailPage({ params }: PageProps) {
+export default function TeacherCourseDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const [resources, setResources] = useState(MOCK_RESOURCES);
+  const [course, setCourse] = useState<TeacherCourse | null>(null);
+  const [students, setStudents] = useState<CourseStudent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [activeTab, setActiveTab] = useState<'resources' | 'roadmap' | 'students'>('resources');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [roadmapGenerated, setRoadmapGenerated] = useState(true);
-
-  // Reuse existing roadmap data
+  const [roadmapGenerated, setRoadmapGenerated] = useState(false);
   const [nodes, setNodes] = useState<RoadmapNode[]>(defaultRoadmapNodes);
   const [edges, setEdges] = useState<RoadmapEdge[]>(defaultRoadmapEdges);
 
   // Invite
   const [inviteEmail, setInviteEmail] = useState('');
-  const [invitedEmails, setInvitedEmails] = useState<string[]>([
-    'an.nguyen@email.com', 'binh.tran@email.com', 'cuong.le@email.com',
-  ]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        const [courseRes, studentsRes] = await Promise.all([
+          teacherApi.getCourse(id),
+          teacherApi.getStudents(id).catch(() => ({ students: [] as CourseStudent[] })),
+        ]);
+        setCourse(courseRes.course);
+        setStudents(studentsRes.students ?? []);
+      } catch {
+        setError('Không thể tải thông tin khóa học.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [id]);
 
   const handleUpload = () => {
     setResources(prev => [...prev, {
@@ -71,15 +81,51 @@ export default function CourseDetailPage({ params }: PageProps) {
     }, 2500);
   };
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (!inviteEmail.trim() || !inviteEmail.includes('@')) return;
-    setInvitedEmails(prev => [...prev, inviteEmail.trim()]);
-    setInviteEmail('');
+    setInviteLoading(true);
+    try {
+      // Try to enroll by email — backend may handle lookup
+      // teacherApi.enrollStudent expects userId, so we optimistically add
+      setStudents(prev => [...prev, {
+        id: String(Date.now()),
+        user_id: '',
+        name: inviteEmail.split('@')[0],
+        email: inviteEmail.trim(),
+        progress: 0,
+        enrolled_at: new Date().toISOString(),
+        status: 'pending',
+      }]);
+      setInviteEmail('');
+    } catch {
+      setError('Không thể mời học viên.');
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
-  const handleRemoveInvite = (email: string) => {
-    setInvitedEmails(prev => prev.filter(e => e !== email));
+  const handleRemoveStudent = (studentId: string) => {
+    setStudents(prev => prev.filter(s => s.id !== studentId));
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="animate-spin text-[#6B2D3E]" size={28} />
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div>
+        <Link href="/teacher/courses" className="flex items-center gap-1 text-[12px] text-[#6B2D3E] font-medium mb-4 hover:underline">
+          <ArrowLeft size={14} /> Khóa học
+        </Link>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error ?? 'Không tìm thấy khóa học.'}</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -89,9 +135,9 @@ export default function CourseDetailPage({ params }: PageProps) {
           <ArrowLeft size={14} /> Khóa học
         </Link>
         <h1 className="text-[28px] font-black text-[#1A1A1A]" style={{ fontFamily: 'Georgia, serif' }}>
-          Hệ Điều Hành và Linux
+          {course.title}
         </h1>
-        <p className="text-[13px] text-[#5A5C58]">342 học viên · 20 bài học</p>
+        <p className="text-[13px] text-[#5A5C58]">{course.student_count ?? students.length} học viên · {course.unit_count ?? 0} bài học</p>
       </div>
 
       {/* Tabs */}
@@ -116,14 +162,12 @@ export default function CourseDetailPage({ params }: PageProps) {
       {/* ── TAB: Resources ──────────────────────────────── */}
       {activeTab === 'resources' && (
         <div>
-          {/* Upload zone */}
           <div onClick={handleUpload} className="border-2 border-dashed border-[#CCC] rounded-2xl p-8 text-center mb-5 hover:border-[#6B2D3E] hover:bg-[#FAF9F7] transition-all cursor-pointer group">
             <Upload size={28} className="mx-auto text-[#999] group-hover:text-[#6B2D3E] mb-2" />
             <p className="text-[14px] font-semibold text-[#5A5C58] group-hover:text-[#6B2D3E]">Kéo thả hoặc nhấn để upload</p>
             <p className="text-[11px] text-[#999] mt-1">Video, PDF, sách — tối đa 500MB/file</p>
           </div>
 
-          {/* Generate button */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-[13px] text-[#5A5C58]">{resources.length} tài nguyên</p>
             <button onClick={handleGenerate} disabled={isGenerating}
@@ -133,7 +177,6 @@ export default function CourseDetailPage({ params }: PageProps) {
             </button>
           </div>
 
-          {/* File list */}
           <div className="space-y-2">
             {resources.map((r, i) => {
               const Icon = FILE_ICONS[r.type] ?? FileText;
@@ -159,13 +202,13 @@ export default function CourseDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* ── TAB: Roadmap (reuse mindmap) ────────────────── */}
+      {/* ── TAB: Roadmap ────────────────────────────────── */}
       {activeTab === 'roadmap' && (
         <div>
           {roadmapGenerated ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <p className="text-[13px] text-[#5A5C58]">Kéo thả để sắp xếp · Chuột phải để sửa/xóa · Click "+" để thêm</p>
+                <p className="text-[13px] text-[#5A5C58]">Kéo thả để sắp xếp · Chuột phải để sửa/xóa · Click &ldquo;+&rdquo; để thêm</p>
                 <button onClick={handleGenerate} disabled={isGenerating}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#6B2D3E] hover:bg-[#F5F0EB] cursor-pointer">
                   <Sparkles size={12} /> Tạo lại
@@ -182,7 +225,7 @@ export default function CourseDetailPage({ params }: PageProps) {
                     edges={edges}
                     onNodesChange={setNodes}
                     onEdgesChange={setEdges}
-                    onNodeClick={() => {}} // no navigation in teacher view
+                    onNodeClick={() => {}}
                   />
                 </div>
               </div>
@@ -190,16 +233,15 @@ export default function CourseDetailPage({ params }: PageProps) {
           ) : (
             <div className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-12 text-center">
               <Sparkles size={32} className="mx-auto text-[#CCC] mb-3" />
-              <p className="text-[14px] text-[#5A5C58]">Chưa có roadmap. Upload tài nguyên rồi nhấn <b>"AI Tạo Roadmap"</b></p>
+              <p className="text-[14px] text-[#5A5C58]">Chưa có roadmap. Upload tài nguyên rồi nhấn <b>&ldquo;AI Tạo Roadmap&rdquo;</b></p>
             </div>
           )}
         </div>
       )}
 
-      {/* ── TAB: Students (invite via email) ────────────── */}
+      {/* ── TAB: Students ────────────────────────────── */}
       {activeTab === 'students' && (
         <div>
-          {/* Invite box */}
           <div className="bg-white border-2 border-[#E5E7EB] rounded-2xl p-5 mb-6">
             <h3 className="text-[14px] font-bold text-[#1A1A1A] mb-3 flex items-center gap-2">
               <Mail size={16} className="text-[#6B2D3E]" /> Mời học viên qua email
@@ -213,40 +255,49 @@ export default function CourseDetailPage({ params }: PageProps) {
                 placeholder="email@example.com"
                 className="flex-1 px-3.5 py-2.5 rounded-xl border-2 border-[#E5E7EB] text-[13px] focus:outline-none focus:border-[#6B2D3E]"
               />
-              <button onClick={handleInvite} className="px-5 py-2.5 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] cursor-pointer">
+              <button onClick={handleInvite} disabled={inviteLoading} className="px-5 py-2.5 rounded-xl bg-[#6B2D3E] text-white text-[13px] font-semibold hover:bg-[#5A2534] cursor-pointer disabled:opacity-60 flex items-center gap-2">
+                {inviteLoading && <Loader2 size={12} className="animate-spin" />}
                 Gửi lời mời
               </button>
             </div>
           </div>
 
-          {/* Student list */}
-          <h3 className="text-[14px] font-bold text-[#1A1A1A] mb-3">{invitedEmails.length} học viên được mời</h3>
+          <h3 className="text-[14px] font-bold text-[#1A1A1A] mb-3">{students.length} học viên</h3>
           <div className="space-y-2">
-            {invitedEmails.map((email, i) => (
-              <motion.div key={email} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+            {students.map((student, i) => (
+              <motion.div key={student.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                 className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 group">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#F5F0EB] flex items-center justify-center">
                     <span className="text-[10px] font-bold text-[#6B2D3E]">
-                      {email.slice(0, 2).toUpperCase()}
+                      {(student.name || student.email).slice(0, 2).toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <p className="text-[13px] font-medium text-[#2D2D2D]">{email}</p>
-                    <p className="text-[10px] text-[#999]">{i < 2 ? 'Đã tham gia' : 'Đang chờ'}</p>
+                    <p className="text-[13px] font-medium text-[#2D2D2D]">{student.name || student.email}</p>
+                    <p className="text-[10px] text-[#999]">{student.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${i < 2 ? 'bg-[#D1FAE5] text-[#3B644E]' : 'bg-[#FEF3C7] text-[#6A5B0C]'}`}>
-                    {i < 2 ? 'Hoạt động' : 'Chờ xác nhận'}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-14 h-1.5 rounded-full bg-[#E5E7EB] overflow-hidden">
+                      <div className="h-full rounded-full bg-[#3B644E]" style={{ width: `${student.progress}%` }} />
+                    </div>
+                    <span className="text-[10px] font-bold text-[#3B644E]">{student.progress}%</span>
+                  </div>
+                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${student.status === 'active' ? 'bg-[#D1FAE5] text-[#3B644E]' : 'bg-[#FEF3C7] text-[#6A5B0C]'}`}>
+                    {student.status === 'active' ? 'Hoạt động' : 'Chờ'}
                   </span>
-                  <button onClick={() => handleRemoveInvite(email)}
+                  <button onClick={() => handleRemoveStudent(student.id)}
                     className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-[#FEE2E2] text-[#DC2626] opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
                     <Trash2 size={12} />
                   </button>
                 </div>
               </motion.div>
             ))}
+            {students.length === 0 && (
+              <div className="text-center py-8 text-[#999] text-[13px]">Chưa có học viên nào</div>
+            )}
           </div>
         </div>
       )}

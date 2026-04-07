@@ -1,29 +1,24 @@
 import { create } from 'zustand';
 import { Project } from './types';
-import { apiFetch } from '@/shared/api/client';
+import { projectApi } from '../api/project';
 
-// Backend project shape
-interface BackendProject {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string | null;
-  is_archived: boolean;
-  created_at: string;
-  updated_at: string;
+// ─── Helper ─────────────────────────────────────────────────
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function backendToProject(bp: BackendProject): Project {
-  const d = new Date(bp.created_at);
+function apiProjectToProject(p: { id: string; name: string; description: string | null; created_at: string }): Project {
   return {
-    id: bp.id,
-    title: bp.name,
-    description: bp.description || '',
-    date: d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+    id: p.id,
+    title: p.name,
+    description: p.description ?? '',
+    date: formatDate(p.created_at),
     progress: 0,
   };
 }
 
+// ─── State ──────────────────────────────────────────────────
 interface OmiLearnState {
   projects: Project[];
   currentProject: Project | null;
@@ -32,18 +27,22 @@ interface OmiLearnState {
   hasPlan: boolean;
   projectsLoaded: boolean;
   _isFetchingProjects: boolean;
+  isLoadingProjects: boolean;
+  projectsError: string | null;
+
   // Actions
+  fetchProjects: () => Promise<void>;
   openCreateModal: () => void;
   closeCreateModal: () => void;
   createProject: (name: string, description: string) => Promise<string>;
   addProject: (project: Project) => void;
+  deleteProject: (id: string) => Promise<void>;
+  updateProject: (id: string, data: Partial<Project>) => Promise<void>;
+  renameProject: (id: string, newName: string) => Promise<void>;
   setCurrentProject: (id: string) => void;
   openPlanModal: () => void;
   closePlanModal: () => void;
   setPlanComplete: () => void;
-  fetchProjects: () => Promise<void>;
-  deleteProject: (id: string) => Promise<void>;
-  renameProject: (id: string, newName: string) => Promise<void>;
   resetProjects: () => void;
 }
 
@@ -55,31 +54,35 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
   hasPlan: false,
   projectsLoaded: false,
   _isFetchingProjects: false,
-
-  openCreateModal: () => set({ isCreateModalOpen: true }),
-  closeCreateModal: () => set({ isCreateModalOpen: false }),
+  isLoadingProjects: false,
+  projectsError: null,
 
   fetchProjects: async () => {
     if (get()._isFetchingProjects || get().projectsLoaded) return;
-    set({ _isFetchingProjects: true });
+    set({ _isFetchingProjects: true, isLoadingProjects: true, projectsError: null });
     try {
-      const data = await apiFetch<BackendProject[]>('/learning/projects');
-      const projects = data.map(backendToProject);
-      set({ projects, projectsLoaded: true, _isFetchingProjects: false });
-    } catch (err) {
+      const data = await projectApi.list();
+      const projects = data.projects.map(apiProjectToProject);
+      set({ projects, projectsLoaded: true, _isFetchingProjects: false, isLoadingProjects: false });
+    } catch (e) {
+      const err = e as { error?: string };
       console.error('[Store] Failed to fetch projects:', err);
-      set({ _isFetchingProjects: false });
+      set({
+        _isFetchingProjects: false,
+        isLoadingProjects: false,
+        projectsError: err.error ?? 'Không thể tải dự án',
+      });
       // Don't set projectsLoaded=true on failure — allow retry when auth is ready
     }
   },
 
+  openCreateModal: () => set({ isCreateModalOpen: true }),
+  closeCreateModal: () => set({ isCreateModalOpen: false }),
+
   createProject: async (name: string, description: string) => {
     try {
-      const data = await apiFetch<BackendProject>('/learning/projects', {
-        method: 'POST',
-        body: JSON.stringify({ name, description }),
-      });
-      const newProject = backendToProject(data);
+      const data = await projectApi.create(name, description);
+      const newProject = apiProjectToProject(data.project);
       set((state) => ({
         projects: [newProject, ...state.projects],
         isCreateModalOpen: false,
@@ -98,7 +101,7 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
       projects: state.projects.filter((p) => p.id !== id),
     }));
     try {
-      await apiFetch(`/learning/projects/${id}`, { method: 'DELETE' });
+      await projectApi.delete(id);
     } catch (err) {
       console.error('[Store] Failed to delete project:', err);
       set({ projects: prev }); // rollback
@@ -115,12 +118,27 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
       ),
     }));
     try {
-      await apiFetch(`/learning/projects/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ name: newName }),
-      });
+      await projectApi.update(id, { name: newName });
     } catch (err) {
       console.error('[Store] Failed to rename project:', err);
+      set({ projects: prev }); // rollback
+      throw err;
+    }
+  },
+
+  updateProject: async (id: string, data: Partial<Project>) => {
+    const prev = get().projects;
+    // Optimistic update
+    set((state) => ({
+      projects: state.projects.map((p) => p.id === id ? { ...p, ...data } : p),
+    }));
+    try {
+      await projectApi.update(id, {
+        name: data.title,
+        description: data.description,
+      });
+    } catch (err) {
+      console.error('[Store] Failed to update project:', err);
       set({ projects: prev }); // rollback
       throw err;
     }
@@ -142,5 +160,12 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
   closePlanModal: () => set({ isPlanModalOpen: false }),
   setPlanComplete: () => set({ hasPlan: true, isPlanModalOpen: false }),
 
-  resetProjects: () => set({ projects: [], projectsLoaded: false, currentProject: null, _isFetchingProjects: false }),
+  resetProjects: () => set({
+    projects: [],
+    projectsLoaded: false,
+    currentProject: null,
+    _isFetchingProjects: false,
+    isLoadingProjects: false,
+    projectsError: null,
+  }),
 }));

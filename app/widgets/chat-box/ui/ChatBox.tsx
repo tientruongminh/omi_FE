@@ -10,9 +10,12 @@ import MemberList from './MemberList';
 import InviteModal from './InviteModal';
 import { groupChatMessages } from '@/entities/learning-content';
 import { projectMembers } from '@/entities/project';
+import { projectApi, ChatRoomMessage } from '@/entities/project/api/project';
+import { useAuthStore } from '@/entities/auth/store';
 
 interface Props {
   isB2B?: boolean;
+  projectId?: string;
 }
 
 const AVATARS = [
@@ -28,13 +31,41 @@ function getAvatarColor(sender: string): string {
   return '#6B2D3E';
 }
 
-export function ChatBox({ isB2B = false }: Props) {
+// Normalize API message to UI format
+function normalizeMessage(m: ChatRoomMessage, currentUserId: string) {
+  return {
+    id: m.id,
+    sender: m.sender,
+    text: m.text,
+    time: m.time,
+    isMe: m.isMe ?? m.sender_id === currentUserId,
+  };
+}
+
+export function ChatBox({ isB2B = false, projectId }: Props) {
+  const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(groupChatMessages);
   const [input, setInput] = useState('');
   const [badge, setBadge] = useState(2);
   const [showInvite, setShowInvite] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [loadedFromAPI, setLoadedFromAPI] = useState(false);
+
+  // Load messages from API when opened (if projectId provided)
+  useEffect(() => {
+    if (open && projectId && !loadedFromAPI) {
+      projectApi.getChatMessages(projectId)
+        .then((res) => {
+          if (res.messages?.length) {
+            const userId = user?.user_id ?? '';
+            setMessages(res.messages.map(m => normalizeMessage(m, userId)));
+          }
+          setLoadedFromAPI(true);
+        })
+        .catch(() => { setLoadedFromAPI(true); });
+    }
+  }, [open, projectId, loadedFromAPI, user?.user_id]);
 
   useEffect(() => {
     if (open) {
@@ -47,13 +78,32 @@ export function ChatBox({ isB2B = false }: Props) {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!input.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), sender: 'Bạn', text: input.trim(), time: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }), isMe: true },
-    ]);
+    const text = input.trim();
+    const localMsg = {
+      id: Date.now().toString(),
+      sender: 'Bạn',
+      text,
+      time: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+      isMe: true,
+    };
+    setMessages((prev) => [...prev, localMsg]);
     setInput('');
+
+    if (projectId) {
+      try {
+        const res = await projectApi.sendChatMessage(projectId, text);
+        // Update local message with server-assigned ID
+        if (res.message) {
+          setMessages((prev) =>
+            prev.map(m => m.id === localMsg.id ? { ...m, id: res.message.id } : m)
+          );
+        }
+      } catch {
+        // Silently fail — message already shows locally
+      }
+    }
   };
 
   return (

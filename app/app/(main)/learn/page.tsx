@@ -55,7 +55,7 @@ function LearnContent() {
       </div>
 
       {/* Floating UI */}
-      <ChatBox isB2B={isB2B} />
+      <ChatBox isB2B={isB2B} projectId={projectId} />
       <FloatingNote />
     </div>
   );
