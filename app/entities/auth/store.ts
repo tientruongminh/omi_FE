@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
 import { authApi, type UserPublic } from './api';
+import { useOmiLearnStore } from '@/entities/project';
 
 // ─── Auth Store (Zustand) ────────────────────────────────────
 // Manages authentication state, tokens in cookies, and user profile.
@@ -87,6 +88,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     clearTokens();
     set({ user: null, isAuthenticated: false });
+    // Reset project store so next login fetches fresh data
+    useOmiLearnStore.getState().resetProjects();
   },
 
   refreshToken: async () => {

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
+import { apiFetch } from '@/shared/api/client';
 import {
   ReactFlow,
   Background,
@@ -337,12 +338,13 @@ function RoadmapContent() {
   const searchParams = useSearchParams();
   const projectId    = searchParams.get('project') ?? '';
 
-  const { projects, isPlanModalOpen, hasPlan, openPlanModal, closePlanModal } = useOmiLearnStore();
+  const { projects, isPlanModalOpen, openPlanModal, closePlanModal } = useOmiLearnStore();
   const project = projects.find((p) => p.id === projectId);
 
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [hasSchedule, setHasSchedule] = useState(false);
 
   useEffect(() => {
     if (!projectId) { setLoading(false); return; }
@@ -352,6 +354,11 @@ function RoadmapContent() {
       .then(setRoadmap)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Check if schedule already exists
+    apiFetch<{ id: string }[]>(`/learning/schedule/${projectId}`)
+      .then((entries) => setHasSchedule(entries.length > 0))
+      .catch(() => setHasSchedule(false));
   }, [projectId]);
 
   const projectTitle = project?.title ?? roadmap?.title ?? 'Roadmap';
@@ -410,7 +417,7 @@ function RoadmapContent() {
 
       {/* ── CTA ── */}
       <div className="mt-12 w-full flex justify-center">
-          {hasPlan ? (
+          {hasSchedule ? (
             <Link
               href={`/dashboard/${projectId}`}
               className="flex items-center gap-3 px-10 py-4 font-bold text-white transition-all hover:opacity-90 active:scale-95"
@@ -427,12 +434,22 @@ function RoadmapContent() {
             </Link>
           ) : (
             <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.06, boxShadow: '6px 6px 0px #1a1a1a' }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                boxShadow: [
+                  '4px 4px 0px #1a1a1a',
+                  '4px 4px 16px rgba(125,63,85,0.5)',
+                  '4px 4px 0px #1a1a1a',
+                ],
+              }}
+              transition={{
+                boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              }}
               onClick={openPlanModal}
-              className="flex items-center gap-3 font-bold text-white cursor-pointer"
+              className="flex items-center gap-3 font-bold text-white cursor-pointer relative overflow-hidden"
               style={{
-                background: '#7d3f55',
+                background: 'linear-gradient(135deg, #7d3f55 0%, #a0526b 100%)',
                 border: '2px solid #1a1a1a',
                 borderRadius: '14px',
                 boxShadow: '4px 4px 0px #1a1a1a',
@@ -442,15 +459,24 @@ function RoadmapContent() {
                 textTransform: 'uppercase',
               }}
             >
+              {/* Shimmer effect */}
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
+                }}
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+              />
               <CalendarDays size={18} />
-              Lập kế hoạch học tập
+              Lap ke hoach hoc tap
             </motion.button>
           )}
       </div>
 
       {/* Plan Modal */}
       <AnimatePresence>
-        {isPlanModalOpen && <PlanSurveyModal onClose={closePlanModal} />}
+        {isPlanModalOpen && <PlanSurveyModal onClose={closePlanModal} projectId={projectId} />}
       </AnimatePresence>
     </div>
   );

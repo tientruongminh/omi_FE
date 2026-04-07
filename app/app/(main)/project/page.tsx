@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, ChevronRight, Plus } from 'lucide-react';
+import { Users, ChevronRight, Plus, MoreVertical, Pencil, Trash2, X, Check } from 'lucide-react';
 import { sharedCourses, projectMembers } from '@/entities/project';
 import { useOmiLearnStore } from '@/entities/project';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import dynamic from 'next/dynamic';
+
+import { useAuthStore } from '@/entities/auth';
 
 const CreateProjectModal = dynamic(() => import('@/features/create-project/ui/CreateProjectModal'), { ssr: false });
 
@@ -66,7 +69,74 @@ function AvatarStack({ count = 2 }: { count?: number }) {
 }
 
 export default function ProjectPage() {
-  const { projects, isCreateModalOpen, openCreateModal, closeCreateModal } = useOmiLearnStore();
+  const { projects, isCreateModalOpen, openCreateModal, closeCreateModal, fetchProjects, projectsLoaded, deleteProject, renameProject } = useOmiLearnStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated && !projectsLoaded) {
+      fetchProjects();
+    }
+  }, [isAuthenticated, projectsLoaded, fetchProjects]);  // ─── Dropdown menu state ─────────────────────────────────
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    if (openMenuId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
+
+  const handleMenuToggle = useCallback((e: React.MouseEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenuId((prev) => (prev === projectId ? null : projectId));
+  }, []);
+
+  const handleDelete = useCallback(async (e: React.MouseEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenuId(null);
+    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+    try {
+      await deleteProject(projectId);
+    } catch {
+      alert('Failed to delete project');
+    }
+  }, [deleteProject]);
+
+  const handleRenameStart = useCallback((e: React.MouseEvent, projectId: string, currentTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenuId(null);
+    setRenamingId(projectId);
+    setRenameValue(currentTitle);
+  }, []);
+
+  const handleRenameSubmit = useCallback(async (projectId: string) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    try {
+      await renameProject(projectId, trimmed);
+    } catch {
+      alert('Failed to rename project');
+    }
+    setRenamingId(null);
+    setRenameValue('');
+  }, [renameValue, renameProject]);
+
+  const handleRenameCancel = useCallback(() => {
+    setRenamingId(null);
+    setRenameValue('');
+  }, []);
 
   return (
     <div className="max-w-230 mx-auto px-6 py-10">
@@ -120,6 +190,7 @@ export default function ProjectPage() {
             variants={cardVariants}
             initial="hidden"
             animate="visible"
+            className="relative"
           >
             <Link
               href={`/dashboard/${project.id}`}
@@ -133,12 +204,40 @@ export default function ProjectPage() {
             >
               {/* Title + desc */}
               <div className="flex-1 mb-4">
-                <h3
-                  className="font-black text-[#1a1a1a] mb-2 leading-snug"
-                  style={{ fontSize: '20px' }}
-                >
-                  {project.title}
-                </h3>
+                {renamingId === project.id ? (
+                  <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRenameSubmit(project.id);
+                        if (e.key === 'Escape') handleRenameCancel();
+                      }}
+                      onClick={(e) => e.preventDefault()}
+                      className="flex-1 font-black text-[#1a1a1a] text-[20px] leading-snug border-b-2 border-[#4CD964] outline-none bg-transparent"
+                    />
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleRenameSubmit(project.id); }}
+                      className="p-1 rounded-full hover:bg-green-100 transition-colors"
+                    >
+                      <Check size={16} className="text-green-600" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleRenameCancel(); }}
+                      className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                    >
+                      <X size={16} className="text-red-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <h3
+                    className="font-black text-[#1a1a1a] mb-2 leading-snug pr-8"
+                    style={{ fontSize: '20px' }}
+                  >
+                    {project.title}
+                  </h3>
+                )}
                 <p className="text-[14px] leading-relaxed line-clamp-2" style={{ color: '#6b7280' }}>
                   {project.description}
                 </p>
@@ -177,6 +276,46 @@ export default function ProjectPage() {
                 )}
               </div>
             </Link>
+
+            {/* ⋮ Menu button — absolute top-right */}
+            <div className="absolute top-3 right-3 z-10" ref={openMenuId === project.id ? menuRef : undefined}>
+              <button
+                onClick={(e) => handleMenuToggle(e, project.id)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <MoreVertical size={16} className="text-gray-400" />
+              </button>
+
+              {/* Dropdown */}
+              <AnimatePresence>
+                {openMenuId === project.id && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-10 bg-white rounded-xl shadow-xl overflow-hidden"
+                    style={{ border: '1.5px solid #e5e7eb', minWidth: 160, zIndex: 50 }}
+                  >
+                    <button
+                      onClick={(e) => handleRenameStart(e, project.id, project.title)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#1a1a1a] hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <Pencil size={14} className="text-gray-500" />
+                      Rename
+                    </button>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      onClick={(e) => handleDelete(e, project.id)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         ))}
       </div>

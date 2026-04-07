@@ -17,20 +17,20 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /root/.openclaw/workspace/omilearn/app
-            
+
             # Pull latest code
             git fetch origin main
             git reset --hard origin/main
-            
+
             # Install dependencies (only if lockfile changed)
             npm ci --production=false
-            
+
             # Build
             npm run build
-            
+
             # Restart app
             pm2 restart omilearn --update-env
-            
+
             # Health check
             sleep 3
             curl -sf http://localhost:3005/ > /dev/null && echo "✅ Deploy success!" || echo "❌ Deploy failed!"

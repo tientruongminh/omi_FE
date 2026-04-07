@@ -1,81 +1,129 @@
 import { create } from 'zustand';
 import { Project } from './types';
+import { apiFetch } from '@/shared/api/client';
 
-// Tạo dữ liệu mẫu là mảng các object có kiểu dữ liệu là Project được định nghĩa trong types.ts
-const initialProjects: Project[] = [
-  {
-    id: '1',
-    title: 'Hệ Điều Hành và Linux',
-    description: 'Nghiên cứu kiến trúc hệ điều hành, quản lý tiến trình, bộ nhớ và hệ thống file trên Linux.',
-    date: '15 Tháng 3, 2025',
-    progress: 65,
-  },
-  {
-    id: '2',
-    title: 'Cấu Trúc Dữ Liệu và Giải Thuật',
-    description: 'Tìm hiểu các cấu trúc dữ liệu cơ bản và nâng cao: mảng, danh sách liên kết, cây, đồ thị, và các thuật toán sắp xếp, tìm kiếm.',
-    date: '2 Tháng 3, 2025',
-    isComplete: true,
-  },
-  {
-    id: '3',
-    title: 'Mạng Máy Tính',
-    description: 'Mô hình OSI, TCP/IP, routing, switching, bảo mật mạng và thực hành cấu hình mạng LAN/WAN.',
-    date: '20 Tháng 2, 2025',
-    progress: 40,
-  },
-  {
-    id: '4',
-    title: 'Trí Tuệ Nhân Tạo',
-    description: 'Machine Learning cơ bản, neural networks, NLP và computer vision. Ứng dụng AI trong thực tế.',
-    date: '10 Tháng 3, 2025',
-    progress: 25,
-  },
-];
+// Backend project shape
+interface BackendProject {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-// Định nghĩa interface cho state của store và các action để cập nhật state để phục vụ cho việc quản lý Projects trong ứng dụng OmiLearn (Đây là 1 store dùng chung cho toàn bộ app, có thể chứa nhiều state và action khác nhau, không chỉ riêng về Projects) mục đích là để quản lý danh sách các dự án, trạng thái của modals, và các hành động liên quan đến việc tạo và chọn dự án. Các action này sẽ được sử dụng trong các component khác nhau của ứng dụng để tương tác với state một cách dễ dàng và hiệu quả mà không cần phải truyền props qua nhiều cấp component hay sử dụng context.
+function backendToProject(bp: BackendProject): Project {
+  const d = new Date(bp.created_at);
+  return {
+    id: bp.id,
+    title: bp.name,
+    description: bp.description || '',
+    date: d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+    progress: 0,
+  };
+}
+
 interface OmiLearnState {
   projects: Project[];
   currentProject: Project | null;
   isCreateModalOpen: boolean;
   isPlanModalOpen: boolean;
   hasPlan: boolean;
+  projectsLoaded: boolean;
+  _isFetchingProjects: boolean;
   // Actions
   openCreateModal: () => void;
   closeCreateModal: () => void;
-  createProject: (name: string, description: string) => string;
+  createProject: (name: string, description: string) => Promise<string>;
   addProject: (project: Project) => void;
   setCurrentProject: (id: string) => void;
   openPlanModal: () => void;
   closePlanModal: () => void;
   setPlanComplete: () => void;
+  fetchProjects: () => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  renameProject: (id: string, newName: string) => Promise<void>;
+  resetProjects: () => void;
 }
 
-// Tạo store sử dụng Zustand với state và action đã định nghĩa ở trên. Store này sẽ được sử dụng trong toàn bộ ứng dụng để quản lý state liên quan đến Projects và các modals một cách tập trung và dễ dàng truy cập từ bất kỳ component nào cần thiết.
 export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
-  projects: initialProjects,
+  projects: [],
   currentProject: null,
   isCreateModalOpen: false,
   isPlanModalOpen: false,
   hasPlan: false,
+  projectsLoaded: false,
+  _isFetchingProjects: false,
 
   openCreateModal: () => set({ isCreateModalOpen: true }),
   closeCreateModal: () => set({ isCreateModalOpen: false }),
 
-  createProject: (name: string, description: string) => {
-    const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
-    const newProject: Project = {
-      id,
-      title: name,
-      description,
-      date: new Date().toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
-      progress: 0,
-    };
+  fetchProjects: async () => {
+    if (get()._isFetchingProjects || get().projectsLoaded) return;
+    set({ _isFetchingProjects: true });
+    try {
+      const data = await apiFetch<BackendProject[]>('/learning/projects');
+      const projects = data.map(backendToProject);
+      set({ projects, projectsLoaded: true, _isFetchingProjects: false });
+    } catch (err) {
+      console.error('[Store] Failed to fetch projects:', err);
+      set({ _isFetchingProjects: false });
+      // Don't set projectsLoaded=true on failure — allow retry when auth is ready
+    }
+  },
+
+  createProject: async (name: string, description: string) => {
+    try {
+      const data = await apiFetch<BackendProject>('/learning/projects', {
+        method: 'POST',
+        body: JSON.stringify({ name, description }),
+      });
+      const newProject = backendToProject(data);
+      set((state) => ({
+        projects: [newProject, ...state.projects],
+        isCreateModalOpen: false,
+      }));
+      return newProject.id;
+    } catch (err) {
+      console.error('[Store] Failed to create project:', err);
+      throw err;
+    }
+  },
+
+  deleteProject: async (id: string) => {
+    const prev = get().projects;
+    // Optimistic remove
     set((state) => ({
-      projects: [newProject, ...state.projects],
-      isCreateModalOpen: false,
+      projects: state.projects.filter((p) => p.id !== id),
     }));
-    return id;
+    try {
+      await apiFetch(`/learning/projects/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('[Store] Failed to delete project:', err);
+      set({ projects: prev }); // rollback
+      throw err;
+    }
+  },
+
+  renameProject: async (id: string, newName: string) => {
+    const prev = get().projects;
+    // Optimistic update
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === id ? { ...p, title: newName } : p,
+      ),
+    }));
+    try {
+      await apiFetch(`/learning/projects/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName }),
+      });
+    } catch (err) {
+      console.error('[Store] Failed to rename project:', err);
+      set({ projects: prev }); // rollback
+      throw err;
+    }
   },
 
   addProject: (project: Project) => {
@@ -93,4 +141,6 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
   openPlanModal: () => set({ isPlanModalOpen: true }),
   closePlanModal: () => set({ isPlanModalOpen: false }),
   setPlanComplete: () => set({ hasPlan: true, isPlanModalOpen: false }),
+
+  resetProjects: () => set({ projects: [], projectsLoaded: false, currentProject: null, _isFetchingProjects: false }),
 }));

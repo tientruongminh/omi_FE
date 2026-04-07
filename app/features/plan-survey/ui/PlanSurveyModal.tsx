@@ -6,49 +6,32 @@ import { CalendarDays } from 'lucide-react';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/shared/api/client';
 
-const PLAN_TEXT = `📋 Kế hoạch học tập — Hệ Điều Hành và Linux
-Thời gian: 8 tuần | 10 giờ/tuần
-
-Tuần 1: Khái Niệm Cơ Bản
-• Xem video: Tổng quan Hệ Điều Hành (2h)
-• Đọc: Lịch sử phát triển HĐH (1.5h)
-• Bài tập: Phân loại các HĐH phổ biến (1h)
-
-Tuần 2: Kiến Trúc Hệ Thống
-• Xem video: Kernel và System Calls (2h)
-• Lab: Biên dịch Linux Kernel đơn giản (3h)
-
-Tuần 3-4: Quản Lý Tài Nguyên
-• Video: Process & Memory Management (4h)
-• Lab: Sử dụng top, htop, ps (2h)
-
-Tuần 5-6: Thực hành Shell
-• Video: Bash Scripting (3h)
-• Lab: Viết 5 scripts thực tế (4h)
-
-Tuần 7-8: Debug & Ôn tập
-• Lab: strace, gdb (2h)
-• Quiz + Flashcard + Mô phỏng phỏng vấn (3h)`;
+interface GenerateScheduleResponse {
+  plan_summary: string;
+  entries: unknown[];
+  total_entries: number;
+}
 
 const QUESTIONS = [
   {
     key: 0,
-    icon: '⏳',
+    icon: '\u23F3',
     label: 'How long do you want to study this knowledge?',
-    placeholder: 'I want to master UI fundamentals...',
+    placeholder: 'e.g. 30 days, 2 months, 8 weeks...',
   },
   {
     key: 1,
-    icon: '🎯',
+    icon: '\uD83C\uDFAF',
     label: 'What level of knowledge do you want to achieve?\n(master, medium, ...)',
-    placeholder: 'I want to master UI fundamentals...',
+    placeholder: 'e.g. Master all concepts, Medium understanding...',
   },
   {
     key: 2,
-    icon: '✏️',
+    icon: '\u270F\uFE0F',
     label: 'What are your wishes?',
-    placeholder: 'Chia sẻ thêm về lộ trình bạn mong muốn...',
+    placeholder: 'e.g. Focus more on practice, study in the evening...',
   },
 ];
 
@@ -60,7 +43,12 @@ const slide = {
   exit:   { opacity: 0, x: -32 },
 };
 
-export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
+interface PlanSurveyModalProps {
+  onClose: () => void;
+  projectId?: string;
+}
+
+export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   const router = useRouter();
   const setPlanComplete = useOmiLearnStore((s) => s.setPlanComplete);
 
@@ -70,8 +58,9 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
   const [calendarConnected, setCalendarConnected]   = useState(false);
   const [calendarConnecting, setCalendarConnecting] = useState(false);
   const [modifyInput, setModifyInput]   = useState('');
-  const [planText, setPlanText]         = useState(PLAN_TEXT);
+  const [planText, setPlanText]         = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const unlockedUpTo = answers.reduce((acc, a, i) => {
     if (i === acc && a.trim()) return acc + 1;
@@ -86,32 +75,76 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
 
   const canSubmit = answers[2].trim().length > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!projectId) {
+      setError('Project ID is missing');
+      return;
+    }
+
     setScreen('generating');
-    setTimeout(() => setScreen('done'), 1200);
+    setError(null);
+
+    try {
+      const response = await apiFetch<GenerateScheduleResponse>('/schedules/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          project_id: projectId,
+          study_duration_days: answers[0],
+          target_mastery: answers[1],
+          wishes_text: answers[2],
+        }),
+      });
+
+      setPlanText(response.plan_summary);
+      setScreen('done');
+    } catch (err: unknown) {
+      const apiErr = err as { error?: string };
+      setError(apiErr?.error || 'Failed to generate schedule. Please try again.');
+      setScreen('survey');
+    }
   };
 
   const handleConnectCalendar = () => {
     setCalendarConnecting(true);
+    // Calendar integration placeholder — will be implemented later
     setTimeout(() => { setCalendarConnected(true); setCalendarConnecting(false); }, 1200);
   };
 
-  const handleModify = () => {
-    if (!modifyInput.trim()) return;
+  const handleModify = async () => {
+    if (!modifyInput.trim() || !projectId) return;
     setIsRegenerating(true);
     const mod = modifyInput.trim();
     setModifyInput('');
-    setTimeout(() => {
-      setPlanText(PLAN_TEXT + `\n\n✏️ Cập nhật: "${mod}"`);
+
+    try {
+      const response = await apiFetch<GenerateScheduleResponse>('/schedules/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          project_id: projectId,
+          study_duration_days: answers[0],
+          target_mastery: answers[1],
+          wishes_text: `${answers[2]}\n\nAdditional request: ${mod}`,
+        }),
+      });
+
+      setPlanText(response.plan_summary);
       setStreamKey((k) => k + 1);
+    } catch {
+      setPlanText((prev) => prev + `\n\n(Failed to regenerate. Please try again.)`);
+      setStreamKey((k) => k + 1);
+    } finally {
       setIsRegenerating(false);
-    }, 800);
+    }
   };
 
   const handleComplete = () => {
     setPlanComplete();
     onClose();
-    router.push('/dashboard');
+    if (projectId) {
+      router.push(`/dashboard/${projectId}`);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   const streamDone = useCallback(() => {}, []);
@@ -125,7 +158,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
         onClick={onClose}
       />
 
-      {/* Card — no border/shadow/overflow here, image.png already has them baked in */}
+      {/* Card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -134,7 +167,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
         className="relative w-full max-w-lg"
         style={{ maxHeight: '92vh' }}
       >
-        {/* image.png as the card background — contains border, shadow, decorations */}
+        {/* image.png as the card background */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/image.png"
@@ -157,7 +190,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                 boxShadow: '2px 2px 0px #1a1a1a',
               }}
             >
-              Khảo sát lập kế hoạch
+              {'\uD83D\uDCCB'} Plan your learning journey
             </span>
           </div>
 
@@ -178,6 +211,13 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-center mb-7" style={{ color: '#6b7280' }}>
                     Tell us about your dreams!
                   </p>
+
+                  {/* Error message */}
+                  {error && (
+                    <div className="mb-4 px-4 py-2.5 rounded-xl text-sm font-medium" style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                      {error}
+                    </div>
+                  )}
 
                   <div className="space-y-5">
                     {QUESTIONS.map((q, i) => {
@@ -243,7 +283,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                       ) : (
                         <CalendarDays size={15} />
                       )}
-                      {calendarConnected ? 'Connected ✓' : 'Connect Calendar'}
+                      {calendarConnected ? 'Connected \u2713' : 'Connect Calendar'}
                     </button>
                   </div>
 
@@ -269,7 +309,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                       }}
                     >
                       Save My Journey
-                      <span className="text-base">✦</span>
+                      <span className="text-base">{'\u2726'}</span>
                     </motion.button>
                   </div>
                 </motion.div>
@@ -279,7 +319,8 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
               {screen === 'generating' && (
                 <motion.div key="gen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-16 text-center space-y-4">
                   <div className="w-14 h-14 rounded-full border-4 border-[#7d3f55] border-t-transparent animate-spin mx-auto" />
-                  <p className="font-semibold text-[#1a1a1a]">AI đang lên kế hoạch...</p>
+                  <p className="font-semibold text-[#1a1a1a]">AI is creating your study plan...</p>
+                  <p className="text-xs text-gray-400">This may take 10-30 seconds</p>
                 </motion.div>
               )}
 
@@ -287,7 +328,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
               {screen === 'done' && (
                 <motion.div key="done" variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }} className="space-y-4">
                   <h2 className="text-2xl font-black text-[#1a1a1a] text-center mb-1" style={{ fontFamily: 'Georgia, serif' }}>
-                    Kế hoạch của bạn 🎉
+                    {'\uD83C\uDF89'} Your Study Plan
                   </h2>
                   <div
                     className="max-h-64 overflow-y-auto p-4 rounded-2xl"
@@ -301,7 +342,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                       value={modifyInput}
                       onChange={(e) => setModifyInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleModify()}
-                      placeholder='Ví dụ: "Thêm thực hành mỗi tuần"'
+                      placeholder='e.g. "Add more practice each week"'
                       className="flex-1 px-4 py-2.5 text-sm outline-none"
                       style={{ background: 'rgba(255,255,255,0.8)', border: '1.5px solid #1a1a1a', borderRadius: '999px' }}
                       disabled={isRegenerating}
@@ -312,7 +353,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                       className="px-4 py-2 text-sm font-semibold text-white transition-colors cursor-pointer disabled:opacity-40"
                       style={{ background: '#1a1a1a', borderRadius: '999px' }}
                     >
-                      {isRegenerating ? '...' : 'Cập nhật'}
+                      {isRegenerating ? '...' : 'Update'}
                     </button>
                   </div>
                   <motion.button
@@ -327,7 +368,7 @@ export function PlanSurveyModal({ onClose }: { onClose: () => void }) {
                       boxShadow: '3px 3px 0px #1a1a1a',
                     }}
                   >
-                    Hoàn thành ✓
+                    {'\u2713'} Complete & View Dashboard
                   </motion.button>
                 </motion.div>
               )}

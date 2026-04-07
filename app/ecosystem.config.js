@@ -5,8 +5,10 @@ module.exports = {
     args: 'start',
     cwd: '/root/.openclaw/workspace/omilearn/app',
     env: {
-      PORT: 3005,
+      PORT: 3000,
       NODE_ENV: 'production'
+      // NEXT_PUBLIC_API_URL không cần ở đây vì là biến build-time
+      // Phải set lúc npm run build, không phải lúc npm start
     },
     // Auto-restart
     autorestart: true,

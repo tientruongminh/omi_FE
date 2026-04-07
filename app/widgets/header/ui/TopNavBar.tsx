@@ -95,9 +95,25 @@ export default function TopNavBar() {
             <button
               onClick={() => setAvatarOpen((o) => !o)}
               className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 transition-colors hover:border-[#6B2D3E]"
-              style={{ background: isAuthenticated && initials ? '#6B2D3E' : '#d6cfc8', borderColor: avatarOpen ? '#6B2D3E' : '#c9c2bb' }}
+              style={{ background: isAuthenticated && (user?.avatar_url || initials) ? '#6B2D3E' : '#d6cfc8', borderColor: avatarOpen ? '#6B2D3E' : '#c9c2bb' }}
             >
-              {isAuthenticated && initials ? (
+              {isAuthenticated && user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name || 'Avatar'}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // Fallback to initials if image fails
+                    const el = e.currentTarget;
+                    el.style.display = 'none';
+                    const span = document.createElement('span');
+                    span.className = 'text-xs font-bold text-white leading-none';
+                    span.textContent = initials || 'U';
+                    el.parentElement?.appendChild(span);
+                  }}
+                />
+              ) : isAuthenticated && initials ? (
                 <span className="text-xs font-bold text-white leading-none">{initials}</span>
               ) : (
                 <User size={16} style={{ color: '#7a736c' }} />
@@ -117,13 +133,27 @@ export default function TopNavBar() {
                   {isAuthenticated && user ? (
                     <>
                       {/* User info */}
-                      <div className="px-4 py-3 border-b" style={{ borderColor: '#f3f4f6' }}>
-                        <p className="text-sm font-semibold text-[#1a1a1a] truncate">
-                          {user.name || 'Người dùng'}
-                        </p>
-                        <p className="text-xs truncate" style={{ color: '#9ca3af' }}>
-                          {user.email}
-                        </p>
+                      <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: '#f3f4f6' }}>
+                        {user.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt={user.name || 'Avatar'}
+                            className="w-8 h-8 rounded-full object-cover shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-[#6B2D3E] flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-white">{initials || 'U'}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1a1a1a] truncate">
+                            {user.name || 'Người dùng'}
+                          </p>
+                          <p className="text-xs truncate" style={{ color: '#9ca3af' }}>
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Logout */}

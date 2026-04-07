@@ -6,7 +6,7 @@ import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2 } from 'lucide-rea
 import { useRouter } from 'next/navigation';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
-import { apiFetch } from '@/shared/api/client';
+import { apiFetch, apiUpload } from '@/shared/api/client';
 
 interface Props {
   onClose: () => void;
@@ -52,8 +52,9 @@ export function CreateProjectModal({ onClose }: Props) {
   const [step, setStep] = useState(1);
   const [projectName, setProjectName] = useState('');
   const [projectDesc, setProjectDesc] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: 'ai', text: 'Tôi đã nhận được tài liệu của bạn. Bạn muốn tìm thêm tài liệu nào không?' },
   ]);
@@ -83,9 +84,19 @@ export function CreateProjectModal({ onClose }: Props) {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
-    setUploadedFiles((prev) => [...prev, ...Array.from(files).map((f) => f.name)]);
+    const valid: File[] = [];
+    for (const f of Array.from(files)) {
+      if (f.size > MAX_FILE_SIZE) {
+        setCreateError(`File "${f.name}" vượt quá 50 MB (${(f.size / 1024 / 1024).toFixed(1)} MB)`);
+        continue;
+      }
+      valid.push(f);
+    }
+    setUploadedFiles((prev) => [...prev, ...valid]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -121,7 +132,20 @@ export function CreateProjectModal({ onClose }: Props) {
   const handleCreateProject = async () => {
     setIsCreating(true);
     setCreateError(null);
+    setUploadProgress(null);
     try {
+      // 1. Upload files to MinIO
+      const minioKeys: string[] = [];
+      if (uploadedFiles.length > 0) {
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          setUploadProgress(`Đang tải lên ${i + 1}/${uploadedFiles.length}...`);
+          const result = await apiUpload(uploadedFiles[i]);
+          minioKeys.push(result.object_name);
+        }
+        setUploadProgress(null);
+      }
+
+      // 2. Create roadmap with minio_keys + external_urls
       const externalUrls = resources.filter((r) => r.url.trim()).map((r) => r.url.trim());
       const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
         method: 'POST',
@@ -129,7 +153,7 @@ export function CreateProjectModal({ onClose }: Props) {
           project_name: projectName || 'Dự án mới',
           project_description: projectDesc || null,
           external_urls: externalUrls,
-          minio_keys: [],
+          minio_keys: minioKeys,
         }),
       });
       const projectId = data.roadmap.project_id;
@@ -147,6 +171,7 @@ export function CreateProjectModal({ onClose }: Props) {
       setCreateError(apiErr.error || (e instanceof Error ? e.message : 'Đã có lỗi xảy ra.'));
     } finally {
       setIsCreating(false);
+      setUploadProgress(null);
     }
   };
 
@@ -216,7 +241,7 @@ export function CreateProjectModal({ onClose }: Props) {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {uploadedFiles.map((f, i) => (
                         <span key={i} className="flex items-center gap-1.5 px-3 py-1 bg-[#2D2D2D] text-white text-xs rounded-full">
-                          <span>{fileTypeIcon(f)}</span>{f}
+                          <span>{fileTypeIcon(f.name)}</span>{f.name} <span className="text-[#9CA3AF]">({(f.size / 1024 / 1024).toFixed(1)} MB)</span>
                           <button onClick={() => setUploadedFiles((prev) => prev.filter((_, j) => j !== i))}><X size={10} /></button>
                         </span>
                       ))}
@@ -329,7 +354,7 @@ export function CreateProjectModal({ onClose }: Props) {
                   </div>
                 </div>
                 <button onClick={handleCreateProject} disabled={isCreating} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                  {isCreating ? 'Đang tạo roadmap...' : 'Tạo dự án 🎉'}
+                  {isCreating ? (uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
                 </button>
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
                 <button onClick={() => setStep(2)} className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer">← Quay lại</button>
