@@ -670,6 +670,12 @@ export default function ProjectDashboardPage({ params }: PageProps) {
                   </div>
                 ))}
               </div>
+              <Link
+                href={`/learn?project=${projectId}`}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#2D2D2D] text-white text-xs font-semibold hover:bg-[#1a1a1a] active:scale-95 transition-all"
+              >
+                Continue learning {'\u2192'}
+              </Link>
             </div>
           </>
         )}
