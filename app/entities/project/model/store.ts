@@ -62,7 +62,9 @@ export const useOmiLearnStore = create<OmiLearnState>((set, get) => ({
     set({ _isFetchingProjects: true, isLoadingProjects: true, projectsError: null });
     try {
       const data = await projectApi.list();
-      const projects = data.projects.map(apiProjectToProject);
+      // Backend returns array directly, not { projects: [...] }
+      const raw = Array.isArray(data) ? data : (data as any).projects ?? [];
+      const projects = raw.map(apiProjectToProject);
       set({ projects, projectsLoaded: true, _isFetchingProjects: false, isLoadingProjects: false });
     } catch (e) {
       const err = e as { error?: string };
