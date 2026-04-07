@@ -16,21 +16,21 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            cd /root/.openclaw/workspace/omilearn/app
-            
+            cd /root/.openclaw/workspace/omi_FE/app
+
             # Pull latest code
-            git fetch origin main
-            git reset --hard origin/main
-            
-            # Install dependencies (only if lockfile changed)
+            git -C /root/.openclaw/workspace/omi_FE fetch origin main
+            git -C /root/.openclaw/workspace/omi_FE reset --hard origin/main
+
+            # Install dependencies
             npm ci --production=false
-            
+
             # Build
             npm run build
-            
-            # Restart app
-            pm2 restart omilearn --update-env
-            
+
+            # Restart service (systemd)
+            systemctl restart omilearn-fe
+
             # Health check
-            sleep 3
-            curl -sf http://localhost:3005/ > /dev/null && echo "✅ Deploy success!" || echo "❌ Deploy failed!"
+            sleep 4
+            curl -sf http://localhost:3000/login > /dev/null && echo "✅ Deploy success!" || echo "❌ Deploy failed!"
