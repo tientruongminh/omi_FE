@@ -25,6 +25,10 @@ export interface ProgressSummary {
   total_nodes: number;
   completed_nodes: number;
   percentage: number;
+  project_title?: string;
+  streak?: number;
+  total_time_minutes?: number;
+  completion_rate?: number;
 }
 
 export interface ProgressDetail {
@@ -53,6 +57,23 @@ export interface CalendarEntriesResponse {
 
 export interface SkillsSnapshot {
   skills: { name: string; level: number; category: string }[];
+}
+
+// Type alias for convenience
+export type ProgressSummaryData = ProgressSummary;
+
+
+export interface ChatRoomMessage {
+  id: string;
+  sender: string;
+  sender_id: string;
+  text: string;
+  time: string;
+  isMe?: boolean;
+}
+
+export interface ChatRoomMessagesResponse {
+  messages: ChatRoomMessage[];
 }
 
 // ─── API ─────────────────────────────────────────────────────
@@ -112,5 +133,16 @@ export const projectApi = {
 
   getSkillsSnapshot() {
     return apiFetch<SkillsSnapshot>('/learning/skills/snapshot');
+  },
+
+  getChatMessages(projectId: string) {
+    return apiFetch<ChatRoomMessagesResponse>(`/learning/projects/${projectId}/chat/messages`);
+  },
+
+  sendChatMessage(projectId: string, text: string) {
+    return apiFetch<{ message: ChatRoomMessage }>(`/learning/projects/${projectId}/chat/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
   },
 };

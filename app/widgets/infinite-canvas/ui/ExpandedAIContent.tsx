@@ -24,6 +24,7 @@ interface FloatingMenu {
 }
 
 export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Props) {
+  const user = useAuthStore((s) => s.user);
   const [input, setInput] = useState('');
   const [msgs, setMsgs] = useState<ChatMsg[]>([{ id: 'init', role: 'ai', text: node.content ?? node.title }]);
   const [streaming, setStreaming] = useState(false);
@@ -38,17 +39,34 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
 
-  const send = () => {
+  const send = async () => {
     if (!input.trim() || streaming) return;
-    const reply = `Đây là câu trả lời tiếp theo cho "${input.trim()}". AI đang xử lý thêm thông tin từ tài liệu...`;
+    const query = input.trim();
+    const userMsgId = Date.now() + '-u';
+    const aiMsgId = Date.now() + '-ai';
     setMsgs((prev) => [
       ...prev,
-      { id: Date.now() + '-u', role: 'user', text: input.trim() },
-      { id: Date.now() + '-ai', role: 'ai', text: reply },
+      { id: userMsgId, role: 'user', text: query },
+      { id: aiMsgId, role: 'ai', text: '' },
     ]);
     setInput('');
     setStreaming(true);
-    setTimeout(() => setStreaming(false), 1500);
+    try {
+      const userId = user?.user_id ?? 'anonymous';
+      const contextPrompt = node.content
+        ? `Tài liệu: ${node.content.slice(0, 500)}\n\nCâu hỏi: ${query}`
+        : query;
+      const res = await aiApi.chat(userId, contextPrompt, 'vi');
+      setMsgs((prev) =>
+        prev.map((m) => m.id === aiMsgId ? { ...m, text: res.response } : m)
+      );
+    } catch {
+      setMsgs((prev) =>
+        prev.map((m) => m.id === aiMsgId ? { ...m, text: 'Xin lỗi, không thể kết nối AI lúc này.' } : m)
+      );
+    } finally {
+      setStreaming(false);
+    }
   };
 
   // Right-click / selection handling in chat
