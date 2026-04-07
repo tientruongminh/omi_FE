@@ -59,7 +59,7 @@ export default function TopNavBar() {
 
         {/* Logo */}
         <Link
-          href="/landing"
+          href="/project"
           className="text-[#6B2D3E] text-lg font-bold tracking-tight lowercase shrink-0 hover:opacity-80 transition-opacity"
           style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
         >

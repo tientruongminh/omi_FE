@@ -4,8 +4,9 @@ import React, { useState, useEffect, use, useMemo, useCallback, useRef } from 'r
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, TrendingUp, CalendarDays } from 'lucide-react';
+import { ChevronRight, ChevronLeft, TrendingUp, CalendarDays, Loader2 } from 'lucide-react';
 import { useOmiLearnStore } from '@/entities/project';
+import { projectApi } from '@/entities/project/api/project';
 import AIStreamText from '@/shared/ui/AIStreamText';
 import { apiFetch } from '@/shared/api/client';
 
@@ -152,14 +153,52 @@ function getLegendItems(entries: ScheduleEntry[]): { title: string; color: strin
 export default function ProjectDashboardPage({ params }: PageProps) {
   const { projectId } = use(params);
   const storeProjects = useOmiLearnStore((s) => s.projects);
-  const project = storeProjects.find((p) => p.id === projectId);
-  const projectTitle = project?.title ?? 'My Project';
-  const projectDesc = project?.description ?? 'Your personalized learning journey.';
+  const fetchProjects = useOmiLearnStore((s) => s.fetchProjects);
+
+  const [project, setProject] = useState(storeProjects.find((p) => p.id === projectId) ?? null);
+  const [loadingProject, setLoadingProject] = useState(!project);
+  const projectTitle = project?.title ?? 'Đang tải...';
+  const projectDesc = project?.description ?? '';
 
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const router = useRouter();
+
+  // Fetch project from API if not found in store (e.g. after page reload)
+  useEffect(() => {
+    if (!project) {
+      setLoadingProject(true);
+      projectApi.get(projectId)
+        .then((res) => {
+          const p = res.project ?? res;
+          setProject({
+            id: p.id,
+            title: p.name,
+            description: p.description ?? '',
+            date: new Date(p.created_at).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+            progress: 0,
+          });
+        })
+        .catch(() => {})
+        .finally(() => setLoadingProject(false));
+    }
+  }, [project, projectId]);
+
+  // Ensure store is populated for other pages
+  useEffect(() => {
+    if (storeProjects.length === 0) {
+      fetchProjects();
+    }
+  }, [storeProjects.length, fetchProjects]);
+
+  // Sync from store when store updates (e.g. fetchProjects completes)
+  useEffect(() => {
+    if (!project && storeProjects.length > 0) {
+      const found = storeProjects.find((p) => p.id === projectId);
+      if (found) setProject(found);
+    }
+  }, [storeProjects, project, projectId]);
 
   // ─── Fetch schedule entries from API ──────────────────────
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
@@ -406,6 +445,14 @@ export default function ProjectDashboardPage({ params }: PageProps) {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [resizePreviewSpan, entries]);
+
+  if (loadingProject) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="animate-spin text-[#6B2D3E]" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8">
