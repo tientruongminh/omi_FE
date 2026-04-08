@@ -1,11 +1,9 @@
-name: Deploy to VPS
-
+name: test
 on:
   push:
     branches: [main]
-
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
