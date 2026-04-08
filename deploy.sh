@@ -20,7 +20,7 @@ npm ci --production=false >> $LOG 2>&1
 
 # Clean build (avoid stale manifest errors)
 rm -rf .next
-npm run build >> $LOG 2>&1
+NEXT_PUBLIC_API_URL=https://api.omilearn.com npm run build >> $LOG 2>&1
 
 # Restart
 pm2 restart omilearn --update-env >> $LOG 2>&1
@@ -28,8 +28,8 @@ pm2 restart omilearn --update-env >> $LOG 2>&1
 # Health check
 sleep 3
 if curl -sf http://localhost:3005/ > /dev/null; then
-    echo "$(date): ✅ Deploy success!" >> $LOG
+    echo "$(date): Deploy success!" >> $LOG
 else
-    echo "$(date): ❌ Deploy failed - health check failed" >> $LOG
+    echo "$(date): Deploy failed - health check failed" >> $LOG
     exit 1
 fi
