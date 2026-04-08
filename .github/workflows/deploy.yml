@@ -9,14 +9,26 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Test SSH connection
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          script: |
-            echo "SSH connected!"
-            whoami
-            hostname
+      - name: Debug
+        run: echo "Workflow works!"
+
+      - name: SSH Deploy
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key $VPS_USER@$VPS_HOST << 'DEPLOY'
+            export HOME=/root
+            cd /root/.openclaw/workspace/omi_FE/app
+            git -C /root/.openclaw/workspace/omi_FE fetch origin main
+            git -C /root/.openclaw/workspace/omi_FE reset --hard origin/main
+            npm ci --production=false
+            NEXT_PUBLIC_API_URL=https://omilearn.com/api npm run build
+            systemctl restart omilearn-fe
+            sleep 4
+            curl -sf http://localhost:3000/login > /dev/null && echo "Deploy success!" || echo "Deploy failed!"
+          DEPLOY
