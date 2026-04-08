@@ -2,14 +2,15 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -17,20 +18,10 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /root/.openclaw/workspace/omi_FE/app
-
-            # Pull latest code
             git -C /root/.openclaw/workspace/omi_FE fetch origin main
             git -C /root/.openclaw/workspace/omi_FE reset --hard origin/main
-
-            # Install dependencies
             npm ci --production=false
-
-            # Build
             npm run build
-
-            # Restart service (systemd)
             systemctl restart omilearn-fe
-
-            # Health check
             sleep 4
-            curl -sf http://localhost:3000/login > /dev/null && echo "✅ Deploy success!" || echo "❌ Deploy failed!"
+            curl -sf http://localhost:3000/login > /dev/null && echo "Deploy success" || echo "Deploy failed"
