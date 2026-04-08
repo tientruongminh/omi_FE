@@ -127,7 +127,9 @@ export function CreateProjectModal({ onClose }: Props) {
     setSelectedDocs((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
 
-  const totalResourceCount = selectedDocs.size + uploadedFiles.length + resources.filter(r => r.url.trim()).length;
+  const validResources = resources.filter(r => r.url.trim());
+  const totalResourceCount = selectedDocs.size + uploadedFiles.length + validResources.length;
+  const hasSourceMaterial = uploadedFiles.length > 0 || validResources.length > 0;
 
   const handleCreateProject = async () => {
     setIsCreating(true);
@@ -146,7 +148,7 @@ export function CreateProjectModal({ onClose }: Props) {
       }
 
       // 2. Create roadmap with minio_keys + external_urls
-      const externalUrls = resources.filter((r) => r.url.trim()).map((r) => r.url.trim());
+      const externalUrls = validResources.map((r) => r.url.trim());
       const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
         method: 'POST',
         body: JSON.stringify({
@@ -353,9 +355,10 @@ export function CreateProjectModal({ onClose }: Props) {
                     <AIStreamText text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục!`} speed={18} className="text-sm text-[#2D2D2D] leading-relaxed" />
                   </div>
                 </div>
-                <button onClick={handleCreateProject} disabled={isCreating} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                <button onClick={handleCreateProject} disabled={isCreating || !hasSourceMaterial} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                   {isCreating ? (uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
                 </button>
+                {!hasSourceMaterial && !isCreating && <p className="text-xs text-amber-600 text-center">Vui lòng tải lên ít nhất 1 file hoặc thêm 1 URL ở bước 1 để AI tạo roadmap.</p>}
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
                 <button onClick={() => setStep(2)} className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer">← Quay lại</button>
               </motion.div>
