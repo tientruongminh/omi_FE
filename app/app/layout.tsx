@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmiLearn — Editorial Learning Platform",
-  description: "A Vietnamese education platform with interactive mindmaps",
+  title: "OmiLearn — Nền tảng học tập thông minh",
+  description: "Nền tảng giáo dục Việt Nam với mindmap tương tác và AI hỗ trợ",
 };
 
 export default function RootLayout({
