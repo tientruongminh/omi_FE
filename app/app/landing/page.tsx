@@ -265,7 +265,7 @@ export default function LandingPage() {
             className="text-xl font-black italic"
             style={{ color: '#6B2D3E', fontFamily: 'Georgia, serif', letterSpacing: '-0.01em' }}
           >
-            omilearnnnnnnnnnnnnnnnn
+            omilearnnnnnnnnnnnnnnnnn
           </span>
 
           {/* Auth buttons */}
