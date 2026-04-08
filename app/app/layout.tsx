@@ -34,3 +34,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Note: The above code is the main layout for the frontend application. It sets up global styles, fonts, and includes an AuthHydrator component to manage authentication state across the app. The metadata object defines the page title and description for SEO purposes.
