@@ -4,6 +4,41 @@ on:
     branches: [main]
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-      - run: echo "hello"
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          command_timeout: 10m
+          script: |
+            export HOME=/root
+            export PM2_HOME=/root/.pm2
+            export PATH=$PATH:/root/.nvm/versions/node/$(ls /root/.nvm/versions/node/ 2>/dev/null | tail -1)/bin:/usr/local/bin
+
+            # Pull latest code at repo root
+            cd /root/.openclaw/workspace/omilearn
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Move into Next.js project
+            cd app
+
+            # Install dependencies
+            rm -f package-lock.json
+            npm install --production=false
+
+            # Clean old build & rebuild with production API URL
+            rm -rf .next
+            NEXT_PUBLIC_API_URL=https://omilearn.com/api npm run build
+
+            # Stop old process, start fresh
+            pm2 delete omilearn 2>/dev/null || true
+            pm2 start ecosystem.config.js
+
+            # Health check
+            sleep 5
+            curl -sf http://localhost:3000/ > /dev/null && echo "Deploy success!" || echo "Deploy failed!"

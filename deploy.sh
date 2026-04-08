@@ -9,25 +9,30 @@ export PM2_HOME=/root/.pm2
 LOG="/var/log/omilearn-deploy.log"
 echo "$(date): Deploy started" >> $LOG
 
-cd /root/.openclaw/workspace/omilearn/app
+cd /root/.openclaw/workspace/omilearn
 
-# Pull latest
+# Pull latest at repo root
 git fetch origin main >> $LOG 2>&1
 git reset --hard origin/main >> $LOG 2>&1
 
-# Install deps (only if lockfile changed)
-npm ci --production=false >> $LOG 2>&1
+# Move into Next.js project
+cd app
+
+# Install deps
+rm -f package-lock.json
+npm install --production=false >> $LOG 2>&1
 
 # Clean build (avoid stale manifest errors)
 rm -rf .next
-NEXT_PUBLIC_API_URL=https://api.omilearn.com npm run build >> $LOG 2>&1
+NEXT_PUBLIC_API_URL=https://omilearn.com/api npm run build >> $LOG 2>&1
 
-# Restart
-pm2 restart omilearn --update-env >> $LOG 2>&1
+# Stop old process, start fresh
+pm2 delete omilearn 2>/dev/null || true
+pm2 start ecosystem.config.js >> $LOG 2>&1
 
 # Health check
-sleep 3
-if curl -sf http://localhost:3005/ > /dev/null; then
+sleep 5
+if curl -sf http://localhost:3000/ > /dev/null; then
     echo "$(date): Deploy success!" >> $LOG
 else
     echo "$(date): Deploy failed - health check failed" >> $LOG
