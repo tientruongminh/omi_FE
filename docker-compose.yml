@@ -1,0 +1,146 @@
+version: "3.9"
+
+services:
+  # ── Auth Service Database ─────────────────────────────────
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: omilearn-auth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-auth_secret}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+      - ./db/auth/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Learning Service Database ─────────────────────────────
+  postgres-learning:
+    image: postgres:16-alpine
+    container_name: omilearn-learning-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learning_db
+      POSTGRES_USER: learning_user
+      POSTGRES_PASSWORD: ${LEARNING_DB_PASSWORD:-learning_secret}
+    ports:
+      - "5434:5432"
+    volumes:
+      - learning_data:/var/lib/postgresql/data
+      - ./db/learning/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning_user -d learning_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── AI Service Database ───────────────────────────────────
+  postgres-ai:
+    image: postgres:16-alpine
+    container_name: omilearn-ai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_db
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ${AI_DB_PASSWORD:-ai_secret}
+    ports:
+      - "5435:5432"
+    volumes:
+      - ai_data:/var/lib/postgresql/data
+      - ./db/ai/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Teacher Service Database ──────────────────────────────
+  postgres-teacher:
+    image: postgres:16-alpine
+    container_name: omilearn-teacher-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: teacher_db
+      POSTGRES_USER: teacher_user
+      POSTGRES_PASSWORD: ${TEACHER_DB_PASSWORD:-teacher_secret}
+    ports:
+      - "5436:5432"
+    volumes:
+      - teacher_data:/var/lib/postgresql/data
+      - ./db/teacher/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teacher_user -d teacher_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Admin Service Database ──────────────────────────────
+  postgres-admin:
+    image: postgres:16-alpine
+    container_name: omilearn-admin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: admin_db
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: ${ADMIN_DB_PASSWORD:-admin_secret}
+    ports:
+      - "5437:5432"
+    volumes:
+      - admin_data:/var/lib/postgresql/data
+      - ./db/admin/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -d admin_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (shared cache / pub-sub) ────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: omilearn-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO (S3-compatible object storage) ──────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: omilearn-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  auth_data:
+  learning_data:
+  ai_data:
+  teacher_data:
+  admin_data:
+  redis_data:
+  minio_data:

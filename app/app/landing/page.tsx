@@ -196,7 +196,7 @@ function TestimonialCarousel() {
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
 const FAQ_ITEMS = [
-  { q: 'AI của Omilearn có giống ChatGPT không?', a: 'Không hoàn toàn. AI của chúng mình được huấn luyện chuyên sâu để hiểu các giáo trình đại học tại Việt Nam, trả lời bám sát đề cương và phong cách ra đề của giảng viên.' },
+  { q: 'AI của Omilearn có giống Minh Tiền cd không?', a: 'Không hoàn toàn. AI của chúng mình được huấn luyện chuyên sâu để hiểu các giáo trình đại học tại Việt Nam, trả lời bám sát đề cương và phong cách ra đề của giảng viên.' },
   { q: 'Dùng thử có tốn phí không?', a: 'Hoàn toàn miễn phí trong 14 ngày đầu. Không cần nhập thẻ tín dụng. Sau đó bạn có thể chọn gói phù hợp hoặc tiếp tục dùng gói Free với tính năng cơ bản.' },
   { q: 'Tài liệu trên đây có tin cậy không?', a: 'Tất cả tài liệu đều được kiểm duyệt bởi đội ngũ học thuật của Omilearn và được đóng góp từ sinh viên xuất sắc của các trường đại học hàng đầu Việt Nam.' },
   { q: 'Omilearn có hỗ trợ môn học nào?', a: 'Hiện tại Omilearn hỗ trợ hơn 200 môn học phổ biến tại 12+ trường đại học, bao gồm Giải tích, Vật lý, Lập trình, Kinh tế, Luật và nhiều hơn nữa.' },
