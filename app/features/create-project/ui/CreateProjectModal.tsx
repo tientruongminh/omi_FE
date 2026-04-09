@@ -144,22 +144,15 @@ export function CreateProjectModal({ onClose }: Props) {
     setIsStreaming(true);
 
     try {
-      // Build context-aware search query with project info
-      const contextParts: string[] = [];
-      if (projectName) contextParts.push(projectName);
-      if (projectDesc) contextParts.push(projectDesc);
-
-      // Combine user query with project context for better search
-      const searchQuery = contextParts.length > 0
-        ? `${query} (${contextParts.join(' - ')})`
-        : query;
+      // Send raw query + context separately — let AI extract keywords
+      const context = [projectName, projectDesc].filter(Boolean).join(' — ');
 
       const res = await apiFetch<{
         results: SearchResult[];
         ai_summary: string;
       }>('/ai/search', {
         method: 'POST',
-        body: JSON.stringify({ query: searchQuery, limit: 8, source: 'all' }),
+        body: JSON.stringify({ query, limit: 8, source: 'all', context }),
       });
 
       // ACCUMULATE results instead of replacing
