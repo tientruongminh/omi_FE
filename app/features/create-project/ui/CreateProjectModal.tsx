@@ -141,14 +141,28 @@ export function CreateProjectModal({ onClose }: Props) {
       if (uploadedFiles.length > 0) {
         for (let i = 0; i < uploadedFiles.length; i++) {
           setUploadProgress(`Đang tải lên ${i + 1}/${uploadedFiles.length}...`);
-          const result = await apiUpload(uploadedFiles[i]);
-          minioKeys.push(result.object_name);
+          try {
+            const result = await apiUpload(uploadedFiles[i]);
+            if (result.object_name) {
+              minioKeys.push(result.object_name);
+            }
+          } catch (uploadErr) {
+            const ue = uploadErr as { error?: string; status?: number };
+            setCreateError(`Upload file "${uploadedFiles[i].name}" thất bại: ${ue.error || 'Lỗi không xác định'} (status: ${ue.status || '?'})`);
+            return; // Stop — do NOT proceed to create roadmap
+          }
         }
         setUploadProgress(null);
       }
 
       // 2. Create roadmap with minio_keys + external_urls
       const externalUrls = validResources.map((r) => r.url.trim());
+
+      if (minioKeys.length === 0 && externalUrls.length === 0) {
+        setCreateError('Cần ít nhất 1 file hoặc URL. Upload có thể đã thất bại.');
+        return;
+      }
+
       const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
         method: 'POST',
         body: JSON.stringify({

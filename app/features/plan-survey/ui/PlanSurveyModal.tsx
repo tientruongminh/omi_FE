@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays } from 'lucide-react';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
@@ -62,6 +62,30 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ─── Check Google Calendar connection status on mount ─────
+  useEffect(() => {
+    apiFetch<{ connected: boolean }>('/learning/calendar/status')
+      .then((res) => {
+        if (res.connected) setCalendarConnected(true);
+      })
+      .catch(() => {}); // ignore if not connected
+  }, []);
+
+  // ─── Listen for Google Calendar OAuth callback ────────────
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (
+        event.origin === window.location.origin &&
+        event.data?.type === 'google-calendar-connected'
+      ) {
+        setCalendarConnected(true);
+        setCalendarConnecting(false);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const unlockedUpTo = answers.reduce((acc, a, i) => {
     if (i === acc && a.trim()) return acc + 1;
     return acc;
@@ -104,10 +128,20 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
     }
   };
 
-  const handleConnectCalendar = () => {
+  const handleConnectCalendar = async () => {
     setCalendarConnecting(true);
-    // Calendar integration placeholder — will be implemented later
-    setTimeout(() => { setCalendarConnected(true); setCalendarConnecting(false); }, 1200);
+    try {
+      const { url } = await apiFetch<{ url: string }>('/learning/calendar/auth-url');
+      // Open Google OAuth consent in popup
+      const popup = window.open(url, 'google-calendar-auth', 'width=500,height=700,popup=yes');
+      // If popup blocked, fall back to redirect
+      if (!popup) {
+        window.location.href = url;
+      }
+    } catch {
+      setCalendarConnecting(false);
+      setError('Failed to connect Google Calendar. Please try again.');
+    }
   };
 
   const handleModify = async () => {
