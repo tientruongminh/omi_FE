@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2, Search, ExternalLink, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
 import { apiFetch, apiUpload } from '@/shared/api/client';
+import { aiApi } from '@/entities/ai/api';
 
 interface Props {
   onClose: () => void;
@@ -27,13 +28,16 @@ interface Resource {
   title: string;
 }
 
-const SUGGESTED_DOCS = [
-  { id: 'd1', title: 'Giới thiệu về Hệ Điều Hành — Tanenbaum (PDF, 2.3MB)' },
-  { id: 'd2', title: 'Linux Command Line Basics — Video Series (YouTube)' },
-  { id: 'd3', title: 'Operating System Concepts — Silberschatz (PDF, 8.1MB)' },
-];
-
-const AI_SEARCH_RESPONSE = `Tôi tìm thấy 3 tài liệu liên quan:\n\nGiới thiệu về Hệ Điều Hành — Tanenbaum\nLinux Command Line Basics — Video Series\nOperating System Concepts — Silberschatz\n\nBạn có muốn thêm tài liệu nào khác không?`;
+interface SearchResult {
+  id: string;
+  title: string;
+  authors: string;
+  year: number | null;
+  cited_by: number;
+  abstract: string;
+  url: string;
+  source: string;
+}
 
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
@@ -60,8 +64,9 @@ export function CreateProjectModal({ onClose }: Props) {
   ]);
   const [userInput, setUserInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set(['d1', 'd2', 'd3']));
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [showDocs, setShowDocs] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -105,21 +110,40 @@ export function CreateProjectModal({ onClose }: Props) {
     handleFileUpload(e.dataTransfer.files);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!userInput.trim() || isStreaming) return;
-    const msg = userInput.trim();
+    const query = userInput.trim();
     setUserInput('');
-    setChatMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    setChatMessages((prev) => [...prev, { role: 'user', text: query }]);
     setIsStreaming(true);
     setShowDocs(false);
-    setTimeout(() => {
-      setChatMessages((prev) => [...prev, { role: 'ai', text: AI_SEARCH_RESPONSE, streaming: true }]);
-    }, 600);
+
+    try {
+      const res = await apiFetch<{
+        results: SearchResult[];
+        ai_summary: string;
+      }>('/ai/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, limit: 6 }),
+      });
+
+      setSearchResults(res.results);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: res.ai_summary, streaming: true },
+      ]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: 'Xin lỗi, không thể tìm kiếm lúc này. Vui lòng thử lại.' },
+      ]);
+      setIsStreaming(false);
+    }
   };
 
   const handleStreamComplete = () => {
     setIsStreaming(false);
-    setShowDocs(true);
+    if (searchResults.length > 0) setShowDocs(true);
     setChatMessages((prev) => prev.map((m, i) => (i === prev.length - 1 ? { ...m, streaming: false } : m)));
   };
 
@@ -298,14 +322,26 @@ export function CreateProjectModal({ onClose }: Props) {
                       {msg.role === 'user' && <div className="max-w-[75%] bg-[#2D2D2D] text-white rounded-2xl rounded-tr-sm px-3 py-2 text-sm">{msg.text}</div>}
                     </div>
                   ))}
-                  {showDocs && (
+                  {showDocs && searchResults.length > 0 && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="ml-9 space-y-2">
-                      {SUGGESTED_DOCS.map((doc) => (
+                      {searchResults.map((doc) => (
                         <label key={doc.id} className="flex items-start gap-2 cursor-pointer group">
                           <div onClick={() => toggleDoc(doc.id)} className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${selectedDocs.has(doc.id) ? 'bg-[#4CD964] border-[#4CD964]' : 'border-[#CCCCCC]'}`}>
                             {selectedDocs.has(doc.id) && <Check size={8} strokeWidth={3} className="text-[#2D2D2D]" />}
                           </div>
-                          <span className="text-xs text-[#2D2D2D] leading-relaxed group-hover:text-[#6B2D3E] transition-colors">{doc.title}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-[#2D2D2D] leading-relaxed group-hover:text-[#6B2D3E] transition-colors font-medium block">{doc.title}</span>
+                            <span className="text-[10px] text-[#5A5C58] block mt-0.5">
+                              {doc.authors && <>{doc.authors} • </>}
+                              {doc.year && <>{doc.year} • </>}
+                              {doc.cited_by > 0 && <>Cited: {doc.cited_by}</>}
+                            </span>
+                            {doc.url && (
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] text-[#6B2D3E] hover:underline inline-flex items-center gap-0.5 mt-0.5">
+                                <ExternalLink size={8} /> Xem
+                              </a>
+                            )}
+                          </div>
                         </label>
                       ))}
                     </motion.div>
