@@ -124,7 +124,7 @@ export function CreateProjectModal({ onClose }: Props) {
         ai_summary: string;
       }>('/ai/search', {
         method: 'POST',
-        body: JSON.stringify({ query, limit: 6 }),
+        body: JSON.stringify({ query, limit: 8, source: 'all' }),
       });
 
       setSearchResults(res.results);
