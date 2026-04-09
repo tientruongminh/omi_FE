@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useOmiLearnStore } from '@/entities/project';
-import { ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronRight, Loader2, AlertCircle, Map } from 'lucide-react';
 
 export default function DashboardIndexPage() {
   const projects = useOmiLearnStore((s) => s.projects);
@@ -41,17 +41,26 @@ export default function DashboardIndexPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {projects.map((p) => (
-          <Link
+          <div
             key={p.id}
-            href={`/dashboard/${p.id}`}
             className="flex items-center justify-between px-6 py-4 bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl hover:border-[#6B2D3E] transition-all group"
           >
-            <div>
+            <Link href={`/dashboard/${p.id}`} className="flex-1 min-w-0">
               <p className="font-bold text-[#2D2D2D] group-hover:text-[#6B2D3E] transition-colors">{p.title}</p>
               <p className="text-xs text-[#5A5C58] mt-0.5">{p.date}</p>
+            </Link>
+            <div className="flex items-center gap-2 ml-3 shrink-0">
+              <Link
+                href={`/roadmap?project=${p.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-lg hover:bg-[#6B2D3E]/10 transition-colors"
+                title="Xem Roadmap"
+              >
+                <Map size={16} className="text-[#5A5C58] hover:text-[#6B2D3E]" />
+              </Link>
+              <ChevronRight size={18} className="text-[#5A5C58] group-hover:text-[#2D2D2D]" />
             </div>
-            <ChevronRight size={18} className="text-[#5A5C58] group-hover:text-[#2D2D2D]" />
-          </Link>
+          </div>
         ))}
       </div>
     </div>

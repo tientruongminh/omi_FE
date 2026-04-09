@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, X, Upload, Cloud } from 'lucide-react';
+import { Send, X, Upload, Cloud, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { aiApi } from '@/entities/ai/api';
-import { useAuthStore } from '@/entities/auth/store';
 
 interface FileItem {
   id: string;
@@ -77,32 +76,6 @@ const INITIAL_FILES: FileItem[] = [
   },
 ];
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: '1',
-    role: 'ai',
-    content:
-      'Chào bạn! Tôi có thể giúp gì cho đồ án Hệ Điều Hành của bạn hôm nay? Tôi thấy bạn vừa upload báo cáo tuần 5.',
-  },
-  {
-    id: '2',
-    role: 'user',
-    content:
-      'Tìm thêm tài liệu về process scheduling algorithms',
-  },
-  {
-    id: '3',
-    role: 'ai',
-    content:
-      'Tôi tìm thấy 3 tài liệu liên quan. Đang thêm vào thư viện dự án của bạn:',
-    links: [
-      { label: '✅ CPU Scheduling Algorithms Comparison.pdf', href: '#' },
-      { label: '✅ Linux CFS Scheduler Explained.pdf', href: '#' },
-      { label: '✅ Real-time Scheduling in RTOS.pdf', href: '#' },
-    ],
-  },
-];
-
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
@@ -118,52 +91,77 @@ function TypingIndicator() {
   );
 }
 
+/** Simple markdown-ish rendering: bold, headers, bullet lists */
+function RenderContent({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        // Headers
+        if (line.startsWith('### '))
+          return <h4 key={i} className="font-bold text-sm mt-2">{line.slice(4)}</h4>;
+        if (line.startsWith('## '))
+          return <h3 key={i} className="font-extrabold text-sm mt-2">{line.slice(3)}</h3>;
+        if (line.startsWith('# '))
+          return <h2 key={i} className="font-black text-base mt-2">{line.slice(2)}</h2>;
+        // Bullets
+        if (line.startsWith('- ') || line.startsWith('* '))
+          return (
+            <p key={i} className="pl-3 text-sm">
+              • {renderInline(line.slice(2))}
+            </p>
+          );
+        // Empty line
+        if (!line.trim()) return <div key={i} className="h-1" />;
+        // Normal text
+        return <p key={i} className="text-sm">{renderInline(line)}</p>;
+      })}
+    </div>
+  );
+}
+
+/** Bold + inline code */
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**'))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith('`') && part.endsWith('`'))
+      return <code key={i} className="bg-gray-100 px-1 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export default function WorkspacePage() {
-  const user = useAuthStore((s) => s.user);
   const [files, setFiles] = useState<FileItem[]>(INITIAL_FILES);
-  const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showTyping, setShowTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Animate initial messages in stagger on mount
+  // Welcome message on mount
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    let idx = 0;
-    const showNext = () => {
-      if (idx < INITIAL_MESSAGES.length) {
-        const msg = INITIAL_MESSAGES[idx];
-        if (msg.role === 'ai' && idx > 0) {
-          setShowTyping(true);
-          timer = setTimeout(() => {
-            setShowTyping(false);
-            setVisibleMessages((prev) => [...prev, msg]);
-            idx++;
-            timer = setTimeout(showNext, 200);
-          }, 800);
-        } else {
-          setVisibleMessages((prev) => [...prev, msg]);
-          idx++;
-          timer = setTimeout(showNext, 300);
-        }
-      }
+    const welcomeMsg: ChatMessage = {
+      id: 'welcome',
+      role: 'ai',
+      content: 'Chào bạn! 👋 Tôi là trợ lý AI của OmiLearn.\n\nBạn có thể:\n- **Hỏi bất kỳ câu hỏi** nào về bài học\n- **Chọn file** bên trái rồi nhờ tôi tóm tắt hoặc phân tích\n- **Nhờ tạo quiz** từ nội dung đã học\n\nBạn cần giúp gì hôm nay?',
     };
-    timer = setTimeout(showNext, 300);
-    return () => clearTimeout(timer);
+    setMessages([welcomeMsg]);
   }, []);
 
-  // Show floating note after 2 seconds
+  // Show tip after 3 seconds
   useEffect(() => {
-    const timer = setTimeout(() => setShowNote(true), 2000);
+    const timer = setTimeout(() => setShowNote(true), 3000);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [visibleMessages]);
+  }, [messages, showTyping]);
 
   const toggleFile = (id: string) => {
     setFiles((prev) =>
@@ -174,21 +172,44 @@ export default function WorkspacePage() {
   const handleSend = async () => {
     if (!inputValue.trim() || isSending) return;
     const query = inputValue.trim();
+
+    // Add user message
     const userMsg: ChatMessage = { id: String(Date.now()), role: 'user', content: query };
-    setVisibleMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputValue('');
     setShowTyping(true);
     setIsSending(true);
+
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const res = await aiApi.chat(userId, query);
+      // Build context from selected files
+      const selectedFiles = files.filter((f) => f.checked);
+      const context = selectedFiles.length > 0
+        ? `Người dùng đã chọn ${selectedFiles.length} file: ${selectedFiles.map((f) => f.name).join(', ')}`
+        : undefined;
+
+      const res = await aiApi.chat(query, {
+        session_id: sessionId ?? undefined,
+        context,
+      });
+
+      // Save session for continuity
+      if (res.session_id) setSessionId(res.session_id);
+
       setShowTyping(false);
-      const aiMsg: ChatMessage = { id: String(Date.now() + 1), role: 'ai', content: res.response };
-      setVisibleMessages((prev) => [...prev, aiMsg]);
+      const aiMsg: ChatMessage = {
+        id: String(Date.now() + 1),
+        role: 'ai',
+        content: res.response,
+      };
+      setMessages((prev) => [...prev, aiMsg]);
     } catch {
       setShowTyping(false);
-      const errMsg: ChatMessage = { id: String(Date.now() + 1), role: 'ai', content: 'Xin lỗi, không thể kết nối AI lúc này. Vui lòng thử lại.' };
-      setVisibleMessages((prev) => [...prev, errMsg]);
+      const errMsg: ChatMessage = {
+        id: String(Date.now() + 1),
+        role: 'ai',
+        content: '⚠️ Xin lỗi, không thể kết nối AI lúc này. Vui lòng thử lại sau.',
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setIsSending(false);
     }
@@ -323,14 +344,14 @@ export default function WorkspacePage() {
           {/* Chat header */}
           <div className="px-5 py-4 border-b-2 border-[#333333]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#2D2D2D] flex items-center justify-center text-xl flex-shrink-0">
-                AI
+              <div className="w-10 h-10 rounded-full bg-[#2D2D2D] flex items-center justify-center flex-shrink-0">
+                <Sparkles size={20} className="text-[#F5C542]" />
               </div>
               <div>
                 <h2 className="font-black text-[#2D2D2D] text-base">Trợ lý AI</h2>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-[#4CD964]" />
-                  <span className="text-xs text-[#5A5C58]">Đang trực tuyến để hỗ trợ bạn</span>
+                  <span className="text-xs text-[#5A5C58]">Powered by DeepTutor</span>
                 </div>
               </div>
             </div>
@@ -339,7 +360,7 @@ export default function WorkspacePage() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
             <AnimatePresence initial={false}>
-              {visibleMessages.map((msg) => (
+              {messages.map((msg) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 10, scale: 0.97 }}
@@ -349,18 +370,22 @@ export default function WorkspacePage() {
                   style={{ willChange: 'transform, opacity' }}
                 >
                   {msg.role === 'ai' && (
-                    <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
-                      AI
+                    <div className="w-7 h-7 rounded-full bg-[#2D2D2D] flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                      <Sparkles size={14} className="text-[#F5C542]" />
                     </div>
                   )}
                   <div
-                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#FADDE1] text-[#2D2D2D] rounded-tr-none'
+                        ? 'bg-[#FADDE1] text-[#2D2D2D] rounded-tr-none text-sm'
                         : 'bg-white border border-[#E5E7EB] text-[#2D2D2D] rounded-tl-none'
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === 'ai' ? (
+                      <RenderContent text={msg.content} />
+                    ) : (
+                      msg.content
+                    )}
                     {msg.links && (
                       <div className="mt-2 flex flex-col gap-1">
                         {msg.links.map((link) => (
@@ -393,8 +418,25 @@ export default function WorkspacePage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Selected files hint */}
+          <AnimatePresence>
+            {checkedCount > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="px-4 overflow-hidden"
+              >
+                <div className="flex items-center gap-2 px-3 py-2 bg-[#FFF5F7] border border-[#6B2D3E]/20 rounded-lg text-xs text-[#6B2D3E]">
+                  <Sparkles size={12} />
+                  <span>{checkedCount} file đã chọn — AI sẽ tham chiếu khi trả lời</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Chat input */}
-          <div className="px-4 pb-4">
+          <div className="px-4 py-3">
             <div className="flex items-center gap-2 bg-white border-2 border-[#333333] rounded-full px-4 py-2">
               <input
                 type="text"
@@ -403,7 +445,10 @@ export default function WorkspacePage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSend();
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
                 }}
                 disabled={isSending}
               />
@@ -419,7 +464,7 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      {/* ── Floating Action Note ── */}
+      {/* ── Floating Tip ── */}
       <AnimatePresence>
         {showNote && (
           <motion.div

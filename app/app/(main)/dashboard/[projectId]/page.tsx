@@ -4,7 +4,7 @@ import React, { useState, useEffect, use, useMemo, useCallback, useRef } from 'r
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, TrendingUp, CalendarDays, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, TrendingUp, CalendarDays, Loader2, Map as MapIcon } from 'lucide-react';
 import { useOmiLearnStore } from '@/entities/project';
 import { projectApi } from '@/entities/project/api/project';
 import AIStreamText from '@/shared/ui/AIStreamText';
@@ -466,6 +466,13 @@ export default function ProjectDashboardPage({ params }: PageProps) {
           <p className="text-[#666666] text-[15px] mt-4 max-w-[480px] leading-relaxed">
             {projectDesc}
           </p>
+          <Link
+            href={`/roadmap?project=${projectId}`}
+            className="inline-flex items-center gap-2 mt-5 px-6 py-2.5 rounded-full bg-[#2D2D2D] text-white text-sm font-semibold hover:bg-[#1a1a1a] transition-all"
+          >
+            <MapIcon size={15} />
+            Xem Roadmap
+          </Link>
         </div>
 
         <motion.div

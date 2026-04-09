@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
@@ -27,13 +27,16 @@ interface Resource {
   title: string;
 }
 
-const SUGGESTED_DOCS = [
-  { id: 'd1', title: 'Giới thiệu về Hệ Điều Hành — Tanenbaum (PDF, 2.3MB)' },
-  { id: 'd2', title: 'Linux Command Line Basics — Video Series (YouTube)' },
-  { id: 'd3', title: 'Operating System Concepts — Silberschatz (PDF, 8.1MB)' },
-];
-
-const AI_SEARCH_RESPONSE = `Tôi tìm thấy 3 tài liệu liên quan:\n\nGiới thiệu về Hệ Điều Hành — Tanenbaum\nLinux Command Line Basics — Video Series\nOperating System Concepts — Silberschatz\n\nBạn có muốn thêm tài liệu nào khác không?`;
+interface SearchResult {
+  id: string;
+  title: string;
+  authors: string;
+  year: number | null;
+  cited_by: number;
+  abstract: string;
+  url: string;
+  source: string;
+}
 
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
@@ -47,7 +50,7 @@ function resourceIcon(type: ResourceType) {
 
 export function CreateProjectModal({ onClose }: Props) {
   const router = useRouter();
-  const addProject = useOmiLearnStore((s) => s.addProject); // Lấy action addProject từ store để thêm dự án mới vào state khi tạo thành công
+  const addProject = useOmiLearnStore((s) => s.addProject);
 
   const [step, setStep] = useState(1);
   const [projectName, setProjectName] = useState('');
@@ -55,25 +58,35 @@ export function CreateProjectModal({ onClose }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: 'ai', text: 'Tôi đã nhận được tài liệu của bạn. Bạn muốn tìm thêm tài liệu nào không?' },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set(['d1', 'd2', 'd3']));
+  // Accumulate ALL search results across searches (keyed by id to dedupe)
+  const [allSearchResults, setAllSearchResults] = useState<Map<string, SearchResult>>(new Map());
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [showDocs, setShowDocs] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [step2Initialized, setStep2Initialized] = useState(false);
+
+  // Sorted search results list (selected first, then by order added)
+  const searchResultsList = useMemo(() => {
+    const all = Array.from(allSearchResults.values());
+    // Selected on top
+    const selected = all.filter(r => selectedDocs.has(r.id));
+    const unselected = all.filter(r => !selectedDocs.has(r.id));
+    return [...selected, ...unselected];
+  }, [allSearchResults, selectedDocs]);
 
   const addEmptyResource = () => {
     setResources((prev) => [...prev, { id: `res-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, type: 'youtube' as ResourceType, url: '', title: '' }]);
   };
 
   const updateResource = (id: string, field: keyof Resource, value: string) => {
-    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))); // Cập nhật trường cụ thể của resource có id trùng với id được truyền vào, nếu không thì giữ nguyên resource đó
+    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
   const removeResource = (id: string) => {
@@ -83,6 +96,24 @@ export function CreateProjectModal({ onClose }: Props) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // When entering Step 2 for the first time, send context-aware greeting
+  useEffect(() => {
+    if (step === 2 && !step2Initialized) {
+      setStep2Initialized(true);
+      const fileNames = uploadedFiles.map(f => f.name).join(', ');
+      const urlList = resources.filter(r => r.url.trim()).map(r => r.url).join(', ');
+
+      let greeting = `Chào bạn! Tôi là trợ lý OmiLearn AI 🎓\n\n`;
+      greeting += `📋 **Dự án:** ${projectName}\n`;
+      if (projectDesc) greeting += `📝 **Mô tả:** ${projectDesc}\n`;
+      if (fileNames) greeting += `📎 **Tài liệu đã tải:** ${fileNames}\n`;
+      if (urlList) greeting += `🔗 **Liên kết:** ${urlList}\n`;
+      greeting += `\nBạn muốn tìm thêm tài liệu gì? Tôi sẽ tìm cả **bài báo khoa học** lẫn **tài liệu web** (PDF, khóa học, slides...) cho bạn.`;
+
+      setChatMessages([{ role: 'ai', text: greeting }]);
+    }
+  }, [step, step2Initialized, projectName, projectDesc, uploadedFiles, resources]);
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -105,21 +136,61 @@ export function CreateProjectModal({ onClose }: Props) {
     handleFileUpload(e.dataTransfer.files);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!userInput.trim() || isStreaming) return;
-    const msg = userInput.trim();
+    const query = userInput.trim();
     setUserInput('');
-    setChatMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    setChatMessages((prev) => [...prev, { role: 'user', text: query }]);
     setIsStreaming(true);
-    setShowDocs(false);
-    setTimeout(() => {
-      setChatMessages((prev) => [...prev, { role: 'ai', text: AI_SEARCH_RESPONSE, streaming: true }]);
-    }, 600);
+
+    try {
+      // Send raw query + context separately — let AI extract keywords
+      const context = [projectName, projectDesc].filter(Boolean).join(' — ');
+
+      const res = await apiFetch<{
+        results: SearchResult[];
+        ai_summary: string;
+      }>('/ai/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, limit: 8, source: 'all', context }),
+      });
+
+      // ACCUMULATE results instead of replacing
+      setAllSearchResults((prev) => {
+        const next = new Map(prev);
+        for (const r of res.results) {
+          // Dedupe by URL (more reliable than id)
+          const key = r.url || r.id;
+          if (!next.has(key)) {
+            next.set(key, { ...r, id: key });
+          }
+        }
+        return next;
+      });
+
+      setShowDocs(true); // Always show docs after search
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          text: res.ai_summary + (res.results.length > 0
+            ? `\n\n📚 Tìm thấy **${res.results.length}** tài liệu mới. Tick chọn những tài liệu bạn muốn dùng nhé!`
+            : ''),
+          streaming: true,
+        },
+      ]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: 'Xin lỗi, không thể tìm kiếm lúc này. Vui lòng thử lại.' },
+      ]);
+      setIsStreaming(false);
+    }
   };
 
   const handleStreamComplete = () => {
     setIsStreaming(false);
-    setShowDocs(true);
     setChatMessages((prev) => prev.map((m, i) => (i === prev.length - 1 ? { ...m, streaming: false } : m)));
   };
 
@@ -128,8 +199,9 @@ export function CreateProjectModal({ onClose }: Props) {
   };
 
   const validResources = resources.filter(r => r.url.trim());
+  // Count includes: uploaded files + manual links + selected search results
   const totalResourceCount = selectedDocs.size + uploadedFiles.length + validResources.length;
-  const hasSourceMaterial = uploadedFiles.length > 0 || validResources.length > 0;
+  const hasSourceMaterial = uploadedFiles.length > 0 || validResources.length > 0 || selectedDocs.size > 0;
 
   const handleCreateProject = async () => {
     setIsCreating(true);
@@ -155,20 +227,27 @@ export function CreateProjectModal({ onClose }: Props) {
         setUploadProgress(null);
       }
 
-      // 2. Create roadmap with minio_keys + external_urls
-      const externalUrls = validResources.map((r) => r.url.trim());
+      // 2. Collect ALL external URLs: manual resources + selected search results
+      const manualUrls = validResources.map((r) => r.url.trim());
+      const searchUrls = Array.from(selectedDocs)
+        .map(id => allSearchResults.get(id))
+        .filter((r): r is SearchResult => !!r && !!r.url)
+        .map(r => r.url);
 
-      if (minioKeys.length === 0 && externalUrls.length === 0) {
+      const allExternalUrls = [...manualUrls, ...searchUrls];
+
+      if (minioKeys.length === 0 && allExternalUrls.length === 0) {
         setCreateError('Cần ít nhất 1 file hoặc URL. Upload có thể đã thất bại.');
         return;
       }
 
+      // 3. Create roadmap
       const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
         method: 'POST',
         body: JSON.stringify({
           project_name: projectName || 'Dự án mới',
           project_description: projectDesc || null,
-          external_urls: externalUrls,
+          external_urls: allExternalUrls,
           minio_keys: minioKeys,
         }),
       });
@@ -297,8 +376,17 @@ export function CreateProjectModal({ onClose }: Props) {
 
             {step === 2 && (
               <motion.div key="step2" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }} className="p-6">
-                <h2 className="text-xl font-bold text-[#2D2D2D] mb-4">Tìm kiếm tài liệu</h2>
-                <div className="bg-white border-2 border-[#333333] rounded-xl h-72 overflow-y-auto p-4 space-y-3 mb-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-[#2D2D2D]">Tìm kiếm tài liệu</h2>
+                  {selectedDocs.size > 0 && (
+                    <span className="text-xs font-semibold bg-[#4CD964] text-[#2D2D2D] px-3 py-1 rounded-full">
+                      ✓ {selectedDocs.size} đã chọn
+                    </span>
+                  )}
+                </div>
+
+                {/* Chat area */}
+                <div className="bg-white border-2 border-[#333333] rounded-xl h-64 overflow-y-auto p-4 space-y-3 mb-3">
                   {chatMessages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       {msg.role === 'ai' && (
@@ -312,27 +400,58 @@ export function CreateProjectModal({ onClose }: Props) {
                       {msg.role === 'user' && <div className="max-w-[75%] bg-[#2D2D2D] text-white rounded-2xl rounded-tr-sm px-3 py-2 text-sm">{msg.text}</div>}
                     </div>
                   ))}
-                  {showDocs && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="ml-9 space-y-2">
-                      {SUGGESTED_DOCS.map((doc) => (
-                        <label key={doc.id} className="flex items-start gap-2 cursor-pointer group">
-                          <div onClick={() => toggleDoc(doc.id)} className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${selectedDocs.has(doc.id) ? 'bg-[#4CD964] border-[#4CD964]' : 'border-[#CCCCCC]'}`}>
-                            {selectedDocs.has(doc.id) && <Check size={8} strokeWidth={3} className="text-[#2D2D2D]" />}
-                          </div>
-                          <span className="text-xs text-[#2D2D2D] leading-relaxed group-hover:text-[#6B2D3E] transition-colors">{doc.title}</span>
-                        </label>
-                      ))}
-                    </motion.div>
-                  )}
                   <div ref={chatEndRef} />
                 </div>
+
+                {/* Search results — always visible once we have any */}
+                {searchResultsList.length > 0 && (
+                  <div className="border-2 border-[#E5E5DF] rounded-xl p-3 mb-3 max-h-48 overflow-y-auto bg-white">
+                    <p className="text-xs font-semibold text-[#5A5C58] mb-2 uppercase tracking-wider">
+                      Tài liệu tìm được ({searchResultsList.length}) — tick để thêm vào dự án
+                    </p>
+                    <div className="space-y-2">
+                      {searchResultsList.map((doc) => (
+                        <label key={doc.id} className="flex items-start gap-2 cursor-pointer group p-1.5 rounded-lg hover:bg-[#F5F0EB] transition-colors">
+                          <div onClick={() => toggleDoc(doc.id)} className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${selectedDocs.has(doc.id) ? 'bg-[#4CD964] border-[#4CD964]' : 'border-[#CCCCCC] group-hover:border-[#999]'}`}>
+                            {selectedDocs.has(doc.id) && <Check size={8} strokeWidth={3} className="text-[#2D2D2D]" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${doc.source === 'openalex' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                {doc.source === 'openalex' ? '📚 Academic' : '🌐 Web'}
+                              </span>
+                              <span className="text-xs text-[#2D2D2D] font-medium truncate group-hover:text-[#6B2D3E] transition-colors">{doc.title}</span>
+                            </div>
+                            <span className="text-[10px] text-[#5A5C58] block mt-0.5">
+                              {doc.authors && <>{doc.authors} • </>}
+                              {doc.year && <>{doc.year} • </>}
+                              {doc.cited_by > 0 && <>Cited: {doc.cited_by}</>}
+                            </span>
+                            {doc.url && (
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] text-[#6B2D3E] hover:underline inline-flex items-center gap-0.5 mt-0.5">
+                                <ExternalLink size={8} /> Xem
+                              </a>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Input */}
                 <div className="flex gap-2 mb-4">
                   <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Nhập yêu cầu tìm tài liệu..." className="flex-1 px-4 py-2.5 rounded-full border-2 border-[#333333] bg-white text-sm outline-none focus:border-[#6B2D3E] transition-colors" disabled={isStreaming} />
                   <button onClick={handleSendMessage} disabled={isStreaming || !userInput.trim()} className="w-10 h-10 rounded-full bg-[#2D2D2D] flex items-center justify-center hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
                     <Send size={14} className="text-white" />
                   </button>
                 </div>
-                <button onClick={() => setStep(3)} className="w-full py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors cursor-pointer">Đã đủ tài liệu ✓</button>
+                <div className="flex gap-2">
+                  <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-full border-2 border-[#333333] text-[#2D2D2D] font-semibold hover:bg-[#2D2D2D] hover:text-white transition-colors cursor-pointer">← Quay lại</button>
+                  <button onClick={() => setStep(3)} className="flex-1 py-3 rounded-full bg-[#2D2D2D] text-white font-semibold hover:bg-[#1a1a1a] transition-colors cursor-pointer">
+                    Đã đủ tài liệu ✓
+                  </button>
+                </div>
               </motion.div>
             )}
 
@@ -347,16 +466,33 @@ export function CreateProjectModal({ onClose }: Props) {
                   {projectDesc && <div><p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-1">Mô tả</p><p className="text-sm text-[#2D2D2D]">{projectDesc}</p></div>}
                   <div className="border-t border-dashed border-[#CCCCCC] pt-3">
                     <p className="text-xs text-[#5A5C58] uppercase tracking-wider mb-2">Tài liệu đã chọn</p>
-                    <div className="flex items-center gap-4">
-                      <span className="font-semibold text-[#2D2D2D]">{totalResourceCount} tài liệu</span>
-                      {resources.length > 0 && <span className="text-xs text-[#5A5C58] bg-[#F1F1EC] px-2 py-0.5 rounded-full">{resources.length} liên kết</span>}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {uploadedFiles.length > 0 && <span className="text-xs bg-[#F1F1EC] px-2 py-0.5 rounded-full">📎 {uploadedFiles.length} file</span>}
+                      {validResources.length > 0 && <span className="text-xs bg-[#F1F1EC] px-2 py-0.5 rounded-full">🔗 {validResources.length} liên kết</span>}
+                      {selectedDocs.size > 0 && <span className="text-xs bg-[#E8F5E9] px-2 py-0.5 rounded-full">🔍 {selectedDocs.size} từ tìm kiếm</span>}
+                      <span className="font-semibold text-[#2D2D2D]">= {totalResourceCount} tài liệu</span>
                     </div>
-                    {resources.length > 0 && (
+                    {/* Show selected search docs */}
+                    {selectedDocs.size > 0 && (
+                      <div className="space-y-1 mt-2">
+                        {Array.from(selectedDocs).map(id => {
+                          const doc = allSearchResults.get(id);
+                          if (!doc) return null;
+                          return (
+                            <div key={id} className="flex items-center gap-2 text-xs text-[#5A5C58]">
+                              <span>{doc.source === 'openalex' ? '📚' : '🌐'}</span>
+                              <span className="truncate">{doc.title}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {validResources.length > 0 && (
                       <div className="mt-2 space-y-1.5">
-                        {resources.map((res) => (
+                        {validResources.map((res) => (
                           <div key={res.id} className="flex items-center gap-2 text-xs text-[#5A5C58]">
                             <span>{resourceIcon(res.type)}</span>
-                            <span className="truncate">{res.title}</span>
+                            <span className="truncate">{res.title || res.url}</span>
                           </div>
                         ))}
                       </div>
@@ -372,7 +508,7 @@ export function CreateProjectModal({ onClose }: Props) {
                 <button onClick={handleCreateProject} disabled={isCreating || !hasSourceMaterial} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                   {isCreating ? (uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
                 </button>
-                {!hasSourceMaterial && !isCreating && <p className="text-xs text-amber-600 text-center">Vui lòng tải lên ít nhất 1 file hoặc thêm 1 URL ở bước 1 để AI tạo roadmap.</p>}
+                {!hasSourceMaterial && !isCreating && <p className="text-xs text-amber-600 text-center">Vui lòng tải lên ít nhất 1 file, thêm 1 URL, hoặc chọn tài liệu từ tìm kiếm.</p>}
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
                 <button onClick={() => setStep(2)} className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer">← Quay lại</button>
               </motion.div>

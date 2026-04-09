@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, ChevronRight, Plus, MoreVertical, Pencil, Trash2, X, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Users, ChevronRight, Plus, MoreVertical, Pencil, Trash2, X, Check, Map } from 'lucide-react';
 import { sharedCourses, projectMembers } from '@/entities/project';
 import { useOmiLearnStore } from '@/entities/project';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
@@ -71,6 +72,7 @@ function AvatarStack({ count = 2 }: { count?: number }) {
 export default function ProjectPage() {
   const { projects, isCreateModalOpen, openCreateModal, closeCreateModal, fetchProjects, projectsLoaded, deleteProject, renameProject } = useOmiLearnStore();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated && !projectsLoaded) {
@@ -303,6 +305,19 @@ export default function ProjectPage() {
                     >
                       <Pencil size={14} className="text-gray-500" />
                       Rename
+                    </button>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenMenuId(null);
+                        router.push(`/roadmap?project=${project.id}`);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#1a1a1a] hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <Map size={14} className="text-gray-500" />
+                      View Roadmap
                     </button>
                     <div className="border-t border-gray-100" />
                     <button

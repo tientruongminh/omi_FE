@@ -38,12 +38,11 @@ Thời gian học tổng: ${s.total_time_minutes ?? 0} phút`;
         } catch {}
       }
 
-      const userId = user?.user_id ?? 'anonymous';
       const prompt = progressContext
         ? `Phân tích sâu tiến độ học tập dựa trên dữ liệu sau và đưa ra gợi ý cụ thể:\n\n${progressContext}`
         : 'Phân tích và đưa ra gợi ý để cải thiện tiến độ học tập';
 
-      const res = await aiApi.chat(userId, prompt, 'vi');
+      const res = await aiApi.chat(prompt);
       setAnalysisText(res.response);
     } catch {
       // Fallback to static text

@@ -73,9 +73,7 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
     setIsPolishing(true);
 
     try {
-      const userId = user?.user_id ?? 'anonymous';
       const res = await aiApi.chat(
-        userId,
         `Hãy hoàn thiện và cải thiện đoạn ghi chú sau, giữ nguyên ý nghĩa, sửa lỗi chính tả và văn phong. Chỉ trả về nội dung đã hoàn thiện, không thêm chú thích:\n\n${content}`,
       );
       const polishedText = res.response;

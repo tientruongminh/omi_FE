@@ -52,11 +52,10 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
     setInput('');
     setStreaming(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
       const contextPrompt = node.content
         ? `Tài liệu: ${node.content.slice(0, 500)}\n\nCâu hỏi: ${query}`
         : query;
-      const res = await aiApi.chat(userId, contextPrompt, 'vi');
+      const res = await aiApi.chat(contextPrompt);
       setMsgs((prev) =>
         prev.map((m) => m.id === aiMsgId ? { ...m, text: res.response } : m)
       );
