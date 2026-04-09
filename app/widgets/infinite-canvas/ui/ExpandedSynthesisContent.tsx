@@ -34,11 +34,10 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
     setSynthesizing(true);
 
     try {
-      const userId = user?.user_id ?? 'anonymous';
       const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
       const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
       const topic = `${prompt}\n\nNguồn:\n${sourceTexts}`;
-      const res = await aiApi.research(userId, topic, 'medium', 'vi');
+      const res = await aiApi.research(topic, 'medium');
       const synthesizedContent = res.report;
       onUpdateContent?.(node.id, synthesizedContent);
       setSynthesized(true);

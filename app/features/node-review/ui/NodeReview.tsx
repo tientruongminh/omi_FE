@@ -150,9 +150,9 @@ function EssayTab({ nodeContent }: { nodeContent?: string }) {
     if (!answer.trim()) return;
     setSubmitting(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const res = await aiApi.evaluate(userId, question, answer);
-      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/10 ${res.grade}`);
+      const content = `Câu hỏi: ${question}\n\nTrả lời: ${answer}`;
+      const res = await aiApi.evaluate(content, 'Đánh giá mức độ hiểu bài và chất lượng câu trả lời');
+      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/100 — ${res.grade}`);
       setSubmitted(true);
     } catch {
       setFeedback('Không thể kết nối với AI đánh giá. Vui lòng thử lại.');
@@ -202,9 +202,9 @@ function TeachAITab({ nodeContent }: { nodeContent?: string }) {
     if (!explanation.trim()) return;
     setSubmitting(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const res = await aiApi.evaluate(userId, question, explanation);
-      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/10 ${res.grade}`);
+      const content = `Câu hỏi: ${question}\n\nGiải thích của học sinh: ${explanation}`;
+      const res = await aiApi.evaluate(content, 'Đánh giá khả năng giải thích và hiểu sâu khái niệm');
+      setFeedback(`${res.feedback}\n\nĐiểm: ${res.score}/100 — ${res.grade}`);
       setSubmitted(true);
     } catch {
       setFeedback('Không thể kết nối với AI đánh giá. Vui lòng thử lại.');

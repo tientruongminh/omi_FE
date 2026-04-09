@@ -88,14 +88,13 @@ export function NodeAIChat({ docId, paragraphs, docTitle, onBack, title, content
       if (nodeId) {
         // Use node-specific chat
         const res = await aiApi.sendNodeChat(nodeId, text.trim());
-        aiText = res.chat.content;
+        aiText = res.response;
       } else {
         // Use general AI chat
-        const userId = user?.user_id ?? 'anonymous';
         const contextMsg = displayContent
           ? `Context: ${displayContent.slice(0, 500)}\n\nQuestion: ${text.trim()}`
           : text.trim();
-        const res = await aiApi.chat(userId, contextMsg);
+        const res = await aiApi.chat(contextMsg);
         aiText = res.response;
       }
 

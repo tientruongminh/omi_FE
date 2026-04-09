@@ -9,8 +9,9 @@ export interface AIChatResponse {
 
 export interface AIQuizQuestion {
   question: string;
-  options: { label: string; text: string; correct: boolean }[];
-  explanation?: string;
+  options: string[];
+  correct_answer: number;
+  explanation: string;
 }
 
 export interface AIQuizResponse {
@@ -21,7 +22,7 @@ export interface AIEvaluateResponse {
   score: number;
   grade: string;
   feedback: string;
-  suggestions?: string[];
+  suggestions: string[];
 }
 
 export interface AIResearchResponse {
@@ -30,9 +31,9 @@ export interface AIResearchResponse {
 
 export interface NodeChatMessage {
   id: string;
-  role: 'user' | 'ai';
+  role: 'user' | 'assistant';
   content: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 export interface NodeChatsResponse {
@@ -42,46 +43,72 @@ export interface NodeChatsResponse {
 // ─── API ─────────────────────────────────────────────────────
 
 export const aiApi = {
-  chat(userId: string, message: string, language = 'vi') {
+  /**
+   * Chat with DeepTutor AI.
+   * session_id is optional — omit for new conversation, pass to continue.
+   */
+  chat(message: string, options?: { session_id?: string; node_id?: string; context?: string }) {
     return apiFetch<AIChatResponse>('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, message, language }),
+      body: JSON.stringify({
+        message,
+        session_id: options?.session_id ?? null,
+        node_id: options?.node_id ?? null,
+        context: options?.context ?? null,
+      }),
     });
   },
 
-  generateQuiz(userId: string, content: string, count = 5, language = 'vi') {
+  /**
+   * Generate quiz questions from content.
+   */
+  generateQuiz(content: string, numQuestions = 5, difficulty = 'medium') {
     return apiFetch<AIQuizResponse>('/ai/quiz/generate', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, content, count, language }),
+      body: JSON.stringify({ content, num_questions: numQuestions, difficulty }),
     });
   },
 
-  evaluate(userId: string, question: string, answer: string, language = 'vi') {
+  /**
+   * Evaluate student work (essay, code, etc).
+   */
+  evaluate(content: string, criteria?: string) {
     return apiFetch<AIEvaluateResponse>('/ai/evaluate', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, question, answer, language }),
+      body: JSON.stringify({ content, criteria: criteria ?? null }),
     });
   },
 
-  research(userId: string, topic: string, depth = 'medium', language = 'vi') {
+  /**
+   * AI research report on a topic.
+   */
+  research(topic: string, depth = 'standard') {
     return apiFetch<AIResearchResponse>('/ai/research', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, topic, depth, language }),
+      body: JSON.stringify({ topic, depth }),
     });
   },
 
-  // Node-specific chats
+  /**
+   * Get chat history for a learning node.
+   */
   getNodeChats(nodeId: string) {
-    return apiFetch<NodeChatsResponse>(`/learning/nodes/${nodeId}/chats`);
+    return apiFetch<NodeChatsResponse>(`/ai/chat/history/${nodeId}`);
   },
 
+  /**
+   * Send chat message in context of a specific node.
+   */
   sendNodeChat(nodeId: string, message: string) {
-    return apiFetch<{ chat: NodeChatMessage }>(`/learning/nodes/${nodeId}/chats`, {
+    return apiFetch<AIChatResponse>('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, node_id: nodeId }),
     });
   },
 
+  /**
+   * Update node content (learning service, not AI).
+   */
   updateNodeContent(nodeId: string, content: string) {
     return apiFetch(`/learning/nodes/${nodeId}/content`, {
       method: 'PUT',

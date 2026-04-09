@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
-import { adminApi } from '@/entities/admin/api';
+import { aiApi } from '@/entities/ai/api';
 
 interface Message {
   id: string;
@@ -25,6 +25,8 @@ export default function AdminChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -42,7 +44,8 @@ export default function AdminChatPage() {
     setIsTyping(true);
 
     try {
-      const res = await adminApi.sendAdminChat(userMsg.content);
+      const res = await aiApi.chat(userMsg.content, { session_id: sessionId ?? undefined });
+      if (res.session_id) setSessionId(res.session_id);
       const aiMsg: Message = {
         id: String(Date.now() + 1),
         role: 'assistant',

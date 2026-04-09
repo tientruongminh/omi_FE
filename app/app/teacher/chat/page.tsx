@@ -17,6 +17,8 @@ export default function TeacherChatPage() {
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const send = async () => {
@@ -26,8 +28,8 @@ export default function TeacherChatPage() {
     setInput('');
     setTyping(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const res = await aiApi.chat(userId, query);
+      const res = await aiApi.chat(query, { session_id: sessionId ?? undefined });
+      if (res.session_id) setSessionId(res.session_id);
       setMessages(prev => [...prev, { id: String(Date.now() + 1), role: 'assistant', content: res.response }]);
     } catch {
       setMessages(prev => [...prev, { id: String(Date.now() + 1), role: 'assistant', content: 'Xin lỗi, không thể kết nối AI lúc này. Vui lòng thử lại.' }]);

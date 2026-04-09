@@ -427,9 +427,9 @@ function EssayTab() {
     if (!answer.trim()) return;
     setSubmitting(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const res = await aiApi.evaluate(userId, essayQuestion.question, answer, 'vi');
-      const feedbackText = `${res.feedback}\n\nĐiểm: ${res.score}/10 (${res.grade})\n${res.suggestions?.length ? '\nGợi ý: ' + res.suggestions.join('; ') : ''}`;
+      const content = `Câu hỏi: ${essayQuestion.question}\n\nBài làm: ${answer}`;
+      const res = await aiApi.evaluate(content, 'Đánh giá bài viết của học sinh');
+      const feedbackText = `${res.feedback}\n\nĐiểm: ${res.score}/100 (${res.grade})\n${res.suggestions?.length ? '\nGợi ý: ' + res.suggestions.join('; ') : ''}`;
       setFeedback(feedbackText);
     } catch {
       setFeedback('Không thể nhận xét lúc này. Hãy thử lại sau.');
@@ -515,11 +515,10 @@ function TeachAITab() {
     if (!teaching.trim()) return;
     setSubmitting(true);
     try {
-      const userId = user?.user_id ?? 'anonymous';
-      const question = `Hãy đánh giá cách giải thích sau về chủ đề "${teachAIPrompt.topic}": "${teachAIPrompt.aiQuestion}"`;
-      const res = await aiApi.evaluate(userId, question, teaching, 'vi');
-      setScore(res.score * 10); // score is /10, convert to %
-      const responseText = `Cảm ơn bạn đã giải thích!\n\n${res.feedback}${res.suggestions?.length ? '\n\n💡 Gợi ý: ' + res.suggestions.join('; ') : ''}\n\nĐộ chính xác giải thích: ${res.score * 10}%`;
+      const content = `Chủ đề: ${teachAIPrompt.topic}\nCâu hỏi AI: ${teachAIPrompt.aiQuestion}\n\nGiải thích của học sinh: ${teaching}`;
+      const res = await aiApi.evaluate(content, 'Đánh giá khả năng giải thích kiến thức');
+      setScore(res.score); // score is /100
+      const responseText = `Cảm ơn bạn đã giải thích!\n\n${res.feedback}${res.suggestions?.length ? '\n\n💡 Gợi ý: ' + res.suggestions.join('; ') : ''}\n\nĐộ chính xác giải thích: ${res.score}%`;
       setAiResponse(responseText);
     } catch {
       setScore(75);
