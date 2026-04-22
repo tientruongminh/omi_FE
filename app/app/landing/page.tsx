@@ -265,7 +265,7 @@ function TestimonialCarousel() {
 
 const FAQ_ITEMS = [
   {
-    q: "AI của Omilearn có giống Minh Tiền cd không?",
+    q: "AI của Omilearn có giống ChatGPT không?",
     a: "Không hoàn toàn. AI của chúng mình được huấn luyện chuyên sâu để hiểu các giáo trình đại học tại Việt Nam, trả lời bám sát đề cương và phong cách ra đề của giảng viên.",
   },
   {
@@ -377,7 +377,7 @@ export default function LandingPage() {
               letterSpacing: "-0.01em",
             }}
           >
-            omilearnnnnnnnnnnnnnnnnn
+            Omilearn
           </span>
 
           {/* Auth buttons */}
