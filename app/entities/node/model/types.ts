@@ -34,9 +34,13 @@ export interface CanvasNode {
   title: string;
   content?: string;
   summary?: string;
+  metaSubtitle?: string;
   docType?: 'text' | 'video';
   docId?: string;
   nodeId?: string;
+  sourceId?: string;
+  sourceType?: string;
+  passages?: string[];
   x: number;
   y: number;
   width: number;

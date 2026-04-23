@@ -1,0 +1,17 @@
+
+> app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.8.162:3000
+- Environments: .env.local
+✓ Ready in 702ms
+Creating turbopack project {
+  dir: 'C:\\Users\\Acer\\Omilearn\\frontend\\omi_FE\\app',
+  testMode: true
+}
+
+ GET /landing 200 in 756ms (next.js: 134ms, proxy.ts: 228ms, application-code: 394ms)
+ GET /landing 200 in 380ms (next.js: 16ms, proxy.ts: 14ms, application-code: 350ms)
+ GET /landing 200 in 240ms (next.js: 27ms, proxy.ts: 23ms, application-code: 190ms)

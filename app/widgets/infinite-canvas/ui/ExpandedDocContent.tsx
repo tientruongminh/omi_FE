@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CanvasNode } from '../model/types';
 import { documentTextContent, videoTranscripts, mindmapNodes } from '@/entities/learning-content';
@@ -20,35 +20,97 @@ interface FloatingMenu {
   text: string;
 }
 
+interface DisplayBlock {
+  kind: 'heading' | 'paragraph';
+  text: string;
+}
+
+function normalizeDisplayText(text: string): string {
+  return text
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function isHeadingLine(line: string): boolean {
+  const value = line.trim();
+  if (!value) return false;
+  if (/^\d+(\.\d+)*[\.)]?\s+\S+/.test(value)) return true;
+  if (/^(Phiên bản|Phạm vi|Mục tiêu|Tóm tắt|Kết luận|Tên sản phẩm|Đối tượng chính|Thiết bị ưu tiên)\b/i.test(value)) {
+    return true;
+  }
+
+  const letters = value.match(/\p{L}/gu) ?? [];
+  if (letters.length < 5) return false;
+
+  const uppercase = letters.filter((char) => char === char.toUpperCase()).length;
+  return uppercase / letters.length >= 0.75;
+}
+
+function buildDisplayBlocks(rawParagraphs: string[]): DisplayBlock[] {
+  const blocks: DisplayBlock[] = [];
+  let paragraphBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    const text = paragraphBuffer.join(' ').replace(/\s{2,}/g, ' ').trim();
+    if (text) {
+      blocks.push({ kind: 'paragraph', text });
+    }
+    paragraphBuffer = [];
+  };
+
+  for (const rawParagraph of rawParagraphs) {
+    const normalized = normalizeDisplayText(rawParagraph);
+    if (!normalized) continue;
+
+    const segments = normalized.split(/\n{2,}/).map((segment) => segment.trim()).filter(Boolean);
+    for (const segment of segments) {
+      const lines = segment.split('\n').map((line) => line.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (isHeadingLine(line)) {
+          flushParagraph();
+          blocks.push({ kind: 'heading', text: line });
+          continue;
+        }
+        paragraphBuffer.push(line);
+      }
+      flushParagraph();
+    }
+  }
+
+  flushParagraph();
+  return blocks;
+}
+
 export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Props) {
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const paragraphs = node.docType === 'text'
-    ? (documentTextContent[node.docId ?? ''] ?? ['Nội dung đang được chuẩn bị.'])
-    : [videoTranscripts[node.docId ?? ''] ?? '...nội dung video đang được tải...'];
+  const runtimeParagraphs = node.passages && node.passages.length > 0
+    ? node.passages
+    : node.content
+      ? node.content.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean)
+      : [];
+
+  const paragraphs = runtimeParagraphs.length > 0
+    ? runtimeParagraphs
+    : node.docType === 'text'
+      ? (documentTextContent[node.docId ?? ''] ?? ['Nội dung đang được chuẩn bị.'])
+      : [videoTranscripts[node.docId ?? ''] ?? '...nội dung video đang được tải...'];
+
+  const displayBlocks = useMemo(() => buildDisplayBlocks(paragraphs), [paragraphs]);
 
   const chapterNode = mindmapNodes.find((n) => n.id === node.nodeId);
   const doc = chapterNode?.documents.find((d) => d.id === node.docId);
+  const subtitle = node.metaSubtitle
+    ?? (doc ? `${node.docType === 'video' ? `Video • ${doc.duration}` : `PDF • ${doc.size}`}` : undefined);
 
-  // Show floating menu on text selection (mouseup) or right-click
-  const showMenuForSelection = useCallback((clientX: number, clientY: number) => {
-    const selection = window.getSelection();
-    const text = selection?.toString().trim();
-    if (!text || text.length < 3) return false;
-
-    const containerRect = contentRef.current?.getBoundingClientRect();
-    if (!containerRect) return false;
-
-    setFloatingMenu({
-      x: clientX - containerRect.left,
-      y: clientY - containerRect.top,
-      text,
-    });
-    return true;
-  }, []);
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     setTimeout(() => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
@@ -69,11 +131,10 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
     }, 10);
   }, []);
 
-  // Right-click on content: show AI menu (with selected text if any)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const selection = window.getSelection();
     const text = selection?.toString().trim() ?? '';
     const containerRect = contentRef.current?.getBoundingClientRect();
@@ -86,7 +147,6 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
     });
   }, []);
 
-  // Dismiss on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (floatingMenu && contentRef.current && !contentRef.current.contains(e.target as Node)) {
@@ -109,7 +169,7 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
       <ExpandedHeader
         icon={node.docType === 'video' ? '▶' : '◎'}
         title={node.title}
-        subtitle={doc ? `${node.docType === 'video' ? `Video • ${doc.duration}` : `PDF • ${doc.size}`}` : undefined}
+        subtitle={subtitle}
         onClose={onClose}
       />
 
@@ -120,13 +180,33 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
           onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}
         >
-          <div className="space-y-4 max-w-xl mx-auto">
-            {paragraphs.map((para, i) => (
-              <p key={i} className="text-[13.5px] text-[#2D2D2D] leading-[1.9] font-serif select-text">{para}</p>
+          <article className="mx-auto w-full max-w-3xl space-y-4 pb-8">
+            {displayBlocks.map((block, i) => (
+              block.kind === 'heading' ? (
+                <section
+                  key={`${block.kind}-${i}`}
+                  className="rounded-2xl border border-[#E8DDD2] bg-[#FFF9F5] px-5 py-4 shadow-sm"
+                >
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8B1E3F]">
+                    Mục nội dung
+                  </p>
+                  <h3 className="mt-2 text-[16px] font-semibold leading-7 text-[#2D2D2D] select-text">
+                    {block.text}
+                  </h3>
+                </section>
+              ) : (
+                <section
+                  key={`${block.kind}-${i}`}
+                  className="rounded-2xl border border-[#E8DDD2] bg-white/75 px-5 py-4 shadow-sm backdrop-blur-sm"
+                >
+                  <p className="text-[15px] leading-8 text-[#2D2D2D] select-text whitespace-pre-wrap [text-wrap:pretty]">
+                    {block.text}
+                  </p>
+                </section>
+              )
             ))}
-          </div>
+          </article>
 
-          {/* Floating AI menu — appears on selection or right-click */}
           <AnimatePresence>
             {floatingMenu && (
               <motion.div
@@ -159,7 +239,6 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
                 >
                   <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
                 </button>
-                {/* Arrow */}
                 <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-[#2D2D2D] rotate-45" />
               </motion.div>
             )}
@@ -180,7 +259,6 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
             <p className="text-[13px] text-[#5A5C58] leading-relaxed italic select-text">{paragraphs[0]}</p>
           </div>
 
-          {/* Floating AI menu — same as text view */}
           <AnimatePresence>
             {floatingMenu && (
               <motion.div
@@ -198,7 +276,7 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
               >
                 {floatingMenu.text && (
                   <div className="px-3 py-2 text-[10px] text-white/50 border-b border-white/10 truncate max-w-[220px]">
-                    &ldquo;{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}&rdquo;
+                    "{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}"
                   </div>
                 )}
                 <button
@@ -220,7 +298,6 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
         </div>
       )}
 
-      {/* Footer: AI actions for full document */}
       <div className="flex gap-2.5 px-5 py-3.5 border-t-2 border-[#333333]/15 bg-white/40 flex-shrink-0">
         <button
           onClick={() => onCreateAINode(node.id, 'ai-chat')}
