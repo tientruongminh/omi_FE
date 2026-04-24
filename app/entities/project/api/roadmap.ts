@@ -29,6 +29,21 @@ export interface LearningUnitPassage {
   sort_order: number;
 }
 
+export interface RenderedDocumentSection {
+  section_id: string;
+  heading: string;
+  content: string;
+  passage_ids: string[];
+}
+
+export interface RenderedDocumentView {
+  source_id: string;
+  source_label: string;
+  source_type: string;
+  summary: string;
+  sections: RenderedDocumentSection[];
+}
+
 export interface RoadmapNode {
   id: string;
   roadmap_id: string;
@@ -84,6 +99,19 @@ export async function fetchPassagesForLearningUnitSource(
   return apiFetch<LearningUnitPassage[]>(
     `/roadmaps/learning-units/${learningNodeId}/sources/${sourceId}/passages`,
   );
+}
+
+export async function fetchRenderedDocumentView(
+  sourceId: string,
+  passageIds: string[],
+): Promise<RenderedDocumentView> {
+  return apiFetch<RenderedDocumentView>('/roadmaps/rendered-documents', {
+    method: 'POST',
+    body: JSON.stringify({
+      source_id: sourceId,
+      passage_ids: passageIds,
+    }),
+  });
 }
 
 export function findRoadmapNodeById(nodes: RoadmapNode[], nodeId: string): RoadmapNode | null {

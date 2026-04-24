@@ -2,11 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, MessageCircle, ClipboardList, Sparkles, ScrollText } from 'lucide-react';
 import { CanvasNode } from '../model/types';
 import { documentTextContent, videoTranscripts, mindmapNodes } from '@/entities/learning-content';
+import type { RenderedDocumentView } from '@/entities/project/api/roadmap';
+import { fetchRenderedDocumentView } from '@/entities/project/api/roadmap';
 import ExpandedHeader from './ExpandedHeader';
 import VideoPlayer from './VideoPlayer';
-import { MessageCircle, ClipboardList } from 'lucide-react';
 
 interface Props {
   node: CanvasNode;
@@ -25,13 +27,21 @@ interface DisplayBlock {
   text: string;
 }
 
+type ViewMode = 'rendered' | 'raw';
+
+const renderedViewCache = new Map<string, RenderedDocumentView>();
+
+function buildCacheKey(node: CanvasNode): string | null {
+  if (!node.sourceId || !node.passageIds?.length) return null;
+  return `${node.sourceId}:${node.passageIds.join(',')}`;
+}
+
 function normalizeDisplayText(text: string): string {
   return text
     .replace(/\r\n?/g, '\n')
     .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -57,7 +67,7 @@ function buildDisplayBlocks(rawParagraphs: string[]): DisplayBlock[] {
 
   const flushParagraph = () => {
     if (paragraphBuffer.length === 0) return;
-    const text = paragraphBuffer.join(' ').replace(/\s{2,}/g, ' ').trim();
+    const text = paragraphBuffer.join('\n').trim();
     if (text) {
       blocks.push({ kind: 'paragraph', text });
     }
@@ -89,6 +99,10 @@ function buildDisplayBlocks(rawParagraphs: string[]): DisplayBlock[] {
 
 export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Props) {
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('rendered');
+  const [renderedView, setRenderedView] = useState<RenderedDocumentView | null>(null);
+  const [renderedLoading, setRenderedLoading] = useState(false);
+  const [renderedError, setRenderedError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const runtimeParagraphs = node.passages && node.passages.length > 0
@@ -109,6 +123,54 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
   const doc = chapterNode?.documents.find((d) => d.id === node.docId);
   const subtitle = node.metaSubtitle
     ?? (doc ? `${node.docType === 'video' ? `Video • ${doc.duration}` : `PDF • ${doc.size}`}` : undefined);
+
+  useEffect(() => {
+    const cacheKey = buildCacheKey(node);
+    if (node.docType !== 'text' || !cacheKey) {
+      setRenderedView(null);
+      setRenderedError(null);
+      setRenderedLoading(false);
+      return;
+    }
+
+    const cached = renderedViewCache.get(cacheKey);
+    if (cached) {
+      setRenderedView(cached);
+      setRenderedError(null);
+      setRenderedLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setRenderedLoading(true);
+    setRenderedError(null);
+
+    void fetchRenderedDocumentView(node.sourceId!, node.passageIds!)
+      .then((result) => {
+        if (cancelled) return;
+        renderedViewCache.set(cacheKey, result);
+        setRenderedView(result);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : 'Không thể tạo bản diễn giải AI.';
+        setRenderedError(message);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setRenderedLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [node]);
+
+  useEffect(() => {
+    if (renderedError) {
+      setViewMode('raw');
+    }
+  }, [renderedError]);
 
   const handleMouseUp = useCallback(() => {
     setTimeout(() => {
@@ -180,32 +242,114 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
           onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}
         >
-          <article className="mx-auto w-full max-w-3xl space-y-4 pb-8">
-            {displayBlocks.map((block, i) => (
-              block.kind === 'heading' ? (
-                <section
-                  key={`${block.kind}-${i}`}
-                  className="rounded-2xl border border-[#E8DDD2] bg-[#FFF9F5] px-5 py-4 shadow-sm"
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8B1E3F]">
-                    Mục nội dung
+          <div className="mx-auto mb-5 flex w-full max-w-3xl items-center gap-2 rounded-2xl border border-[#E5D8CE] bg-white/75 p-2 shadow-sm">
+            <button
+              onClick={() => setViewMode('rendered')}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-[12px] font-semibold transition-colors ${
+                viewMode === 'rendered'
+                  ? 'bg-[#2D2D2D] text-white'
+                  : 'text-[#5A5C58] hover:bg-[#F5F0EB]'
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Sparkles size={13} />
+                Diễn giải AI
+              </span>
+            </button>
+            <button
+              onClick={() => setViewMode('raw')}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-[12px] font-semibold transition-colors ${
+                viewMode === 'raw'
+                  ? 'bg-[#2D2D2D] text-white'
+                  : 'text-[#5A5C58] hover:bg-[#F5F0EB]'
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <ScrollText size={13} />
+                Bản gốc
+              </span>
+            </button>
+          </div>
+
+          {viewMode === 'rendered' && (
+            <article className="mx-auto w-full max-w-3xl space-y-4 pb-8">
+              {renderedLoading && (
+                <div className="flex min-h-[280px] flex-col items-center justify-center rounded-3xl border border-[#E8DDD2] bg-white/75 text-center">
+                  <Loader2 size={22} className="animate-spin text-[#8B1E3F]" />
+                  <p className="mt-3 text-[13px] font-medium text-[#5A5C58]">
+                    AI đang đọc các chunk và sắp xếp lại nội dung...
                   </p>
-                  <h3 className="mt-2 text-[16px] font-semibold leading-7 text-[#2D2D2D] select-text">
-                    {block.text}
-                  </h3>
-                </section>
-              ) : (
-                <section
-                  key={`${block.kind}-${i}`}
-                  className="rounded-2xl border border-[#E8DDD2] bg-white/75 px-5 py-4 shadow-sm backdrop-blur-sm"
-                >
-                  <p className="text-[15px] leading-8 text-[#2D2D2D] select-text whitespace-pre-wrap [text-wrap:pretty]">
-                    {block.text}
-                  </p>
-                </section>
-              )
-            ))}
-          </article>
+                </div>
+              )}
+
+              {!renderedLoading && renderedError && (
+                <div className="rounded-3xl border border-[#FCA5A5] bg-[#FFF1F2] px-5 py-4 text-[13px] text-[#9F1239]">
+                  {renderedError}
+                </div>
+              )}
+
+              {!renderedLoading && !renderedError && renderedView && (
+                <>
+                  <section className="rounded-3xl border border-[#E8DDD2] bg-[#FFF9F5] px-6 py-5 shadow-sm">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8B1E3F]">
+                      Tóm tắt từ evidence
+                    </p>
+                    <p className="mt-3 text-[15px] leading-8 text-[#2D2D2D] whitespace-pre-wrap [text-wrap:pretty]">
+                      {renderedView.summary}
+                    </p>
+                  </section>
+
+                  {renderedView.sections.map((section) => (
+                    <section
+                      key={section.section_id}
+                      className="rounded-3xl border border-[#E8DDD2] bg-white/80 px-6 py-5 shadow-sm backdrop-blur-sm"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <h3 className="text-[18px] font-semibold leading-7 text-[#2D2D2D]">
+                          {section.heading}
+                        </h3>
+                        <span className="shrink-0 rounded-full bg-[#F5F0EB] px-3 py-1 text-[11px] font-semibold text-[#6B7280]">
+                          {section.passage_ids.length} passage
+                        </span>
+                      </div>
+                      <p className="mt-4 text-[15px] leading-8 text-[#2D2D2D] whitespace-pre-wrap [text-wrap:pretty] select-text">
+                        {section.content}
+                      </p>
+                    </section>
+                  ))}
+                </>
+              )}
+            </article>
+          )}
+
+          {viewMode === 'raw' && (
+            <article className="mx-auto w-full max-w-3xl space-y-4 pb-8">
+              {displayBlocks.map((block, i) => (
+                block.kind === 'heading' ? (
+                  <section
+                    key={`${block.kind}-${i}`}
+                    className="rounded-2xl border border-[#E8DDD2] bg-[#FFF9F5] px-5 py-4 shadow-sm"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8B1E3F]">
+                      Evidence gốc
+                    </p>
+                    <h3 className="mt-2 text-[16px] font-semibold leading-7 text-[#2D2D2D] select-text">
+                      {block.text}
+                    </h3>
+                  </section>
+                ) : (
+                  <section
+                    key={`${block.kind}-${i}`}
+                    className="rounded-2xl border border-[#E8DDD2] bg-white/75 px-5 py-4 shadow-sm backdrop-blur-sm"
+                  >
+                    <p className="text-[15px] leading-8 text-[#2D2D2D] select-text whitespace-pre-wrap [text-wrap:pretty]">
+                      {block.text}
+                    </p>
+                  </section>
+                )
+              ))}
+            </article>
+          )}
 
           <AnimatePresence>
             {floatingMenu && (
@@ -258,43 +402,6 @@ export default function ExpandedDocContent({ node, onClose, onCreateAINode }: Pr
             <p className="text-[11px] font-bold text-[#5A5C58] uppercase tracking-wide mb-2">Nội dung chính</p>
             <p className="text-[13px] text-[#5A5C58] leading-relaxed italic select-text">{paragraphs[0]}</p>
           </div>
-
-          <AnimatePresence>
-            {floatingMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 6, scale: 0.9 }}
-                transition={{ duration: 0.15 }}
-                className="absolute z-50 flex flex-col bg-[#2D2D2D] rounded-xl shadow-2xl overflow-hidden"
-                style={{
-                  left: floatingMenu.x,
-                  top: floatingMenu.y,
-                  transform: 'translate(-50%, -100%)',
-                  minWidth: 180,
-                }}
-              >
-                {floatingMenu.text && (
-                  <div className="px-3 py-2 text-[10px] text-white/50 border-b border-white/10 truncate max-w-[220px]">
-                    "{floatingMenu.text.slice(0, 50)}{floatingMenu.text.length > 50 ? '...' : ''}"
-                  </div>
-                )}
-                <button
-                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-chat'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
-                >
-                  <MessageCircle size={13} className="text-[#6EE7B7]" /> AI hỏi đáp
-                </button>
-                <button
-                  onMouseDown={(e) => { e.preventDefault(); handleAction('ai-review'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-white/15 transition-colors cursor-pointer text-left"
-                >
-                  <ClipboardList size={13} className="text-[#FCA5A5]" /> AI ôn tập
-                </button>
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-[#2D2D2D] rotate-45" />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       )}
 

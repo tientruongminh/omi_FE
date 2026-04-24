@@ -41,6 +41,7 @@ export interface CanvasNode {
   sourceId?: string;
   sourceType?: string;
   passages?: string[];
+  passageIds?: string[];
   x: number;
   y: number;
   width: number;
