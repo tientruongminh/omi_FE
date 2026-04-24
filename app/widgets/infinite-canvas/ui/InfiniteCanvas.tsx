@@ -16,6 +16,7 @@ import {
   fetchPassagesForLearningUnitSource,
   fetchRoadmapByProject,
   fetchSourcesForLearningUnit,
+  getLearningSourceDisplayLabel,
   findRoadmapNodeById,
   type LearningUnit,
   type LearningUnitPassage,
@@ -413,7 +414,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
           const existingNode = nextNodes[existingIndex];
           const updatedNode: CanvasNode = {
             ...existingNode,
-            title: payload.source.source_label,
+            title: getLearningSourceDisplayLabel(payload.source),
             docType: 'text',
             docId: payload.source.source_id,
             nodeId: payload.contextNodeId,
@@ -442,7 +443,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         const newNode: CanvasNode = {
           id: nodeId,
           type: 'document',
-          title: payload.source.source_label,
+          title: getLearningSourceDisplayLabel(payload.source),
           docType: 'text',
           docId: payload.source.source_id,
           nodeId: payload.contextNodeId,

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Play, FileEdit, Loader2, Check } from 'lucide-react';
-import type { LearningUnitSource } from '@/entities/project/api/roadmap';
+import { getLearningSourceDisplayLabel, type LearningUnitSource } from '@/entities/project/api/roadmap';
 
 interface SidebarContext {
   id: string;
@@ -155,7 +155,9 @@ export function DocumentSidebar({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-[#2D2D2D] leading-tight truncate">{source.source_label}</p>
+                    <p className="text-[13px] font-semibold text-[#2D2D2D] leading-tight truncate">
+                      {getLearningSourceDisplayLabel(source)}
+                    </p>
                     <p className="text-[11px] text-[#5A5C58] mt-0.5 truncate">{sourceMeta(source)}</p>
                   </div>
 

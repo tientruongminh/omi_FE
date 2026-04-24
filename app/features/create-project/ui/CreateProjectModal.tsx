@@ -38,6 +38,12 @@ interface SearchResult {
   source: string;
 }
 
+interface UploadedFilePayload {
+  minio_key: string;
+  original_name: string;
+  mimetype: string;
+}
+
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
   { value: 'website', label: 'Website', icon: <Globe size={13} />, color: '#0891B2' },
@@ -210,6 +216,7 @@ export function CreateProjectModal({ onClose }: Props) {
     try {
       // 1. Upload files to MinIO
       const minioKeys: string[] = [];
+      const uploadedFilePayloads: UploadedFilePayload[] = [];
       if (uploadedFiles.length > 0) {
         for (let i = 0; i < uploadedFiles.length; i++) {
           setUploadProgress(`Đang tải lên ${i + 1}/${uploadedFiles.length}...`);
@@ -217,6 +224,11 @@ export function CreateProjectModal({ onClose }: Props) {
             const result = await apiUpload(uploadedFiles[i]);
             if (result.object_name) {
               minioKeys.push(result.object_name);
+              uploadedFilePayloads.push({
+                minio_key: result.object_name,
+                original_name: uploadedFiles[i].name,
+                mimetype: uploadedFiles[i].type,
+              });
             }
           } catch (uploadErr) {
             const ue = uploadErr as { error?: string; status?: number };
@@ -249,6 +261,7 @@ export function CreateProjectModal({ onClose }: Props) {
           project_description: projectDesc || null,
           external_urls: allExternalUrls,
           minio_keys: minioKeys,
+          uploaded_files: uploadedFilePayloads,
         }),
       });
       const projectId = data.roadmap.project_id;

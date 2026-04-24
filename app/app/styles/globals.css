@@ -222,3 +222,39 @@ body {
   border: 4px solid transparent;
   border-top-color: #2D2D2D;
 }
+
+.pdf-page-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  transform-origin: 0 0;
+  z-index: 2;
+  forced-color-adjust: none;
+  text-size-adjust: none;
+}
+
+.pdf-text-layer span,
+.pdf-text-layer br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.pdf-text-layer .pdf-text-highlight {
+  background: rgba(250, 204, 21, 0.48);
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.15);
+  border-radius: 4px;
+}
+
+.pdf-text-layer ::selection {
+  background: rgba(250, 204, 21, 0.75);
+}
