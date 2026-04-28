@@ -215,7 +215,6 @@ export function CreateProjectModal({ onClose }: Props) {
     setUploadProgress(null);
     try {
       // 1. Upload files to MinIO
-      const minioKeys: string[] = [];
       const uploadedFilePayloads: UploadedFilePayload[] = [];
       if (uploadedFiles.length > 0) {
         for (let i = 0; i < uploadedFiles.length; i++) {
@@ -223,7 +222,6 @@ export function CreateProjectModal({ onClose }: Props) {
           try {
             const result = await apiUpload(uploadedFiles[i]);
             if (result.object_name) {
-              minioKeys.push(result.object_name);
               uploadedFilePayloads.push({
                 minio_key: result.object_name,
                 original_name: uploadedFiles[i].name,
@@ -248,7 +246,7 @@ export function CreateProjectModal({ onClose }: Props) {
 
       const allExternalUrls = [...manualUrls, ...searchUrls];
 
-      if (minioKeys.length === 0 && allExternalUrls.length === 0) {
+      if (uploadedFilePayloads.length === 0 && allExternalUrls.length === 0) {
         setCreateError('Cần ít nhất 1 file hoặc URL. Upload có thể đã thất bại.');
         return;
       }
@@ -260,7 +258,6 @@ export function CreateProjectModal({ onClose }: Props) {
           project_name: projectName || 'Dự án mới',
           project_description: projectDesc || null,
           external_urls: allExternalUrls,
-          minio_keys: minioKeys,
           uploaded_files: uploadedFilePayloads,
         }),
       });
