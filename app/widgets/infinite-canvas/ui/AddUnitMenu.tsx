@@ -13,6 +13,7 @@ interface Props {
   onClose: () => void;
 }
 
+// Menu hiển thị khi người dùng click vào canvas để thêm đơn vị bài học mới
 export default function AddUnitMenu({ x, y, canvasX, canvasY, onAddUnit, onClose }: Props) {
   useEffect(() => {
     const close = () => onClose();
