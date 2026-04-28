@@ -41,108 +41,258 @@ function normalizeSearchText(value: string): string {
     .normalize('NFKC')
     .replace(/\u00ad/g, '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\u2018\u2019\u201A\u0060\u00B4]/g, "'")
+    .replace(/[\u201C\u201D\u201E]/g, '"')
+    .replace(/[\u2013\u2014\u2015]/g, '-')
+    .replace(/\u2026/g, '...')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
 }
 
-function buildHighlightCandidates(searchText: string): string[] {
-  const normalized = normalizeSearchText(searchText);
-  if (!normalized) return [];
+function splitSearchTextIntoSegments(searchText: string): string[] {
+  const seen = new Set<string>();
 
-  const candidates = new Set<string>();
-  const sentences = normalized
-    .split(/(?<=[.?!])\s+/)
+  return searchText
+    .replace(/\\n/g, '\n')
+    .split(/\n+/)
     .map((part) => part.trim())
-    .filter((part) => part.length >= 18)
-    .sort((left, right) => right.length - left.length);
+    .filter((part) => part.length >= 5)
+    .map((part) => normalizeSearchText(part))
+    .filter(Boolean)
+    .filter((part) => {
+      if (seen.has(part)) return false;
+      seen.add(part);
+      return true;
+    });
+}
 
-  for (const sentence of sentences.slice(0, 3)) {
-    candidates.add(sentence);
+function stripToLettersDigits(value: string): string {
+  return value
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildHighlightCandidates(searchText: string): string[] {
+  const segments = splitSearchTextIntoSegments(searchText);
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+
+  function addCandidate(value: string) {
+    const normalized = normalizeSearchText(value);
+    if (normalized.length >= 5 && !seen.has(normalized)) {
+      seen.add(normalized);
+      candidates.push(normalized);
+    }
   }
 
-  const words = normalized.split(' ').filter(Boolean);
-  for (let windowSize = Math.min(10, words.length); windowSize >= 4; windowSize -= 1) {
-    for (let index = 0; index + windowSize <= words.length; index += 1) {
-      const phrase = words.slice(index, index + windowSize).join(' ');
-      if (phrase.length >= 18) {
-        candidates.add(phrase);
+  for (const segment of segments) {
+    addCandidate(segment);
+
+    const sentences = segment
+      .split(/(?<=[.?!])\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .sort((left, right) => right.length - left.length);
+
+    for (const sentence of sentences.slice(0, 4)) {
+      addCandidate(sentence);
+    }
+
+    const words = segment.split(' ').filter(Boolean);
+
+    for (let windowSize = Math.min(14, words.length); windowSize >= 3; windowSize -= 1) {
+      for (let index = 0; index + windowSize <= words.length; index += 1) {
+        addCandidate(words.slice(index, index + windowSize).join(' '));
+      }
+
+      if (candidates.length > 80) break;
+    }
+  }
+
+  return candidates;
+}
+
+function collectMatchedIndices(
+  text: string,
+  candidate: string,
+  charMap: number[],
+): Set<number> {
+  const result = new Set<number>();
+  let startIndex = text.indexOf(candidate);
+
+  while (startIndex >= 0) {
+    for (let i = startIndex; i < startIndex + candidate.length && i < charMap.length; i += 1) {
+      const spanIndex = charMap[i];
+      if (spanIndex >= 0) {
+        result.add(spanIndex);
       }
     }
-    if (candidates.size > 10) {
-      break;
-    }
+
+    startIndex = text.indexOf(candidate, startIndex + Math.max(1, Math.floor(candidate.length / 2)));
   }
 
-  if (!candidates.size && normalized.length >= 12) {
-    candidates.add(normalized);
-  }
-
-  return Array.from(candidates);
+  return result;
 }
 
-function clearTextLayerHighlights(container: HTMLDivElement) {
-  for (const span of Array.from(container.querySelectorAll('.pdf-text-highlight'))) {
-    span.classList.remove('pdf-text-highlight');
-  }
-}
-
-function applyTextHighlights(container: HTMLDivElement, searchText: string): boolean {
-  clearTextLayerHighlights(container);
-  if (!searchText.trim()) return false;
+function findMatchedSpanIndices(
+  container: HTMLDivElement,
+  searchText: string,
+): Set<number> {
+  if (!searchText.trim()) return new Set();
 
   const spans = Array.from(container.querySelectorAll('span')).filter(
     (node): node is HTMLSpanElement => node instanceof HTMLSpanElement && Boolean(node.textContent?.trim()),
   );
-  if (!spans.length) return false;
+
+  if (!spans.length) return new Set();
 
   const pageTextParts: string[] = [];
   const charToSpanIndex: number[] = [];
 
   spans.forEach((span, spanIndex) => {
     const normalized = normalizeSearchText(span.textContent ?? '');
-    if (!normalized) {
-      return;
-    }
+    if (!normalized) return;
+
     if (pageTextParts.length > 0) {
       pageTextParts.push(' ');
       charToSpanIndex.push(-1);
     }
+
     pageTextParts.push(normalized);
+
     for (let offset = 0; offset < normalized.length; offset += 1) {
       charToSpanIndex.push(spanIndex);
     }
   });
 
   const pageText = pageTextParts.join('');
-  if (!pageText) return false;
+  if (!pageText) return new Set();
 
+  const fuzzyChars: string[] = [];
+  const fuzzySpanMap: number[] = [];
+
+  for (let i = 0; i < pageText.length; i += 1) {
+    const char = pageText[i];
+
+    if (/[\p{L}\p{N}]/u.test(char)) {
+      fuzzyChars.push(char);
+      fuzzySpanMap.push(charToSpanIndex[i]);
+    } else if (char === ' ' && fuzzyChars.length > 0 && fuzzyChars[fuzzyChars.length - 1] !== ' ') {
+      fuzzyChars.push(' ');
+      fuzzySpanMap.push(-1);
+    }
+  }
+
+  const fuzzyPageText = fuzzyChars.join('');
+
+  const spacelessChars: string[] = [];
+  const spacelessSpanMap: number[] = [];
+
+  for (let i = 0; i < pageText.length; i += 1) {
+    const char = pageText[i];
+
+    if (/[\p{L}\p{N}]/u.test(char)) {
+      spacelessChars.push(char);
+      spacelessSpanMap.push(charToSpanIndex[i]);
+    }
+  }
+
+  const spacelessPageText = spacelessChars.join('');
   const candidates = buildHighlightCandidates(searchText);
-  let matched = false;
+  const matched = new Set<number>();
 
   for (const candidate of candidates) {
-    let startIndex = pageText.indexOf(candidate);
-    while (startIndex >= 0) {
-      const spanIndexes = new Set<number>();
-      for (let index = startIndex; index < startIndex + candidate.length && index < charToSpanIndex.length; index += 1) {
-        const spanIndex = charToSpanIndex[index];
-        if (spanIndex >= 0) {
-          spanIndexes.add(spanIndex);
-        }
-      }
+    for (const index of collectMatchedIndices(pageText, candidate, charToSpanIndex)) {
+      matched.add(index);
+    }
+  }
 
-      if (spanIndexes.size) {
-        matched = true;
-        for (const spanIndex of spanIndexes) {
-          spans[spanIndex]?.classList.add('pdf-text-highlight');
-        }
-      }
+  for (const candidate of candidates) {
+    const fuzzyCandidate = stripToLettersDigits(candidate);
+    if (fuzzyCandidate.length < 5) continue;
 
-      startIndex = pageText.indexOf(candidate, startIndex + Math.max(1, Math.floor(candidate.length / 2)));
+    for (const index of collectMatchedIndices(fuzzyPageText, fuzzyCandidate, fuzzySpanMap)) {
+      matched.add(index);
+    }
+  }
+
+  for (const candidate of candidates) {
+    const spacelessCandidate = candidate.replace(/[^\p{L}\p{N}]/gu, '');
+    if (spacelessCandidate.length < 5) continue;
+
+    for (const index of collectMatchedIndices(spacelessPageText, spacelessCandidate, spacelessSpanMap)) {
+      matched.add(index);
     }
   }
 
   return matched;
+}
+
+function findMatchedSpanIndicesBySegments(
+  container: HTMLDivElement,
+  searchText: string,
+): Set<number> {
+  const merged = new Set<number>();
+  const segments = splitSearchTextIntoSegments(searchText);
+
+  for (const segment of segments) {
+    const matched = findMatchedSpanIndices(container, segment);
+
+    for (const spanIndex of matched) {
+      merged.add(spanIndex);
+    }
+  }
+
+  return merged;
+}
+
+function paintHighlightCanvas(
+  highlightCanvas: HTMLCanvasElement,
+  textLayerContainer: HTMLDivElement,
+  pageFrame: HTMLDivElement,
+  matchedSpanIndices: Set<number>,
+  viewport: { width: number; height: number },
+): void {
+  const dpr = window.devicePixelRatio || 1;
+
+  highlightCanvas.width = Math.floor(viewport.width * dpr);
+  highlightCanvas.height = Math.floor(viewport.height * dpr);
+  highlightCanvas.style.width = `${viewport.width}px`;
+  highlightCanvas.style.height = `${viewport.height}px`;
+
+  const ctx = highlightCanvas.getContext('2d');
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
+  if (!matchedSpanIndices.size) return;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = 'rgba(250, 204, 21, 0.35)';
+
+  const spans = Array.from(textLayerContainer.querySelectorAll('span')).filter(
+    (node): node is HTMLSpanElement =>
+      node instanceof HTMLSpanElement && Boolean(node.textContent?.trim()),
+  );
+
+  const frameRect = pageFrame.getBoundingClientRect();
+  const pad = 2;
+
+  for (const spanIndex of matchedSpanIndices) {
+    const span = spans[spanIndex];
+    if (!span) continue;
+
+    const rect = span.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+
+    const x = rect.left - frameRect.left;
+    const y = rect.top - frameRect.top;
+
+    ctx.beginPath();
+    ctx.roundRect(x - pad, y - pad, rect.width + pad * 2, rect.height + pad * 2, 3);
+    ctx.fill();
+  }
 }
 
 function buildPdfViewerRoute(
@@ -155,9 +305,11 @@ function buildPdfViewerRoute(
   params.set('source', sourceUrl);
   params.set('label', sourceLabel);
   params.set('page', String(Math.max(1, Math.floor(page))));
+
   if (searchText?.trim()) {
     params.set('search', searchText);
   }
+
   return `/reference-viewer/pdf?${params.toString()}`;
 }
 
@@ -183,8 +335,10 @@ export default function PdfPageViewer({
   standalone = false,
 }: PdfPageViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const highlightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const textLayerRef = useRef<HTMLDivElement | null>(null);
   const pageFrameRef = useRef<HTMLDivElement | null>(null);
+
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentHandle | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pageNumber, setPageNumber] = useState(Math.max(1, Math.floor(initialPage)));
@@ -219,6 +373,7 @@ export default function PdfPageViewer({
 
         const headers: Record<string, string> = {};
         const token = readCookieToken();
+
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
@@ -227,6 +382,7 @@ export default function PdfPageViewer({
           credentials: 'include',
           headers,
         });
+
         if (!response.ok) {
           throw new Error(`Khong the tai file PDF (${response.status}).`);
         }
@@ -234,12 +390,14 @@ export default function PdfPageViewer({
         const buffer = await response.arrayBuffer();
         const task = pdfjs.getDocument({ data: buffer });
         loadedPdf = await task.promise as unknown as PdfDocumentHandle;
+
         if (cancelled) {
           await loadedPdf.destroy?.();
           return;
         }
 
         setPdfDoc(loadedPdf);
+
         const totalPages = loadedPdf.numPages;
         setPageCount(totalPages);
         setPageNumber((current) => clampPage(current || initialPage, totalPages));
@@ -270,7 +428,10 @@ export default function PdfPageViewer({
     void (async () => {
       try {
         const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        const page = await pdfDoc.getPage(clampPage(pageNumber, pageCount || pageNumber)) as unknown as {
+
+        const page = await pdfDoc.getPage(
+          clampPage(pageNumber, pageCount || pageNumber),
+        ) as unknown as {
           getViewport: (options: { scale: number }) => { width: number; height: number };
           render: (options: {
             canvasContext: CanvasRenderingContext2D;
@@ -278,35 +439,48 @@ export default function PdfPageViewer({
           }) => { promise: Promise<void> };
           getTextContent: () => Promise<unknown>;
         };
+
         if (cancelled) return;
 
         const viewport = page.getViewport({ scale: zoom });
         const canvas = canvasRef.current;
+        const highlightCanvas = highlightCanvasRef.current;
         const textLayer = textLayerRef.current;
         const pageFrame = pageFrameRef.current;
-        if (!canvas || !textLayer || !pageFrame) return;
+
+        if (!canvas || !highlightCanvas || !textLayer || !pageFrame) return;
 
         const context = canvas.getContext('2d');
+
         if (!context) {
           throw new Error('Khong the khoi tao canvas PDF.');
         }
 
         textLayer.innerHTML = '';
-        clearTextLayerHighlights(textLayer);
+
+        const highlightContext = highlightCanvas.getContext('2d');
+
+        if (highlightContext) {
+          highlightContext.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
+        }
 
         const deviceScale = window.devicePixelRatio || 1;
+
         canvas.width = Math.floor(viewport.width * deviceScale);
         canvas.height = Math.floor(viewport.height * deviceScale);
         canvas.style.width = `${viewport.width}px`;
         canvas.style.height = `${viewport.height}px`;
+
         pageFrame.style.width = `${viewport.width}px`;
         pageFrame.style.height = `${viewport.height}px`;
+
         context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
 
         const renderTask = page.render({
           canvasContext: context,
           viewport,
         });
+
         await renderTask.promise;
 
         const textContent = await page.getTextContent();
@@ -323,13 +497,32 @@ export default function PdfPageViewer({
           container: textLayer,
           viewport,
         });
+
         await textLayerInstance.render();
         if (cancelled) return;
 
         if (highlightEnabled) {
-          setHighlighted(applyTextHighlights(textLayer, searchText));
+          const matchedSpanIndices = findMatchedSpanIndicesBySegments(textLayer, searchText);
+
+          if (matchedSpanIndices.size > 0) {
+            paintHighlightCanvas(
+              highlightCanvas,
+              textLayer,
+              pageFrame,
+              matchedSpanIndices,
+              viewport,
+            );
+            setHighlighted(true);
+          } else {
+            setHighlighted(false);
+          }
         } else {
-          clearTextLayerHighlights(textLayer);
+          const clearContext = highlightCanvas.getContext('2d');
+
+          if (clearContext) {
+            clearContext.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
+          }
+
           setHighlighted(false);
         }
       } catch (renderError) {
@@ -372,6 +565,7 @@ export default function PdfPageViewer({
           >
             Zoom -
           </button>
+
           <button
             onClick={() => setZoom((value) => Math.min(2.4, Number((value + 0.15).toFixed(2))))}
             className="rounded-xl border border-[#D6C9BE] bg-white px-3 py-2 text-[12px] font-semibold text-[#2D2D2D]"
@@ -379,6 +573,7 @@ export default function PdfPageViewer({
           >
             Zoom +
           </button>
+
           {searchText.trim() ? (
             <button
               onClick={() => setHighlightEnabled((value) => !value)}
@@ -388,6 +583,7 @@ export default function PdfPageViewer({
               {highlightEnabled ? 'Bo highlight' : 'Bat highlight'}
             </button>
           ) : null}
+
           <button
             onClick={() => setPageNumber((value) => clampPage(value - 1, pageCount))}
             disabled={pageNumber <= 1}
@@ -396,6 +592,7 @@ export default function PdfPageViewer({
           >
             Trang truoc
           </button>
+
           <button
             onClick={() => setPageNumber((value) => clampPage(value + 1, pageCount))}
             disabled={pageCount > 0 ? pageNumber >= pageCount : true}
@@ -404,6 +601,7 @@ export default function PdfPageViewer({
           >
             Trang sau
           </button>
+
           {standalone ? null : (
             <a
               href={openInTabUrl}
@@ -442,16 +640,20 @@ export default function PdfPageViewer({
           <div className="mx-auto w-fit rounded-[22px] border border-[#D8CEC4] bg-white p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
             <div ref={pageFrameRef} className="pdf-page-frame">
               <canvas ref={canvasRef} className="block rounded-[14px]" />
+              <canvas ref={highlightCanvasRef} className="pdf-highlight-canvas" />
               <div ref={textLayerRef} className="pdf-text-layer" />
             </div>
+
             <p className="mt-3 text-center text-[12px] text-[#6B7280]">
               {rendering
                 ? 'Dang render trang...'
                 : highlighted
                   ? `Dang hien thi trang ${pageNumber} - da highlight evidence`
-                  : searchText.trim() && !highlightEnabled
-                    ? `Dang hien thi trang ${pageNumber} - highlight dang tat`
-                  : `Dang hien thi trang ${pageNumber}`}
+                  : searchText.trim() && highlightEnabled
+                    ? `Dang hien thi trang ${pageNumber} - chua tim thay highlight khop`
+                    : searchText.trim() && !highlightEnabled
+                      ? `Dang hien thi trang ${pageNumber} - highlight dang tat`
+                      : `Dang hien thi trang ${pageNumber}`}
             </p>
           </div>
         ) : null}

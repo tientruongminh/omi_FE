@@ -229,6 +229,14 @@ body {
   border-radius: 14px;
 }
 
+.pdf-highlight-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 14px;
+}
+
 .pdf-text-layer {
   position: absolute;
   inset: 0;
@@ -247,12 +255,6 @@ body {
   white-space: pre;
   cursor: text;
   transform-origin: 0 0;
-}
-
-.pdf-text-layer .pdf-text-highlight {
-  background: rgba(250, 204, 21, 0.48);
-  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.15);
-  border-radius: 4px;
 }
 
 .pdf-text-layer ::selection {
