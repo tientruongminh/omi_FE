@@ -1,6 +1,6 @@
 // ─── API Base Configuration ───────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface ApiError {
   error: string;
@@ -16,6 +16,7 @@ export interface ApiError {
 export interface UploadResponse {
   url: string;
   object_name: string;
+  original_name: string;
   size: number;
   mimetype: string;
 }
