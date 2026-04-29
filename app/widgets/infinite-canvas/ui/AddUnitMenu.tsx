@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { mindmapNodes, additionalUnits } from '@/entities/learning-content';
-
+// Props định nghĩa các tham số mà component nhận vào, bao gồm vị trí hiển thị menu (x, y), vị trí trên canvas để thêm đơn vị mới (canvasX, canvasY), hàm callback khi người dùng chọn một đơn vị để thêm (onAddUnit), và hàm callback để đóng menu (onClose).
 interface Props {
   x: number;
   y: number;
