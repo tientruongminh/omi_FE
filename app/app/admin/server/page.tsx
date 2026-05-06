@@ -67,6 +67,8 @@ export default function AdminServerPage() {
   const [saving, setSaving] = useState(false);
   const [showSecretInputs, setShowSecretInputs] = useState(false);
   const [updates, setUpdates] = useState<Record<string, string>>({});
+  const [newSecretKey, setNewSecretKey] = useState('');
+  const [newSecretValue, setNewSecretValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const services = useMemo(() => {
@@ -118,12 +120,26 @@ export default function AdminServerPage() {
   }, []);
 
   const saveEnv = async () => {
+    const extraKey = newSecretKey.trim().toUpperCase();
     const clean = Object.fromEntries(Object.entries(updates).filter(([, value]) => value.trim().length > 0));
+    if (extraKey || newSecretValue.trim()) {
+      if (!/^[A-Z][A-Z0-9_]{1,80}$/.test(extraKey)) {
+        alert('Secret key phải là chữ hoa/số/gạch dưới, ví dụ OPENAI_API_KEY');
+        return;
+      }
+      if (!newSecretValue.trim()) {
+        alert('Secret value không được rỗng');
+        return;
+      }
+      clean[extraKey] = newSecretValue;
+    }
     if (!Object.keys(clean).length) return;
     setSaving(true);
     try {
       await adminApi.updateRuntimeEnv(clean);
       setUpdates({});
+      setNewSecretKey('');
+      setNewSecretValue('');
       await loadStatus();
       alert('Đã lưu env. Cần rebuild/restart service liên quan để env có hiệu lực.');
     } catch (e: unknown) {
@@ -277,7 +293,7 @@ export default function AdminServerPage() {
               <p className="mt-1 text-sm text-[#6B7280]">Giá trị hiện tại chỉ hiện masked. Nhập value mới vào ô password để update.</p>
             </div>
             <button onClick={() => setShowSecretInputs((v) => !v)} className="inline-flex items-center gap-2 rounded-xl border-2 border-[#E5E7EB] px-4 py-2 text-sm font-bold">
-              {showSecretInputs ? <EyeOff size={15} /> : <Eye size={15} />} {showSecretInputs ? 'Hide inputs' : 'Edit secrets'}
+              {showSecretInputs ? <EyeOff size={15} /> : <Eye size={15} />} {showSecretInputs ? 'Hide inputs' : 'Edit / add secrets'}
             </button>
           </div>
 
@@ -308,8 +324,34 @@ export default function AdminServerPage() {
             </table>
           </div>
 
+          {showSecretInputs && (
+            <div className="mt-5 rounded-2xl border-2 border-dashed border-[#D1D5DB] bg-[#FAFAF8] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-[#111827]">Add new secret</h3>
+                  <p className="mt-1 text-xs text-[#6B7280]">Key sẽ được lưu vào backend .env và chỉ hiện masked sau khi lưu.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <input
+                  value={newSecretKey}
+                  onChange={(e) => setNewSecretKey(e.target.value.toUpperCase())}
+                  placeholder="SECRET_KEY, ví dụ SERPER_API_KEY"
+                  className="rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-xs font-mono outline-none focus:border-[#6B2D3E]"
+                />
+                <input
+                  type="password"
+                  value={newSecretValue}
+                  onChange={(e) => setNewSecretValue(e.target.value)}
+                  placeholder="Secret value"
+                  className="rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-xs outline-none focus:border-[#6B2D3E]"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="mt-5 flex justify-end">
-            <button onClick={saveEnv} disabled={saving || !Object.values(updates).some(Boolean)} className="inline-flex items-center gap-2 rounded-xl bg-[#6B2D3E] px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">
+            <button onClick={saveEnv} disabled={saving || (!Object.values(updates).some(Boolean) && !newSecretKey && !newSecretValue)} className="inline-flex items-center gap-2 rounded-xl bg-[#6B2D3E] px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save env changes
             </button>
           </div>
