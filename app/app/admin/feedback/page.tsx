@@ -100,6 +100,7 @@ export default function AdminFeedbackPage() {
                   <p className="line-clamp-2 text-sm text-[#4B5563]">{item.message}</p>
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-[#9CA3AF]">
                     <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 font-bold uppercase">{item.type}</span>
+                    {item.attachment_urls?.length > 0 && <span>{item.attachment_urls.length} ảnh</span>}
                     {item.admin_response && <span>Đã phản hồi</span>}
                   </div>
                 </button>
@@ -121,6 +122,24 @@ export default function AdminFeedbackPage() {
                 <p className="mt-1 text-xs text-[#6B7280]">{selected.user_email}</p>
               </div>
               <div className="mb-4 rounded-xl bg-[#F9FAFB] p-3 text-sm leading-relaxed text-[#374151]">{selected.message}</div>
+              {selected.page_url && (
+                <div className="mb-4 rounded-xl border border-[#E5E7EB] bg-[#FAFAF8] p-3">
+                  <p className="text-[10px] font-black uppercase text-[#9CA3AF]">Trang người dùng đang đứng</p>
+                  <a href={selected.page_url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-bold text-[#6B2D3E] hover:underline">{selected.page_url}</a>
+                </div>
+              )}
+              {selected.attachment_urls?.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-bold text-[#5A5C58]">Ảnh đính kèm</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selected.attachment_urls.map((url) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]">
+                        <img src={url} alt="Feedback attachment" className="h-28 w-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
               <label className="mb-1 block text-xs font-bold text-[#5A5C58]">Status</label>
               <select value={selected.status} onChange={(e) => setSelected({ ...selected, status: e.target.value as FeedbackReport['status'] })} className="mb-4 w-full rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-sm">
                 <option value="open">Open</option>

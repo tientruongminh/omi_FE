@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bug, CheckCircle2, Lightbulb, Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { Bug, Camera, CheckCircle2, Lightbulb, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { adminApi, type FeedbackReport } from '@/entities/admin/api';
+import { apiUpload } from '@/shared/api/client';
 import { useAuthStore } from '@/entities/auth';
 
 const STATUS_LABEL: Record<FeedbackReport['status'], string> = {
@@ -19,6 +20,7 @@ export default function FeedbackWidget() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [items, setItems] = useState<FeedbackReport[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -43,16 +45,23 @@ export default function FeedbackWidget() {
     if (!title.trim() || !message.trim() || !isAuthenticated) return;
     setSending(true);
     try {
+      const attachmentUrls: string[] = [];
+      for (const file of files.slice(0, 3)) {
+        const uploaded = await apiUpload(file);
+        attachmentUrls.push(uploaded.url || `/api/upload/${uploaded.object_name}`);
+      }
       const res = await adminApi.createFeedback({
         type,
         title: title.trim(),
         message: message.trim(),
         page_url: typeof window !== 'undefined' ? window.location.href : '',
         user_name: user?.name || user?.email || '',
+        attachment_urls: attachmentUrls,
       });
       setItems((prev) => [res.feedback, ...prev]);
       setTitle('');
       setMessage('');
+      setFiles([]);
     } finally {
       setSending(false);
     }
@@ -103,6 +112,14 @@ export default function FeedbackWidget() {
               <div className="space-y-3">
                 <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tiêu đề ngắn..." className="w-full rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#6B2D3E]" />
                 <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Mô tả lỗi/góp ý càng cụ thể càng tốt..." rows={4} className="w-full resize-none rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#6B2D3E]" />
+                <div className="rounded-xl border-2 border-dashed border-[#E5E7EB] bg-[#FAFAF8] p-3">
+                  <label className="flex cursor-pointer items-center justify-center gap-2 text-xs font-black text-[#6B2D3E]">
+                    <Camera size={14} /> Thêm ảnh lỗi / screenshot
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 3))} />
+                  </label>
+                  {files.length > 0 && <p className="mt-2 text-center text-[11px] text-[#6B7280]">{files.length} ảnh đã chọn</p>}
+                  <p className="mt-1 text-center text-[10px] text-[#9CA3AF]">Tự kèm trang hiện tại để admin biết bạn gặp lỗi ở đâu.</p>
+                </div>
                 <button onClick={submit} disabled={sending || !title.trim() || !message.trim()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6B2D3E] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
                   {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Gửi feedback
                 </button>
@@ -126,6 +143,7 @@ export default function FeedbackWidget() {
                           <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-[#6B2D3E]">{STATUS_LABEL[item.status]}</span>
                         </div>
                         <p className="mt-1 line-clamp-2 text-xs text-[#6B7280]">{item.message}</p>
+                        {item.attachment_urls?.length > 0 && <p className="mt-1 text-[11px] font-bold text-[#6B2D3E]">Có {item.attachment_urls.length} ảnh đính kèm</p>}
                         {item.admin_response && (
                           <div className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
                             <CheckCircle2 size={12} className="mr-1 inline" /> {item.admin_response}
