@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmiLearn — Nền tảng học tập thông minh",
+  title: "Omilearn — Nền tảng học tập thông minh",
   description: "Nền tảng giáo dục Việt Nam với mindmap tương tác và AI hỗ trợ",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
