@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, ChevronRight, Plus, MoreVertical, Pencil, Trash2, X, Check, Map } from 'lucide-react';
-import { sharedCourses, projectMembers } from '@/entities/project';
+import { Plus, MoreVertical, Pencil, Trash2, X, Check, Map } from 'lucide-react';
+import { projectMembers } from '@/entities/project';
 import { useOmiLearnStore } from '@/entities/project';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -331,48 +331,6 @@ export default function ProjectPage() {
                 )}
               </AnimatePresence>
             </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── Courses Shared with Me ───────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 mb-5">
-        <Users size={20} style={{ color: '#6b7280' }} />
-        <h2 className="text-lg font-bold text-[#1a1a1a]">Courses shared with Me</h2>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {sharedCourses.map((course, i) => (
-          <motion.div
-            key={course.id}
-            custom={i}
-            variants={rowVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <Link
-              href="/learn"
-              className="flex items-center justify-between transition-all hover:brightness-95 group"
-              style={{
-                background: '#f5f0eb',
-                border: '1.5px solid #1a1a1a',
-                borderRadius: '14px',
-                padding: '16px 20px',
-              }}
-            >
-              <div>
-                <p className="font-bold text-[#1a1a1a]" style={{ fontSize: '15px' }}>
-                  {course.title}
-                </p>
-                <p className="text-[12px] mt-0.5" style={{ color: '#9ca3af' }}>
-                  Shared by {course.sharedBy} • {course.timeAgo}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <AvatarStack count={i === 0 ? 3 : i === 1 ? 2 : 1} />
-                <ChevronRight size={18} style={{ color: '#9ca3af' }} />
-              </div>
-            </Link>
           </motion.div>
         ))}
       </div>
