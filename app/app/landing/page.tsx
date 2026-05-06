@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   motion,
   AnimatePresence,
@@ -22,6 +22,103 @@ const fadeUp: Variants = {
     transition: { duration: 0.5, ease: EASE, delay: i * 0.1 },
   }),
 };
+
+// ─── Launch Countdown ────────────────────────────────────────────────────────
+
+const BETA_LAUNCH_AT = new Date("2026-05-07T23:59:00+07:00").getTime();
+
+function getLaunchTimeLeft() {
+  const diff = Math.max(0, BETA_LAUNCH_AT - Date.now());
+  const totalSeconds = Math.floor(diff / 1000);
+
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+    launched: diff === 0,
+  };
+}
+
+function LaunchCountdown() {
+  const [timeLeft, setTimeLeft] = useState(getLaunchTimeLeft);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTimeLeft(getLaunchTimeLeft());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const units = [
+    { label: "Ngày", value: timeLeft.days },
+    { label: "Giờ", value: timeLeft.hours },
+    { label: "Phút", value: timeLeft.minutes },
+    { label: "Giây", value: timeLeft.seconds },
+  ];
+
+  return (
+    <div
+      className="w-full mb-7 p-4 sm:p-5"
+      style={{
+        background: "linear-gradient(135deg, #101f1a 0%, #1f3d2d 100%)",
+        border: "2.5px solid #1a1a1a",
+        borderRadius: "18px",
+        boxShadow: "5px 5px 0px #1a1a1a",
+        maxWidth: 460,
+      }}
+      aria-label="Đồng hồ đếm ngược launch beta Omilearn"
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#b9f68c]">
+            Beta launch countdown
+          </p>
+          <p className="mt-1 text-sm font-semibold text-white">
+            {timeLeft.launched
+              ? "Omilearn Beta đã sẵn sàng 🚀"
+              : "Đếm ngược đến 23:59 ngày 07/05"}
+          </p>
+        </div>
+        <span
+          className="shrink-0 rounded-full px-3 py-1 text-[11px] font-black"
+          style={{
+            background: "#b9f68c",
+            color: "#102017",
+            border: "1.5px solid #ffffff",
+          }}
+        >
+          BETA
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        {units.map((unit) => (
+          <div
+            key={unit.label}
+            className="rounded-xl px-2 py-3 text-center"
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.18)",
+            }}
+          >
+            <div className="text-2xl sm:text-3xl font-black tabular-nums text-white leading-none">
+              {String(unit.value).padStart(2, "0")}
+            </div>
+            <div className="mt-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-[#d7f7c5]">
+              {unit.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-3 text-[11px] leading-relaxed text-[#d7f7c5]/85">
+        Múi giờ Việt Nam (GMT+7). Chuẩn bị mở bản trải nghiệm beta đầu tiên.
+      </p>
+    </div>
+  );
+}
 
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
@@ -463,6 +560,8 @@ export default function LandingPage() {
             Omilearn giúp bạn lập kế hoạch, quản lý tài liệu và bứt phá kết quả
             học tập với trợ lý AI cá nhân.
           </p>
+
+          <LaunchCountdown />
 
           {/* CTA */}
           <Link
