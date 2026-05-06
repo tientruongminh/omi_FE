@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./styles/globals.css";
 import AuthHydrator from "@/shared/ui/AuthHydrator";
 import UserActivityTracker from "@/shared/ui/UserActivityTracker";
+import FeedbackWidget from "@/shared/ui/FeedbackWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
         <AuthHydrator />
         <UserActivityTracker />
         {children}
+        <FeedbackWidget />
       </body>
     </html>
   );
