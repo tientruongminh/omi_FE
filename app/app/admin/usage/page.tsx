@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, RefreshCw, Zap } from 'lucide-react';
+import { Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { apiFetch } from '@/shared/api/client';
 
 type UsageSummary = {
@@ -10,24 +10,68 @@ type UsageSummary = {
   by_feature: Array<{ feature: string; total_tokens: number; requests: number }>;
 };
 
+type WalletUser = {
+  user_id: string;
+  monthly_quota_tokens: number;
+  bonus_tokens: number;
+  used_tokens: number;
+  reserved_tokens: number;
+  remaining_tokens: number;
+  reset_at: string;
+  updated_at: string;
+  requests: number;
+};
+
+type WalletResponse = { users: WalletUser[] };
+
 function fmt(n: number) {
   return Number(n || 0).toLocaleString('vi-VN');
 }
 
 export default function AdminUsagePage() {
   const [data, setData] = useState<UsageSummary | null>(null);
+  const [wallets, setWallets] = useState<WalletUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, { quota: string; bonus: string }>>({});
 
   const load = async () => {
     setLoading(true);
     try {
-      setData(await apiFetch<UsageSummary>('/tokens/admin/summary'));
+      const [summary, walletData] = await Promise.all([
+        apiFetch<UsageSummary>('/tokens/admin/summary'),
+        apiFetch<WalletResponse>('/tokens/admin/users'),
+      ]);
+      setData(summary);
+      setWallets(walletData.users ?? []);
+      setDrafts(Object.fromEntries((walletData.users ?? []).map((u) => [u.user_id, {
+        quota: String(u.monthly_quota_tokens),
+        bonus: String(u.bonus_tokens),
+      }])));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
+
+  const saveWallet = async (userId: string) => {
+    const draft = drafts[userId];
+    if (!draft) return;
+    setSavingId(userId);
+    try {
+      const res = await apiFetch<{ user: WalletUser }>(`/tokens/admin/users/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          monthly_quota_tokens: Number(draft.quota || 0),
+          bonus_tokens: Number(draft.bonus || 0),
+        }),
+      });
+      setWallets((prev) => prev.map((u) => u.user_id === userId ? { ...u, ...res.user } : u));
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div>
@@ -36,7 +80,7 @@ export default function AdminUsagePage() {
           <h1 className="flex items-center gap-2 text-[28px] font-black text-[#1A1A1A]" style={{ fontFamily: 'Georgia, serif' }}>
             <Zap size={24} className="text-[#6B2D3E]" /> AI Usage
           </h1>
-          <p className="mt-0.5 text-[13px] text-[#5A5C58]">Theo dõi tổng token Shop MMO/OpenAI-compatible đã dùng qua backend.</p>
+          <p className="mt-0.5 text-[13px] text-[#5A5C58]">Theo dõi token Shop MMO và quản lý quota từng user.</p>
         </div>
         <button onClick={load} className="flex items-center gap-2 rounded-xl border-2 border-[#E5E7EB] bg-white px-4 py-2 text-[13px] font-bold">
           <RefreshCw size={14} /> Refresh
@@ -61,6 +105,56 @@ export default function AdminUsagePage() {
                 <p className="mt-2 text-2xl font-black text-[#111827]">{fmt(value as number)}</p>
               </div>
             ))}
+          </div>
+
+          <div className="rounded-2xl border-2 border-[#E5E7EB] bg-white">
+            <div className="border-b border-[#E5E7EB] px-5 py-4">
+              <p className="font-black text-[#111827]">Quản lý token từng user</p>
+              <p className="mt-1 text-xs text-[#6B7280]">Mặc định mỗi user mới: 20,000,000 tokens/tháng. Có thể chỉnh quota hoặc bonus token tại đây.</p>
+            </div>
+            {wallets.length === 0 ? (
+              <div className="p-8 text-center text-sm text-[#999]">Chưa có wallet. User sẽ có wallet sau khi gọi AI hoặc mở token badge.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-sm">
+                  <thead className="bg-[#FAFAF8] text-left text-xs uppercase text-[#6B7280]">
+                    <tr>
+                      <th className="px-5 py-3">User</th>
+                      <th className="px-5 py-3">Used</th>
+                      <th className="px-5 py-3">Remaining</th>
+                      <th className="px-5 py-3">Monthly quota</th>
+                      <th className="px-5 py-3">Bonus</th>
+                      <th className="px-5 py-3">Requests</th>
+                      <th className="px-5 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F3F4F6]">
+                    {wallets.map((u) => {
+                      const draft = drafts[u.user_id] || { quota: String(u.monthly_quota_tokens), bonus: String(u.bonus_tokens) };
+                      return (
+                        <tr key={u.user_id}>
+                          <td className="max-w-[240px] truncate px-5 py-4 font-bold text-[#111827]">{u.user_id}</td>
+                          <td className="px-5 py-4 text-[#6B7280]">{fmt(u.used_tokens)}</td>
+                          <td className="px-5 py-4 font-black text-[#6B2D3E]">{fmt(u.remaining_tokens)}</td>
+                          <td className="px-5 py-4">
+                            <input value={draft.quota} onChange={(e) => setDrafts((p) => ({ ...p, [u.user_id]: { ...draft, quota: e.target.value } }))} className="w-36 rounded-lg border border-[#E5E7EB] px-2 py-1 text-sm" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <input value={draft.bonus} onChange={(e) => setDrafts((p) => ({ ...p, [u.user_id]: { ...draft, bonus: e.target.value } }))} className="w-28 rounded-lg border border-[#E5E7EB] px-2 py-1 text-sm" />
+                          </td>
+                          <td className="px-5 py-4 text-[#6B7280]">{fmt(u.requests)}</td>
+                          <td className="px-5 py-4">
+                            <button onClick={() => saveWallet(u.user_id)} disabled={savingId === u.user_id} className="flex items-center gap-1.5 rounded-lg bg-[#6B2D3E] px-3 py-1.5 text-xs font-black text-white disabled:opacity-50">
+                              {savingId === u.user_id ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Lưu
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
