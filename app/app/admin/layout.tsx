@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft, Server } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/admin/teachers', label: 'Giảng viên', icon: GraduationCap },
   { href: '/admin/courses', label: 'Khóa học', icon: BookOpen },
   { href: '/admin/chat', label: 'Chat AI', icon: MessageCircle },
+  { href: '/admin/server', label: 'Server Logs', icon: Server },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

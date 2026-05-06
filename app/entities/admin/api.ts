@@ -86,6 +86,20 @@ export interface AdminTeachersResponse {
   teachers: AdminTeacher[];
 }
 
+export interface ServerStatusResponse {
+  services: Array<{ name: string; status: string; ports?: string }>;
+  frontend: { name: string; status: string };
+}
+
+export interface ServerLogsResponse {
+  service: string;
+  logs: string;
+}
+
+export interface RuntimeEnvResponse {
+  env: Record<string, string>;
+}
+
 // ─── API ─────────────────────────────────────────────────────
 
 export const adminApi = {
@@ -138,6 +152,25 @@ export const adminApi = {
     return apiFetch('/admin/activity/heartbeat', {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId, path, user_name: userName ?? '' }),
+    });
+  },
+
+  getServerStatus() {
+    return apiFetch<ServerStatusResponse>('/admin/server/status');
+  },
+
+  getServerLogs(service: string, lines = 200) {
+    return apiFetch<ServerLogsResponse>(`/admin/server/logs/${service}?lines=${lines}`);
+  },
+
+  getRuntimeEnv() {
+    return apiFetch<RuntimeEnvResponse>('/admin/server/env');
+  },
+
+  updateRuntimeEnv(updates: Record<string, string>) {
+    return apiFetch<{ updated: string[] }>('/admin/server/env', {
+      method: 'PUT',
+      body: JSON.stringify({ updates }),
     });
   },
 };
