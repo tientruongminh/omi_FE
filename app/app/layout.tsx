@@ -4,6 +4,7 @@ import "./styles/globals.css";
 import AuthHydrator from "@/shared/ui/AuthHydrator";
 import UserActivityTracker from "@/shared/ui/UserActivityTracker";
 import FeedbackWidget from "@/shared/ui/FeedbackWidget";
+import TokenBalanceBadge from "@/shared/ui/TokenBalanceBadge";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
         <AuthHydrator />
         <UserActivityTracker />
         {children}
+        <TokenBalanceBadge />
         <FeedbackWidget />
       </body>
     </html>
