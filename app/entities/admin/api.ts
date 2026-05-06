@@ -100,6 +100,27 @@ export interface RuntimeEnvResponse {
   env: Record<string, string>;
 }
 
+export interface FeedbackReport {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  type: 'bug' | 'feedback' | 'idea';
+  status: 'open' | 'in_progress' | 'fixed' | 'closed';
+  title: string;
+  message: string;
+  page_url: string;
+  browser_info: string;
+  admin_response: string;
+  responded_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeedbackListResponse {
+  feedback: FeedbackReport[];
+}
+
 // ─── API ─────────────────────────────────────────────────────
 
 export const adminApi = {
@@ -171,6 +192,28 @@ export const adminApi = {
     return apiFetch<{ updated: string[] }>('/admin/server/env', {
       method: 'PUT',
       body: JSON.stringify({ updates }),
+    });
+  },
+
+  createFeedback(data: { type: 'bug' | 'feedback' | 'idea'; title: string; message: string; page_url?: string; user_name?: string }) {
+    return apiFetch<{ feedback: FeedbackReport }>('/admin/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getMyFeedback() {
+    return apiFetch<FeedbackListResponse>('/admin/feedback/me');
+  },
+
+  getAllFeedback(status?: string) {
+    return apiFetch<FeedbackListResponse>(`/admin/feedback${status && status !== 'all' ? `?status=${status}` : ''}`);
+  },
+
+  updateFeedback(id: string, data: { status?: FeedbackReport['status']; admin_response?: string }) {
+    return apiFetch<{ feedback: FeedbackReport }>(`/admin/feedback/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   },
 };
