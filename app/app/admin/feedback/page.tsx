@@ -98,7 +98,10 @@ export default function AdminFeedbackPage() {
                     <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${STATUS_CLASS[item.status]}`}>{STATUS_LABEL[item.status]}</span>
                   </div>
                   <p className="line-clamp-2 text-sm text-[#4B5563]">{item.message}</p>
-                  <div className="mt-3 flex items-center gap-2 text-[11px] text-[#9CA3AF]"><span>{item.type}</span><span>•</span><span className="truncate">{item.page_url}</span></div>
+                  <div className="mt-3 flex items-center gap-2 text-[11px] text-[#9CA3AF]">
+                    <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 font-bold uppercase">{item.type}</span>
+                    {item.admin_response && <span>Đã phản hồi</span>}
+                  </div>
                 </button>
               ))}
             </div>
@@ -118,10 +121,6 @@ export default function AdminFeedbackPage() {
                 <p className="mt-1 text-xs text-[#6B7280]">{selected.user_email}</p>
               </div>
               <div className="mb-4 rounded-xl bg-[#F9FAFB] p-3 text-sm leading-relaxed text-[#374151]">{selected.message}</div>
-              <div className="mb-4 space-y-2 text-xs text-[#6B7280]">
-                <p><b>Page:</b> {selected.page_url || 'N/A'}</p>
-                <p><b>Browser:</b> {selected.browser_info || 'N/A'}</p>
-              </div>
               <label className="mb-1 block text-xs font-bold text-[#5A5C58]">Status</label>
               <select value={selected.status} onChange={(e) => setSelected({ ...selected, status: e.target.value as FeedbackReport['status'] })} className="mb-4 w-full rounded-xl border-2 border-[#E5E7EB] px-3 py-2 text-sm">
                 <option value="open">Open</option>
