@@ -64,10 +64,12 @@ export default function FeedbackWidget() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-[80] flex h-14 w-14 items-center justify-center rounded-full bg-[#6B2D3E] text-white shadow-[0_12px_30px_rgba(107,45,62,0.35)] transition hover:-translate-y-0.5 hover:bg-[#5A2534]"
-        aria-label="Report bug or feedback"
+        className="fixed bottom-5 right-5 z-[80] flex items-center gap-2 rounded-full border-2 border-white bg-[#6B2D3E] px-4 py-3 text-white shadow-xl transition hover:-translate-y-0.5 hover:bg-[#5A2534]"
+        aria-label="Báo lỗi hoặc gửi feedback"
       >
-        <MessageCircle size={24} />
+        <Bug size={19} />
+        <span className="text-sm font-black">Báo lỗi</span>
+        <span className="hidden rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold sm:inline">Feedback</span>
       </button>
 
       {open && (
