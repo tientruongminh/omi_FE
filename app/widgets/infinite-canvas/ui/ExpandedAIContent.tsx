@@ -15,7 +15,7 @@ interface Props {
   onCreateAINode?: (nodeId: string, type: 'ai-chat' | 'ai-review', selectedText?: string) => void;
 }
 
-type ChatMsg = { id: string; role: 'ai' | 'user'; text: string };
+type ChatMsg = { id: string; role: 'ai' | 'user'; text: string; citations?: Array<{ source_title: string; quote: string }> };
 
 interface FloatingMenu {
   x: number;
@@ -52,12 +52,18 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
     setInput('');
     setStreaming(true);
     try {
-      const contextPrompt = node.content
-        ? `Tài liệu: ${node.content.slice(0, 500)}\n\nCâu hỏi: ${query}`
-        : query;
-      const res = await aiApi.chat(contextPrompt);
+      const res = await aiApi.studyChat({
+        message: query,
+        canvas_node_id: node.id,
+        node_id: node.nodeId,
+        source_id: node.sourceId,
+        source_type: node.sourceType,
+        passage_ids: node.passageIds ?? [],
+        context: node.content,
+        selected_text: node.summary,
+      });
       setMsgs((prev) =>
-        prev.map((m) => m.id === aiMsgId ? { ...m, text: res.response } : m)
+        prev.map((m) => m.id === aiMsgId ? { ...m, text: res.answer, citations: res.citations } : m)
       );
     } catch {
       setMsgs((prev) =>
@@ -149,6 +155,15 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
             )}
             <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[12.5px] leading-relaxed ${m.role === 'user' ? 'bg-[#6B2D3E] text-white rounded-tr-sm' : 'bg-white border border-[#E5E5DF] text-[#2D2D2D] rounded-tl-sm'}`}>
               {idx === 0 && m.role === 'ai' ? <AIStreamText text={m.text} speed={18} startDelay={200} /> : m.text}
+              {m.citations && m.citations.length > 0 && (
+                <div className="mt-2 space-y-1 border-t border-[#E5E7EB] pt-2">
+                  {m.citations.slice(0, 3).map((c, i) => (
+                    <div key={`${c.source_title}-${i}`} className="rounded-lg bg-[#F9FAFB] px-2 py-1 text-[10px] text-[#6B7280]">
+                      <b>{c.source_title}</b>: {c.quote.slice(0, 120)}{c.quote.length > 120 ? '...' : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -7,6 +7,18 @@ export interface AIChatResponse {
   response: string;
 }
 
+export interface StudyCitation {
+  source_title: string;
+  quote: string;
+  passage_id?: string | null;
+  source_id?: string | null;
+}
+
+export interface StudyChatResponse {
+  answer: string;
+  citations: StudyCitation[];
+}
+
 export interface AIQuizQuestion {
   question: string;
   options: string[];
@@ -43,6 +55,23 @@ export interface NodeChatsResponse {
 // ─── API ─────────────────────────────────────────────────────
 
 export const aiApi = {
+  studyChat(payload: {
+    message: string;
+    canvas_node_id?: string;
+    project_id?: string;
+    node_id?: string;
+    source_id?: string;
+    source_type?: string;
+    passage_ids?: string[];
+    context?: string;
+    selected_text?: string;
+  }) {
+    return apiFetch<StudyChatResponse>('/study/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   /**
    * Chat with DeepTutor AI.
    * session_id is optional — omit for new conversation, pass to continue.
