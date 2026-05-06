@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft, Server } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/admin/teachers', label: 'Giảng viên', icon: GraduationCap },
   { href: '/admin/courses', label: 'Khóa học', icon: BookOpen },
   { href: '/admin/chat', label: 'Chat AI', icon: MessageCircle },
+  { href: '/admin/server', label: 'Server Logs', icon: Server },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo */}
         <div className="px-5 py-5 border-b border-[#E5E7EB]">
           <Link href="/admin" className="text-[20px] font-bold text-[#6B2D3E]" style={{ fontFamily: 'Georgia, serif' }}>
-            omilearn
+            Omilearn
           </Link>
           <p className="text-[10px] font-semibold text-[#5A5C58] uppercase tracking-widest mt-0.5">Admin Panel</p>
         </div>

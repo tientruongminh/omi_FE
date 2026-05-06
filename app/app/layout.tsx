@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./styles/globals.css";
 import AuthHydrator from "@/shared/ui/AuthHydrator";
+import UserActivityTracker from "@/shared/ui/UserActivityTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmiLearn — Nền tảng học tập thông minh",
+  title: "Omilearn — Nền tảng học tập thông minh",
   description: "Nền tảng giáo dục Việt Nam với mindmap tương tác và AI hỗ trợ",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +34,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F5F0EB] min-h-screen flex flex-col`}
       >
         <AuthHydrator />
+        <UserActivityTracker />
         {children}
       </body>
     </html>

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
-import { adminApi, AdminUser } from '@/entities/admin/api';
+import { Activity, BarChart3, Search, Pencil, X, Loader2 } from 'lucide-react';
+import { adminApi, AdminUser, type UserActivityAnalytics } from '@/entities/admin/api';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -14,6 +14,9 @@ export default function AdminUsersPage() {
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [form, setForm] = useState({ name: '', email: '', status: 'active' as AdminUser['status'], role: 'student' as AdminUser['role'] });
   const [saving, setSaving] = useState(false);
+  const [activityUser, setActivityUser] = useState<AdminUser | null>(null);
+  const [activityData, setActivityData] = useState<UserActivityAnalytics | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   const loadUsers = async () => {
     try {
@@ -33,6 +36,30 @@ export default function AdminUsersPage() {
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const formatActiveTime = (seconds?: number) => {
+    const total = seconds ?? 0;
+    if (total < 60) return `${total}s`;
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return `${minutes} phút`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h${remainingMinutes ? ` ${remainingMinutes}p` : ''}`;
+  };
+
+  const openActivity = async (u: AdminUser) => {
+    setActivityUser(u);
+    setActivityData(null);
+    setActivityLoading(true);
+    try {
+      const data = await adminApi.getUserActivity(u.user_id);
+      setActivityData(data);
+    } catch {
+      setError('Không thể tải dữ liệu vòng đời sử dụng.');
+    } finally {
+      setActivityLoading(false);
+    }
+  };
 
   const openEdit = (u: AdminUser) => {
     setEditUser(u);
@@ -98,12 +125,13 @@ export default function AdminUsersPage() {
                 <th className="text-left px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Email</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Vai trò</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Trạng thái</th>
+                <th className="text-left px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Active time</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F0F0F0]">
               {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-[#FAFAF8] transition-colors">
+                <tr key={u.id} onClick={() => openActivity(u)} className="hover:bg-[#FAFAF8] transition-colors cursor-pointer">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#F5F0EB] flex items-center justify-center flex-shrink-0">
@@ -128,8 +156,23 @@ export default function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[13px] font-bold text-[#2D2D2D]">{formatActiveTime(u.active_seconds)}</span>
+                      <span className="text-[11px] text-[#999]">
+                        {u.online
+                          ? `Đang online${u.current_path ? ` • ${u.current_path}` : ''}`
+                          : u.last_seen_at
+                            ? `Lần cuối ${new Date(u.last_seen_at).toLocaleString('vi-VN')}`
+                            : 'Chưa ghi nhận'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
                     <div className="flex items-center justify-center gap-1.5">
-                      <button onClick={() => openEdit(u)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#F5F0EB] text-[#5A5C58] transition-colors cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); openActivity(u); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#F5F0EB] text-[#5A5C58] transition-colors cursor-pointer" title="Xem analytics">
+                        <BarChart3 size={14} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(u); }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#F5F0EB] text-[#5A5C58] transition-colors cursor-pointer" title="Sửa user">
                         <Pencil size={14} />
                       </button>
                     </div>
@@ -140,6 +183,108 @@ export default function AdminUsersPage() {
           </table>
         </div>
       )}
+
+      {/* Activity Analytics Modal */}
+      <AnimatePresence>
+        {activityUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+            onClick={() => setActivityUser(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl border-2 border-[#E5E7EB] p-6 w-full max-w-[900px] max-h-[88vh] overflow-auto shadow-xl"
+            >
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-[20px] font-black text-[#1A1A1A] flex items-center gap-2">
+                    <Activity size={20} className="text-[#6B2D3E]" />
+                    Vòng đời sử dụng sản phẩm
+                  </h3>
+                  <p className="text-[13px] text-[#5A5C58] mt-1">{activityUser.name} • {activityUser.email}</p>
+                </div>
+                <button onClick={() => setActivityUser(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer">
+                  <X size={18} className="text-[#5A5C58]" />
+                </button>
+              </div>
+
+              {activityLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="animate-spin text-[#6B2D3E]" size={26} />
+                </div>
+              ) : activityData ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Tổng active', value: formatActiveTime(activityData.total_active_seconds) },
+                      { label: 'Số session', value: String(activityData.session_count) },
+                      { label: 'Trạng thái', value: activityData.online ? 'Online' : 'Offline' },
+                      { label: 'Lần cuối', value: activityData.last_seen_at ? new Date(activityData.last_seen_at).toLocaleString('vi-VN') : 'N/A' },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-2xl border-2 border-[#E5E7EB] bg-[#FAFAF8] p-4">
+                        <p className="text-[11px] uppercase tracking-wider text-[#5A5C58] font-bold">{item.label}</p>
+                        <p className="mt-1 text-[18px] font-black text-[#1A1A1A]">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <h4 className="text-[14px] font-bold text-[#1A1A1A] mb-3">Biểu đồ thời gian theo khu vực sản phẩm</h4>
+                    <div className="space-y-3">
+                      {activityData.paths.length === 0 ? (
+                        <p className="text-[13px] text-[#999]">Chưa có dữ liệu path.</p>
+                      ) : activityData.paths.map((p) => {
+                        const pct = activityData.total_active_seconds > 0 ? Math.max(3, Math.round((p.active_seconds / activityData.total_active_seconds) * 100)) : 0;
+                        return (
+                          <div key={p.path}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[13px] font-semibold text-[#2D2D2D]">{p.path}</span>
+                              <span className="text-[12px] text-[#5A5C58]">{formatActiveTime(p.active_seconds)} • {p.sessions} session</span>
+                            </div>
+                            <div className="h-3 rounded-full bg-[#F0F0F0] overflow-hidden border border-[#E5E7EB]">
+                              <div className="h-full rounded-full bg-[#6B2D3E]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-[14px] font-bold text-[#1A1A1A] mb-3">Timeline session gần đây</h4>
+                    <div className="relative pl-4 border-l-2 border-[#E5E7EB] space-y-4">
+                      {activityData.sessions.length === 0 ? (
+                        <p className="text-[13px] text-[#999]">Chưa có session nào.</p>
+                      ) : activityData.sessions.map((s) => (
+                        <div key={s.session_id} className="relative">
+                          <div className={`absolute -left-[23px] top-1 w-3 h-3 rounded-full border-2 border-white ${s.is_active ? 'bg-[#22C55E]' : 'bg-[#9CA3AF]'}`} />
+                          <div className="rounded-xl border border-[#E5E7EB] p-3 bg-[#FAFAF8]">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-[13px] font-bold text-[#1A1A1A]">{s.last_path || '/'}</p>
+                              <span className="text-[11px] font-bold text-[#6B2D3E]">{formatActiveTime(s.active_seconds)}</span>
+                            </div>
+                            <p className="text-[11px] text-[#5A5C58] mt-1">
+                              {new Date(s.first_seen_at).toLocaleString('vi-VN')} → {new Date(s.last_seen_at).toLocaleString('vi-VN')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[13px] text-[#999] py-10 text-center">Không có dữ liệu.</p>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Edit Modal */}
       <AnimatePresence>

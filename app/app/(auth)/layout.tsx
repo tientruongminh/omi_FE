@@ -20,7 +20,7 @@ export default function AuthLayout({
         }}
       >
         <div className="max-w-[1100px] mx-auto px-5 h-[60px] flex items-center justify-between">
-          <Link href="/landing">
+          <Link href="/landing" aria-label="Omilearn home">
             <span
               className="text-xl font-black italic"
               style={{
@@ -29,7 +29,7 @@ export default function AuthLayout({
                 letterSpacing: '-0.01em',
               }}
             >
-              omilearn
+              Omilearn
             </span>
           </Link>
         </div>
