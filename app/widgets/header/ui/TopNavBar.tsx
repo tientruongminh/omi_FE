@@ -60,10 +60,10 @@ export default function TopNavBar() {
         {/* Logo */}
         <Link
           href="/project"
-          aria-label="Omilearn home"
-          className="shrink-0 hover:opacity-85 transition-opacity inline-flex items-center"
+          className="text-[#6B2D3E] text-lg font-bold tracking-tight shrink-0 hover:opacity-80 transition-opacity"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
         >
-          <img src="/omilearn-logo.jpg" alt="Omilearn" className="h-9 w-auto object-contain" />
+          Omilearn
         </Link>
 
         {/* Right side */}

@@ -11,7 +11,7 @@ export default function LandingNav() {
         <button className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/5 transition-colors" aria-label="Menu">
           <Menu size={20} color="#2D2D2D" />
         </button>
-        <span className="text-xl italic" style={{ fontFamily: 'Georgia, serif', color: '#6B2D3E', letterSpacing: '-0.01em' }}>omilearn</span>
+        <span className="text-xl italic" style={{ fontFamily: 'Georgia, serif', color: '#6B2D3E', letterSpacing: '-0.01em' }}>Omilearn</span>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-sm font-semibold transition-all hover:opacity-70" style={{ color: '#5A5C58' }}>Đăng nhập</Link>
           <CTAButton className="text-xs py-2.5 px-5" />
