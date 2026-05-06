@@ -43,6 +43,33 @@ export interface AdminUsersResponse {
   offset: number;
 }
 
+export interface UserActivitySession {
+  session_id: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  active_seconds: number;
+  last_path: string;
+  is_active: boolean;
+}
+
+export interface UserActivityPath {
+  path: string;
+  active_seconds: number;
+  sessions: number;
+  last_seen_at: string;
+}
+
+export interface UserActivityAnalytics {
+  user_id: string;
+  total_active_seconds: number;
+  session_count: number;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  online: boolean;
+  sessions: UserActivitySession[];
+  paths: UserActivityPath[];
+}
+
 export interface AdminTeacher {
   id: string;
   name: string;
@@ -72,6 +99,10 @@ export const adminApi = {
 
   getUsers(limit = 50, offset = 0) {
     return apiFetch<AdminUsersResponse>(`/admin/users?limit=${limit}&offset=${offset}`);
+  },
+
+  getUserActivity(userId: string) {
+    return apiFetch<UserActivityAnalytics>(`/admin/users/${userId}/activity`);
   },
 
   updateUserRole(userId: string, role: string) {
