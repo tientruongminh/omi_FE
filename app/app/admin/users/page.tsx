@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
+import { Search, Pencil, X, Loader2 } from 'lucide-react';
 import { adminApi, AdminUser } from '@/entities/admin/api';
 
 export default function AdminUsersPage() {
@@ -33,6 +33,16 @@ export default function AdminUsersPage() {
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const formatActiveTime = (seconds?: number) => {
+    const total = seconds ?? 0;
+    if (total < 60) return `${total}s`;
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return `${minutes} phút`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h${remainingMinutes ? ` ${remainingMinutes}p` : ''}`;
+  };
 
   const openEdit = (u: AdminUser) => {
     setEditUser(u);
@@ -98,6 +108,7 @@ export default function AdminUsersPage() {
                 <th className="text-left px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Email</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Vai trò</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Trạng thái</th>
+                <th className="text-left px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Active time</th>
                 <th className="text-center px-5 py-3 text-[11px] font-bold text-[#5A5C58] uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
@@ -126,6 +137,18 @@ export default function AdminUsersPage() {
                     }`}>
                       {u.status === 'active' ? 'Hoạt động' : 'Ngừng'}
                     </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[13px] font-bold text-[#2D2D2D]">{formatActiveTime(u.active_seconds)}</span>
+                      <span className="text-[11px] text-[#999]">
+                        {u.online
+                          ? `Đang online${u.current_path ? ` • ${u.current_path}` : ''}`
+                          : u.last_seen_at
+                            ? `Lần cuối ${new Date(u.last_seen_at).toLocaleString('vi-VN')}`
+                            : 'Chưa ghi nhận'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-center gap-1.5">

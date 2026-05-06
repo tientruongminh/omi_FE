@@ -29,6 +29,11 @@ export interface AdminUser {
   status: 'active' | 'inactive' | 'banned';
   created_at: string;
   course_count?: number;
+  online?: boolean;
+  last_seen_at?: string | null;
+  active_seconds?: number;
+  active_minutes?: number;
+  current_path?: string | null;
 }
 
 export interface AdminUsersResponse {
@@ -95,6 +100,13 @@ export const adminApi = {
     return apiFetch<{ session_id: string; response: string }>('/admin/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message }),
+    });
+  },
+
+  heartbeat(sessionId: string, path: string, userName?: string) {
+    return apiFetch('/admin/activity/heartbeat', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId, path, user_name: userName ?? '' }),
     });
   },
 };
