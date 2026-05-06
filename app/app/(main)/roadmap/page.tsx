@@ -24,8 +24,16 @@ import '@xyflow/react/dist/style.css';
 import { useOmiLearnStore } from '@/entities/project';
 import { fetchRoadmapByProject, type Roadmap } from '@/entities/project/api/roadmap';
 import dynamic from 'next/dynamic';
+import {
+  loadRoadmapCreationReport,
+  type RoadmapCreationReport,
+} from '@/features/create-project/model/roadmapCreationReport';
 
 const PlanSurveyModal = dynamic(() => import('@/features/plan-survey/ui/PlanSurveyModal'), { ssr: false });
+const RoadmapCreationReportModal = dynamic(
+  () => import('@/features/create-project/ui/RoadmapCreationReportModal'),
+  { ssr: false },
+);
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -345,6 +353,11 @@ function RoadmapContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [hasSchedule, setHasSchedule] = useState(false);
+  const [isCreationReportOpen, setIsCreationReportOpen] = useState(false);
+  const creationReport = useMemo<RoadmapCreationReport | null>(
+    () => loadRoadmapCreationReport(projectId),
+    [projectId],
+  );
 
   useEffect(() => {
     if (!projectId) { setLoading(false); return; }
@@ -383,6 +396,14 @@ function RoadmapContent() {
         <p className="text-sm max-w-xl" style={{ color: '#6b7280', lineHeight: 1.6 }}>
           Khám phá hành trình chinh phục công nghệ của bạn thông qua các mốc quan trọng được thiết kế riêng.
         </p>
+        {creationReport && (
+          <button
+            onClick={() => setIsCreationReportOpen(true)}
+            className="mt-4 rounded-full border-2 border-[#333333] bg-white px-4 py-2 text-xs font-semibold text-[#2D2D2D] transition-colors hover:bg-[#2D2D2D] hover:text-white"
+          >
+            Xem lai tien do tao roadmap
+          </button>
+        )}
       </div>
 
       {/* ── Flow / States ── */}
@@ -478,6 +499,13 @@ function RoadmapContent() {
       <AnimatePresence>
         {isPlanModalOpen && <PlanSurveyModal onClose={closePlanModal} projectId={projectId} />}
       </AnimatePresence>
+
+      {creationReport && isCreationReportOpen && (
+        <RoadmapCreationReportModal
+          report={creationReport}
+          onClose={() => setIsCreationReportOpen(false)}
+        />
+      )}
     </div>
   );
 }

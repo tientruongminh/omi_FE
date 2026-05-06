@@ -60,21 +60,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
 
   login: async (email: string, password: string) => {
-    const { tokens, user } = await authApi.login({ email, password });
-    saveTokens(tokens.accessToken, tokens.refreshToken);
-    set({ user, isAuthenticated: true });
+    set({ isLoading: true });
+    try {
+      const { tokens, user } = await authApi.login({ email, password });
+      saveTokens(tokens.accessToken, tokens.refreshToken);
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
   },
 
   register: async (email: string, password: string, name?: string) => {
-    const { tokens, user } = await authApi.register({ email, password, name });
-    saveTokens(tokens.accessToken, tokens.refreshToken);
-    set({ user, isAuthenticated: true });
+    set({ isLoading: true });
+    try {
+      const { tokens, user } = await authApi.register({ email, password, name });
+      saveTokens(tokens.accessToken, tokens.refreshToken);
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
   },
 
   googleLogin: async (credential: string) => {
-    const { tokens, user } = await authApi.googleLogin(credential);
-    saveTokens(tokens.accessToken, tokens.refreshToken);
-    set({ user, isAuthenticated: true });
+    set({ isLoading: true });
+    try {
+      const { tokens, user } = await authApi.googleLogin(credential);
+      saveTokens(tokens.accessToken, tokens.refreshToken);
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
   },
 
   logout: async () => {

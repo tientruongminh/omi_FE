@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -35,10 +35,11 @@ export default function LoginPage() {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, googleLogin } = useAuthStore();
+  const { login, googleLogin, isAuthenticated, isLoading } = useAuthStore();
 
   // Redirect target: where the user came from, or /project
   const redirectTo = searchParams.get('from') || '/project';
+  const hasRedirectedRef = useRef(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,6 +47,19 @@ function LoginContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const navigateAfterAuth = useCallback(() => {
+    if (hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+    router.replace(redirectTo);
+    router.refresh();
+  }, [redirectTo, router]);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigateAfterAuth();
+    }
+  }, [isAuthenticated, isLoading, navigateAfterAuth]);
 
   // ─── Google Sign-In ────────────────────────────────────────
 
@@ -55,7 +69,7 @@ function LoginContent() {
       setError('');
       try {
         await googleLogin(response.credential);
-        router.push(redirectTo);
+        navigateAfterAuth();
       } catch (err: unknown) {
         const apiErr = err as { error?: string };
         setError(apiErr.error || 'Google sign-in failed');
@@ -63,7 +77,7 @@ function LoginContent() {
         setGoogleLoading(false);
       }
     },
-    [googleLogin, router, redirectTo],
+    [googleLogin, navigateAfterAuth],
   );
 
   useEffect(() => {
@@ -110,7 +124,7 @@ function LoginContent() {
     setError('');
     try {
       await login(email.trim(), password);
-      router.push(redirectTo);
+      navigateAfterAuth();
     } catch (err: unknown) {
       const apiErr = err as { error?: string };
       setError(apiErr.error || 'Invalid email or password');

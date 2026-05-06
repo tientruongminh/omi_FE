@@ -6,7 +6,11 @@ import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2, ExternalLink } fr
 import { useRouter } from 'next/navigation';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
-import { apiFetch, apiUpload } from '@/shared/api/client';
+import { apiFetch, apiFetchEventStream, apiUpload, type SseEventPayload } from '@/shared/api/client';
+import {
+  type RoadmapCreationReport,
+  saveRoadmapCreationReport,
+} from '@/features/create-project/model/roadmapCreationReport';
 
 interface Props {
   onClose: () => void;
@@ -44,6 +48,45 @@ interface UploadedFilePayload {
   mimetype: string;
 }
 
+interface RoadmapStreamProgressEvent {
+  stage: string;
+  status: 'started' | 'completed';
+  progress: number;
+  message: string;
+  elapsed_ms?: number;
+  meta?: Record<string, unknown>;
+}
+
+interface RoadmapCreateStreamResult {
+  roadmap: { project_id: string };
+  extracted_sources: number;
+  total_nodes: number;
+}
+
+interface ProgressStageState {
+  key: string;
+  label: string;
+  status: 'pending' | 'active' | 'done';
+  elapsedMs?: number;
+  message?: string;
+}
+
+const ROADMAP_STAGE_LABELS: Record<string, string> = {
+  queued: 'Tiếp nhận yêu cầu',
+  extracting_sources: 'Trích xuất tài liệu',
+  creating_project: 'Khởi tạo project',
+  persisting_passages: 'Lưu evidence passages',
+  building_chunks: 'Chia semantic chunks',
+  embedding_chunks: 'Embedding chunks',
+  labeling_modules: 'Đặt tên modules',
+  labeling_learning_units: 'Đặt tên learning units',
+  labeling_branches_root: 'Đặt tên branches và roadmap',
+  persisting_roadmap: 'Lưu roadmap cuối cùng',
+  loading_result: 'Tải kết quả trả về',
+};
+
+const ROADMAP_STAGE_ORDER = Object.keys(ROADMAP_STAGE_LABELS);
+
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: 'youtube', label: 'YouTube', icon: <Youtube size={13} />, color: '#DC2626' },
   { value: 'website', label: 'Website', icon: <Globe size={13} />, color: '#0891B2' },
@@ -52,6 +95,20 @@ const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string; icon: React.R
 function resourceIcon(type: ResourceType) {
   if (type === 'youtube') return <Youtube size={14} />;
   return <Globe size={14} />;
+}
+
+function formatElapsed(ms?: number) {
+  if (!ms || ms <= 0) return null;
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function createStageSnapshot(): ProgressStageState[] {
+  return ROADMAP_STAGE_ORDER.map((key) => ({
+    key,
+    label: ROADMAP_STAGE_LABELS[key],
+    status: 'pending',
+  }));
 }
 
 export function CreateProjectModal({ onClose }: Props) {
@@ -74,6 +131,20 @@ export function CreateProjectModal({ onClose }: Props) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [roadmapPercent, setRoadmapPercent] = useState(0);
+  const [roadmapStatusMessage, setRoadmapStatusMessage] = useState<string | null>(null);
+  const [progressStages, setProgressStages] = useState<ProgressStageState[]>(createStageSnapshot);
+  const [createStartedAt, setCreateStartedAt] = useState<number | null>(null);
+  const [totalElapsedMs, setTotalElapsedMs] = useState(0);
+  const [uploadElapsedMs, setUploadElapsedMs] = useState(0);
+  const progressStagesRef = useRef<ProgressStageState[]>(createStageSnapshot());
+  const roadmapPercentRef = useRef(0);
+  const roadmapStatusMessageRef = useRef<string | null>(null);
+  const uploadPercentRef = useRef(0);
+  const uploadProgressRef = useRef<string | null>(null);
+  const totalElapsedMsRef = useRef(0);
+  const uploadElapsedMsRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [step2Initialized, setStep2Initialized] = useState(false);
@@ -209,16 +280,103 @@ export function CreateProjectModal({ onClose }: Props) {
   const totalResourceCount = selectedDocs.size + uploadedFiles.length + validResources.length;
   const hasSourceMaterial = uploadedFiles.length > 0 || validResources.length > 0 || selectedDocs.size > 0;
 
+  const resetRoadmapProgress = () => {
+    const nextStages = createStageSnapshot();
+    setRoadmapPercent(0);
+    setRoadmapStatusMessage(null);
+    setProgressStages(nextStages);
+    progressStagesRef.current = nextStages;
+    roadmapPercentRef.current = 0;
+    roadmapStatusMessageRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!isCreating || !createStartedAt) return;
+
+    setTotalElapsedMs(Date.now() - createStartedAt);
+    totalElapsedMsRef.current = Date.now() - createStartedAt;
+    const timer = window.setInterval(() => {
+      const nextElapsed = Date.now() - createStartedAt;
+      totalElapsedMsRef.current = nextElapsed;
+      setTotalElapsedMs(nextElapsed);
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [isCreating, createStartedAt]);
+
+  const buildCreationReport = (
+    projectId: string,
+    status: RoadmapCreationReport['status'],
+    errorMessage?: string | null,
+  ): RoadmapCreationReport => ({
+    projectId,
+    projectName: projectName || 'Du an moi',
+    projectDescription: projectDesc || null,
+    sourceCount: totalResourceCount,
+    uploadPercent: uploadPercentRef.current,
+    uploadMessage: uploadProgressRef.current,
+    roadmapPercent: roadmapPercentRef.current,
+    roadmapStatusMessage: roadmapStatusMessageRef.current,
+    progressStages: progressStagesRef.current,
+    startedAt: createStartedAt ?? Date.now(),
+    completedAt: status === 'running' ? undefined : Date.now(),
+    totalElapsedMs: totalElapsedMsRef.current,
+    uploadElapsedMs: uploadElapsedMsRef.current,
+    status,
+    errorMessage: errorMessage ?? null,
+  });
+
+  const applyRoadmapProgressEvent = (payload: SseEventPayload) => {
+    if (payload.event !== 'progress') return;
+    const data = payload.data as RoadmapStreamProgressEvent;
+    roadmapPercentRef.current = data.progress ?? 0;
+    roadmapStatusMessageRef.current = data.message || null;
+    const nextStages: ProgressStageState[] = progressStagesRef.current.map((stage) => {
+      if (stage.key !== data.stage) {
+        if (data.status === 'started' && stage.status === 'active') {
+          return { ...stage, status: 'done' };
+        }
+        return stage;
+      }
+      return {
+        ...stage,
+        status: data.status === 'completed' ? 'done' : 'active',
+        elapsedMs: data.elapsed_ms,
+        message: data.message,
+      };
+    });
+    progressStagesRef.current = nextStages;
+    setRoadmapPercent(data.progress ?? 0);
+    setRoadmapStatusMessage(data.message || null);
+    setProgressStages(nextStages);
+  };
+
   const handleCreateProject = async () => {
+    const startedAt = Date.now();
     setIsCreating(true);
+    setCreateStartedAt(startedAt);
+    setTotalElapsedMs(0);
+    setUploadElapsedMs(0);
+    totalElapsedMsRef.current = 0;
+    uploadElapsedMsRef.current = 0;
     setCreateError(null);
     setUploadProgress(null);
+    setUploadPercent(0);
+    uploadProgressRef.current = null;
+    uploadPercentRef.current = 0;
+    resetRoadmapProgress();
     try {
       // 1. Upload files to MinIO
       const uploadedFilePayloads: UploadedFilePayload[] = [];
+      const uploadStartedAt = Date.now();
       if (uploadedFiles.length > 0) {
         for (let i = 0; i < uploadedFiles.length; i++) {
-          setUploadProgress(`Đang tải lên ${i + 1}/${uploadedFiles.length}...`);
+          const nextUploadMessage = `Đang tải lên ${i + 1}/${uploadedFiles.length}...`;
+          const nextUploadPercent = Math.round((i / uploadedFiles.length) * 100);
+          uploadProgressRef.current = nextUploadMessage;
+          uploadPercentRef.current = nextUploadPercent;
+          setUploadProgress(nextUploadMessage);
+          setUploadPercent(nextUploadPercent);
           try {
             const result = await apiUpload(uploadedFiles[i]);
             if (result.object_name) {
@@ -234,8 +392,13 @@ export function CreateProjectModal({ onClose }: Props) {
             return; // Stop — do NOT proceed to create roadmap
           }
         }
+        uploadPercentRef.current = 100;
+        uploadProgressRef.current = null;
+        setUploadPercent(100);
         setUploadProgress(null);
       }
+      uploadElapsedMsRef.current = Date.now() - uploadStartedAt;
+      setUploadElapsedMs(uploadElapsedMsRef.current);
 
       // 2. Collect ALL external URLs: manual resources + selected search results
       const manualUrls = validResources.map((r) => r.url.trim());
@@ -252,7 +415,8 @@ export function CreateProjectModal({ onClose }: Props) {
       }
 
       // 3. Create roadmap
-      const data = await apiFetch<{ roadmap: { project_id: string } }>('/roadmaps', {
+      setRoadmapStatusMessage('Đang mở kết nối realtime tạo roadmap...');
+      const data = await apiFetchEventStream<RoadmapCreateStreamResult>('/roadmaps/stream', {
         method: 'POST',
         body: JSON.stringify({
           project_name: projectName || 'Dự án mới',
@@ -260,14 +424,29 @@ export function CreateProjectModal({ onClose }: Props) {
           external_urls: allExternalUrls,
           uploaded_files: uploadedFilePayloads,
         }),
+        onEvent: applyRoadmapProgressEvent,
       });
+      roadmapPercentRef.current = 100;
+      roadmapStatusMessageRef.current = 'Da tao xong roadmap.';
+      setRoadmapPercent(100);
+      setRoadmapStatusMessage('Đã tạo xong roadmap.');
       const projectId = data.roadmap.project_id;
+      const completedAt = Date.now();
+      totalElapsedMsRef.current = completedAt - startedAt;
+      setTotalElapsedMs(completedAt - startedAt);
       addProject({
         id: projectId,
         title: projectName,
         description: projectDesc,
         date: new Date().toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
         progress: 0,
+      });
+      saveRoadmapCreationReport({
+        ...buildCreationReport(projectId, 'completed'),
+        completedAt,
+        totalElapsedMs: completedAt - startedAt,
+        roadmapPercent: 100,
+        roadmapStatusMessage: 'Da tao xong roadmap.',
       });
       router.push(`/roadmap?project=${projectId}`);
       onClose();
@@ -277,6 +456,9 @@ export function CreateProjectModal({ onClose }: Props) {
     } finally {
       setIsCreating(false);
       setUploadProgress(null);
+      setUploadPercent(0);
+      uploadProgressRef.current = null;
+      uploadPercentRef.current = 0;
     }
   };
 
@@ -515,8 +697,97 @@ export function CreateProjectModal({ onClose }: Props) {
                     <AIStreamText text={`Bạn đã sẵn sàng bắt đầu chưa? Tôi sẽ tạo lộ trình học tập cho dự án **${projectName}** với ${totalResourceCount} tài liệu. Hãy nhấn "Tạo dự án" để tiếp tục!`} speed={18} className="text-sm text-[#2D2D2D] leading-relaxed" />
                   </div>
                 </div>
+                {isCreating && (
+                  <div className="space-y-3 rounded-xl border-2 border-[#333333] bg-white p-4">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-[#E5E5DF] bg-[#F9F8F5] px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5C58]">
+                          Tong thoi gian
+                        </p>
+                        <p className="text-sm font-bold text-[#2D2D2D]">
+                          {formatElapsed(totalElapsedMs) ?? 'Dang tinh...'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-[#E5E5DF] bg-[#F9F8F5] px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5C58]">
+                          Thoi gian upload
+                        </p>
+                        <p className="text-sm font-bold text-[#2D2D2D]">
+                          {formatElapsed(uploadElapsedMs) ?? 'Dang upload...'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
+                        <span>Upload tài liệu</span>
+                        <span>{uploadPercent}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[#E5E5DF]">
+                        <div
+                          className="h-full rounded-full bg-[#2D2D2D] transition-all duration-300"
+                          style={{ width: `${uploadPercent}%` }}
+                        />
+                      </div>
+                      {uploadProgress && (
+                        <p className="mt-1.5 text-[11px] text-[#5A5C58]">{uploadProgress}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
+                        <span>Tạo roadmap realtime</span>
+                        <span>{roadmapPercent}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[#E5E5DF]">
+                        <div
+                          className="h-full rounded-full bg-[#4CD964] transition-all duration-300"
+                          style={{ width: `${roadmapPercent}%` }}
+                        />
+                      </div>
+                      {roadmapStatusMessage && (
+                        <p className="mt-1.5 text-[11px] text-[#2D2D2D]">{roadmapStatusMessage}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {progressStages.map((stage) => (
+                        <div
+                          key={stage.key}
+                          className="flex items-center justify-between rounded-lg border border-[#E5E5DF] px-3 py-2 text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                stage.status === 'done'
+                                  ? 'bg-[#4CD964]'
+                                  : stage.status === 'active'
+                                    ? 'bg-[#F59E0B]'
+                                    : 'bg-[#D1D5DB]'
+                              }`}
+                            />
+                            <div>
+                              <p className="font-semibold text-[#2D2D2D]">{stage.label}</p>
+                              {stage.message && (
+                                <p className="text-[10px] text-[#5A5C58]">{stage.message}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-[#5A5C58]">
+                              {stage.status === 'done' ? 'Xong' : stage.status === 'active' ? 'Đang chạy' : 'Chờ'}
+                            </p>
+                            {stage.elapsedMs ? (
+                              <p className="text-[10px] text-[#9CA3AF]">{formatElapsed(stage.elapsedMs)}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <button onClick={handleCreateProject} disabled={isCreating || !hasSourceMaterial} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                  {isCreating ? (uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
+                  {isCreating ? (roadmapStatusMessage || uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
                 </button>
                 {!hasSourceMaterial && !isCreating && <p className="text-xs text-amber-600 text-center">Vui lòng tải lên ít nhất 1 file, thêm 1 URL, hoặc chọn tài liệu từ tìm kiếm.</p>}
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}

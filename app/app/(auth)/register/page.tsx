@@ -11,7 +11,8 @@ type Step = 'email' | 'otp' | 'details';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuthStore();
+  const { register, isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
+  const hasRedirectedRef = useRef(false);
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -25,6 +26,19 @@ export default function RegisterPage() {
   const [resendTimer, setResendTimer] = useState(0);
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const navigateAfterAuth = useCallback(() => {
+    if (hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+    router.replace('/project');
+    router.refresh();
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      navigateAfterAuth();
+    }
+  }, [isAuthenticated, isAuthLoading, navigateAfterAuth]);
 
   // ─── Resend timer countdown ─────────────────────────────────
 
@@ -160,7 +174,7 @@ export default function RegisterPage() {
     setError('');
     try {
       await register(email, password, name.trim() || undefined);
-      router.push('/project');
+      navigateAfterAuth();
     } catch (err: unknown) {
       const apiErr = err as { error?: string };
       setError(apiErr.error || 'Registration failed');
