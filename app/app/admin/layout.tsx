@@ -21,10 +21,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-[240px] bg-white border-r-2 border-[#E5E7EB] flex flex-col flex-shrink-0">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-[#E5E7EB]">
-          <Link href="/admin" className="text-[20px] font-bold text-[#6B2D3E]" style={{ fontFamily: 'Georgia, serif' }}>
-            omilearn
+          <Link href="/admin" aria-label="Omilearn Admin" className="inline-flex items-center">
+            <img src="/omilearn-logo.jpg" alt="Omilearn" className="h-9 w-auto object-contain" />
           </Link>
-          <p className="text-[10px] font-semibold text-[#5A5C58] uppercase tracking-widest mt-0.5">Admin Panel</p>
+          <p className="text-[10px] font-semibold text-[#5A5C58] uppercase tracking-widest mt-2">Admin Panel</p>
         </div>
 
         {/* Nav */}

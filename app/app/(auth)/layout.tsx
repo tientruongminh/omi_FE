@@ -20,17 +20,8 @@ export default function AuthLayout({
         }}
       >
         <div className="max-w-[1100px] mx-auto px-5 h-[60px] flex items-center justify-between">
-          <Link href="/landing">
-            <span
-              className="text-xl font-black italic"
-              style={{
-                color: '#6B2D3E',
-                fontFamily: 'Georgia, serif',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              omilearn
-            </span>
+          <Link href="/landing" aria-label="Omilearn home" className="inline-flex items-center">
+            <img src="/omilearn-logo.jpg" alt="Omilearn" className="h-10 w-auto object-contain" />
           </Link>
         </div>
       </nav>
