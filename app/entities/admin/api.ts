@@ -111,6 +111,7 @@ export interface FeedbackReport {
   message: string;
   page_url: string;
   browser_info: string;
+  attachment_urls: string[];
   admin_response: string;
   responded_at: string | null;
   created_at: string;
@@ -195,7 +196,7 @@ export const adminApi = {
     });
   },
 
-  createFeedback(data: { type: 'bug' | 'feedback' | 'idea'; title: string; message: string; page_url?: string; user_name?: string }) {
+  createFeedback(data: { type: 'bug' | 'feedback' | 'idea'; title: string; message: string; page_url?: string; user_name?: string; attachment_urls?: string[] }) {
     return apiFetch<{ feedback: FeedbackReport }>('/admin/feedback', {
       method: 'POST',
       body: JSON.stringify(data),
