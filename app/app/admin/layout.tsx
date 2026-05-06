@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft, Server, Bug } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, MessageCircle, ChevronLeft, Server, Bug, Zap } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/courses', label: 'Khóa học', icon: BookOpen },
   { href: '/admin/chat', label: 'Chat AI', icon: MessageCircle },
   { href: '/admin/feedback', label: 'Feedback', icon: Bug },
+  { href: '/admin/usage', label: 'AI Usage', icon: Zap },
   { href: '/admin/server', label: 'Server Logs', icon: Server },
 ];
 
