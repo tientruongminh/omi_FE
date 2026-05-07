@@ -11,6 +11,8 @@ import ZoomIndicator from './ZoomIndicator';
 import CanvasHint from './CanvasHint';
 import DocumentSidebar from './DocumentSidebar';
 import ExpandedNodeView from './ExpandedNodeView';
+import ContextMenu from './ContextMenu';
+import { ContextMenuState } from '../model/types';
 import {
   fetchLearningUnitsForRoadmapNode,
   fetchPassagesForLearningUnitSource,
@@ -141,8 +143,10 @@ function buildSourceSubtitle(sourceType: string, passageCount: number): string {
   return `${sourceType.toUpperCase()} - ${passageCount} trich doan`;
 }
 
-function buildAINodeTitle(type: 'ai-chat' | 'ai-review'): string {
-  return type === 'ai-chat' ? 'AI hoi dap' : 'On tap';
+function buildAINodeTitle(type: 'ai-chat' | 'ai-review' | 'synthesis'): string {
+  if (type === 'ai-chat') return 'AI hoi dap';
+  if (type === 'ai-review') return 'On tap';
+  return 'Tong hop';
 }
 
 export default function InfiniteCanvas({ unitId, projectId }: Props) {
@@ -158,6 +162,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [previewNodes, setPreviewNodes] = useState<CanvasNode[]>([]);
   const [sidebarContext, setSidebarContext] = useState<SidebarContext | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const [sourceCache, setSourceCache] = useState<Record<string, LearningUnitSource[]>>({});
   const [passageCache, setPassageCache] = useState<Record<string, LearningUnitPassage[]>>({});
@@ -508,6 +513,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       width: 196,
       height: 48,
       parentId: parentNode.id,
+      questionCount: type === 'ai-chat' ? 15 : undefined,
     };
 
     setNodes((prev) => [...prev, newNode]);
@@ -515,6 +521,131 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     setFocusedNodeId(nodeId);
     openPreviewNode(newNode);
   }, [nodes, openPreviewNode]);
+
+  const createCanvasNodeAt = useCallback((type: 'ai-chat' | 'ai-review' | 'synthesis', x: number, y: number, parentNode?: CanvasNode) => {
+    const nodeId = `${type}-${parentNode?.id ?? 'canvas'}-${Date.now()}`;
+    const seedText = parentNode?.content || parentNode?.title || workspaceData?.roadmapNode.title || 'Workspace context';
+    const newNode: CanvasNode = {
+      id: nodeId,
+      type,
+      title: buildAINodeTitle(type),
+      content: type === 'ai-chat'
+        ? `Ban dang hoc tu workspace${parentNode ? `, node "${parentNode.title}"` : ''}.\n\nNgu canh:\n${seedText}`
+        : type === 'ai-review'
+          ? `Hay on tap dua tren noi dung sau:\n${seedText}`
+          : `Tong hop cac node/tai lieu lien quan trong workspace.\n\nNgu canh ban dau:\n${seedText}`,
+      metaSubtitle: parentNode ? `Tao tu ${parentNode.title}` : 'Tao tu canvas',
+      nodeId: parentNode?.nodeId ?? workspaceData?.roadmapNode.id,
+      sourceId: parentNode?.sourceId,
+      sourceType: parentNode?.sourceType,
+      passages: parentNode?.passages,
+      passageIds: parentNode?.passageIds,
+      x,
+      y,
+      width: type === 'synthesis' ? 220 : 196,
+      height: type === 'synthesis' ? 52 : 48,
+      parentId: parentNode?.id,
+      questionCount: type === 'ai-chat' ? 15 : undefined,
+    };
+    setNodes((prev) => [...prev, newNode]);
+    if (parentNode) {
+      setEdges((prev) => [...prev, { from: parentNode.id, to: nodeId }]);
+    }
+    setFocusedNodeId(nodeId);
+    openPreviewNode(newNode);
+  }, [openPreviewNode, workspaceData]);
+
+  const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect();
+    const canvasX = rect ? (e.clientX - rect.left - transform.x) / transform.scale : e.clientX;
+    const canvasY = rect ? (e.clientY - rect.top - transform.y) / transform.scale : e.clientY;
+    setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
+  }, [transform]);
+
+  const handleNodeContextMenu = useCallback((e: React.MouseEvent, node: CanvasNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      nodeId: node.id,
+      nodeType: node.type,
+      hasChildren: nodes.some((item) => item.parentId === node.id),
+    });
+  }, [nodes]);
+
+  const handleContextMenuAction = useCallback((action: string, nodeId?: string) => {
+    const parentNode = nodeId ? nodes.find((node) => node.id === nodeId) : undefined;
+    const x = parentNode ? parentNode.x + parentNode.width + 90 : (contextMenu?.canvasX ?? 520);
+    const y = parentNode ? parentNode.y + nodes.filter((node) => node.parentId === parentNode.id).length * 72 : (contextMenu?.canvasY ?? 340);
+
+    switch (action) {
+      case 'ai-chat':
+      case 'add-ai-chat':
+        if (parentNode) handleCreateAINode(parentNode.id, 'ai-chat');
+        else createCanvasNodeAt('ai-chat', x, y);
+        break;
+      case 'ai-review':
+      case 'add-ai-review':
+        if (parentNode) handleCreateAINode(parentNode.id, 'ai-review');
+        else createCanvasNodeAt('ai-review', x, y);
+        break;
+      case 'ai-synthesis':
+      case 'add-synthesis':
+        createCanvasNodeAt('synthesis', x, y, parentNode);
+        break;
+      case 'add-note': {
+        const nodeId = `note-${parentNode?.id ?? 'canvas'}-${Date.now()}`;
+        const newNode: CanvasNode = {
+          id: nodeId,
+          type: 'note',
+          title: 'Ghi chu',
+          content: parentNode?.content || '',
+          metaSubtitle: parentNode ? `Tao tu ${parentNode.title}` : 'Ghi chu moi',
+          nodeId: parentNode?.nodeId ?? workspaceData?.roadmapNode.id,
+          x,
+          y,
+          width: 196,
+          height: 48,
+          parentId: parentNode?.id,
+        };
+        setNodes((prev) => [...prev, newNode]);
+        if (parentNode) setEdges((prev) => [...prev, { from: parentNode.id, to: nodeId }]);
+        setFocusedNodeId(nodeId);
+        openPreviewNode(newNode);
+        break;
+      }
+      case 'open-read':
+        if (parentNode) openPreviewNode(parentNode);
+        break;
+      case 'delete-node':
+        if (nodeId) {
+          setNodes((prev) => prev.filter((node) => node.id !== nodeId && node.parentId !== nodeId));
+          setEdges((prev) => prev.filter((edge) => edge.from !== nodeId && edge.to !== nodeId));
+          setPreviewNodes((prev) => prev.filter((node) => node.id !== nodeId));
+        }
+        break;
+    }
+    setContextMenu(null);
+  }, [contextMenu, createCanvasNodeAt, handleCreateAINode, nodes, openPreviewNode]);
+
+  const handleAddUnitDirect = useCallback((unitIdToAdd: string, unitLabel: string, cx: number, cy: number) => {
+    const nodeId = `unit-${unitIdToAdd}-${Date.now()}`;
+    const newNode: CanvasNode = {
+      id: nodeId,
+      type: 'chapter',
+      title: unitLabel,
+      content: unitLabel,
+      nodeId: unitIdToAdd,
+      x: cx,
+      y: cy,
+      width: 192,
+      height: 48,
+    };
+    setNodes((prev) => [...prev, newNode]);
+    setFocusedNodeId(nodeId);
+  }, []);
 
   const handleNodeClick = useCallback((id: string) => {
     const node = nodes.find((item) => item.id === id);
@@ -625,10 +756,12 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onContextMenu={handleCanvasContextMenu}
         onClick={(e) => {
           if (!(e.target as HTMLElement).closest('[data-node-id]')) {
             setFocusedNodeId(null);
           }
+          setContextMenu(null);
         }}
       >
         <div
@@ -673,7 +806,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
                 isFocused={focusedNodeId === node.id}
                 onDrag={handleNodeDrag}
                 onClick={handleNodeClick}
-                onContextMenu={() => {}}
+                onContextMenu={handleNodeContextMenu}
                 onStartEdge={() => {}}
                 scale={transform.scale}
                 collapsedChildCount={0}
@@ -685,6 +818,17 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         <ZoomControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} />
         <ZoomIndicator scale={transform.scale} />
         {!hasExpanded && !hasSidebar && !workspaceLoading && !workspaceError && <CanvasHint />}
+        <AnimatePresence>
+          {contextMenu && (
+            <ContextMenu
+              menu={contextMenu}
+              onAction={handleContextMenuAction}
+              onClose={() => setContextMenu(null)}
+              onShowAddUnit={() => {}}
+              onAddUnitDirect={handleAddUnitDirect}
+            />
+          )}
+        </AnimatePresence>
       </div>
 
       <AnimatePresence>
