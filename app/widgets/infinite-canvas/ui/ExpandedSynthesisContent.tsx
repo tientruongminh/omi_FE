@@ -36,9 +36,14 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
     try {
       const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
       const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
-      const topic = `${prompt}\n\nNguồn:\n${sourceTexts}`;
-      const res = await aiApi.research(topic, 'medium');
-      const synthesizedContent = res.report;
+      const passageIds = sourceDocs.flatMap((s) => s.passageIds ?? []);
+      const res = await aiApi.generateStudySummary({
+        message: prompt,
+        canvas_node_id: node.id,
+        passage_ids: passageIds,
+        context: sourceTexts,
+      });
+      const synthesizedContent = res.content;
       onUpdateContent?.(node.id, synthesizedContent);
       setSynthesized(true);
       setTimeout(() => setSynthesized(false), 3000);
