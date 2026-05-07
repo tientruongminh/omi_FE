@@ -15,6 +15,8 @@ interface Props {
   onClick: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, node: CanvasNode) => void;
   onStartEdge?: (nodeId: string, side: 'left' | 'right' | 'top' | 'bottom', x: number, y: number) => void;
+  onCompleteEdge?: (nodeId: string) => void;
+  isEdgeTarget?: boolean;
   scale: number;
   collapsedChildCount?: number;
 }
@@ -22,7 +24,7 @@ interface Props {
 const HANDLE_SIZE = 10;
 
 export default function CanvasNode({
-  node, isExpanded, isFocused, onDrag, onClick, onContextMenu, onStartEdge, scale, collapsedChildCount = 0,
+  node, isExpanded, isFocused, onDrag, onClick, onContextMenu, onStartEdge, onCompleteEdge, isEdgeTarget, scale, collapsedChildCount = 0,
 }: Props) {
   const baseStyle = NODE_STYLES[node.type];
   const style = (node as any).customBg ? {
@@ -93,9 +95,11 @@ export default function CanvasNode({
         border: isSynthesis ? '2px solid transparent' : `2px solid ${style.border}`,
         ...synthesisStyle,
         color: style.textColor,
-        boxShadow: isFocused
-          ? `0 0 0 3px ${style.border}, 0 8px 32px rgba(0,0,0,0.18)`
-          : isSynthesis ? '0 4px 20px rgba(168,85,247,0.2)' : '0 2px 10px rgba(0,0,0,0.08)',
+        boxShadow: isEdgeTarget
+          ? '0 0 0 4px #22C55E, 0 10px 36px rgba(34,197,94,0.28)'
+          : isFocused
+            ? `0 0 0 3px ${style.border}, 0 8px 32px rgba(0,0,0,0.18)`
+            : isSynthesis ? '0 4px 20px rgba(168,85,247,0.2)' : '0 2px 10px rgba(0,0,0,0.08)',
         zIndex: isFocused ? 10 : 1,
         opacity: isExpanded ? 0.6 : 1,
       }}
@@ -105,6 +109,13 @@ export default function CanvasNode({
       transition={{ duration: 0.25, ease: 'easeOut' }}
       whileHover={{ scale: 1.03, boxShadow: '0 6px 24px rgba(0,0,0,0.14)' }}
       onMouseDown={handleMouseDown}
+      onMouseUp={(e) => {
+        if (isEdgeTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          onCompleteEdge?.(node.id);
+        }
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) onClick(node.id); }}

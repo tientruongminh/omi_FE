@@ -497,9 +497,16 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       setEdges((prev) => prev.some((edge) => edge.from === draft.from && edge.to === toNodeId)
         ? prev
         : [...prev, { from: draft.from, to: toNodeId }]);
+      const toNode = nodes.find((node) => node.id === toNodeId);
+      if (toNode?.type === 'synthesis') {
+        const sourceNode = nodes.find((node) => node.id === draft.from);
+        if (sourceNode) {
+          setPreviewNodes((prev) => prev.map((node) => node.id === toNodeId ? { ...node, synthSourceIds: Array.from(new Set([...(node.synthSourceIds || []), sourceNode.id])) } : node));
+        }
+      }
       return null;
     });
-  }, []);
+  }, [nodes]);
 
   const handleCreateAINode = useCallback((
     parentNodeId: string,
@@ -564,7 +571,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       setEdges((prev) => [...prev, { from: parentNode.id, to: nodeId }]);
     }
     setFocusedNodeId(nodeId);
-    openPreviewNode(newNode);
+    if (type === 'synthesis') openPreviewNode(newNode);
   }, [openPreviewNode, workspaceData]);
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
@@ -625,7 +632,8 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         setNodes((prev) => [...prev, newNode]);
         if (parentNode) setEdges((prev) => [...prev, { from: parentNode.id, to: nodeId }]);
         setFocusedNodeId(nodeId);
-        openPreviewNode(newNode);
+        setSidebarContext(null);
+        setSidebarNode(newNode);
         break;
       }
       case 'open-read':
@@ -635,7 +643,8 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         if (nodeId) {
           setNodes((prev) => prev.filter((node) => node.id !== nodeId && node.parentId !== nodeId));
           setEdges((prev) => prev.filter((edge) => edge.from !== nodeId && edge.to !== nodeId));
-          setPreviewNodes((prev) => prev.filter((node) => node.id !== nodeId));
+            setPreviewNodes((prev) => prev.filter((node) => node.id !== nodeId));
+          setSidebarNode((prev) => prev?.id === nodeId ? null : prev);
         }
         break;
     }
@@ -764,10 +773,18 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     setTransform((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
   }, [edgeDraft, transform]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     isPanning.current = false;
-    setEdgeDraft(null);
-  }, []);
+    if (edgeDraft) {
+      const target = (e.target as HTMLElement).closest('[data-node-id]') as HTMLElement | null;
+      const targetId = target?.dataset.nodeId;
+      if (targetId && targetId !== edgeDraft.from) {
+        completeEdgeToNode(targetId);
+        return;
+      }
+      setEdgeDraft(null);
+    }
+  }, [completeEdgeToNode, edgeDraft]);
 
   const zoomIn = () => setTransform((prev) => ({ ...prev, scale: Math.min(2.5, prev.scale * 1.2) }));
   const zoomOut = () => setTransform((prev) => ({ ...prev, scale: Math.max(0.3, prev.scale / 1.2) }));
@@ -846,6 +863,8 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
                 onClick={handleNodeClick}
                 onContextMenu={handleNodeContextMenu}
                 onStartEdge={handleStartEdge}
+                onCompleteEdge={completeEdgeToNode}
+                isEdgeTarget={!!edgeDraft && edgeDraft.from !== node.id}
                 scale={transform.scale}
                 collapsedChildCount={0}
               />
