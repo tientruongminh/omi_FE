@@ -74,7 +74,7 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
 
     try {
       const res = await aiApi.generateStudyNotes({
-        message: 'Hoàn thiện và cải thiện ghi chú này, giữ ý nghĩa, sửa chính tả/văn phong, trả về markdown sạch.',
+        message: 'Hoàn thiện và cải thiện ghi chú này, giữ ý nghĩa, sửa chính tả/văn phong. Trả về plain text thuần, không Markdown, không heading #, không **bold**, không bảng markdown.',
         canvas_node_id: node.id,
         node_id: node.nodeId,
         source_id: node.sourceId,
