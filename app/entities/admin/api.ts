@@ -166,10 +166,10 @@ export const adminApi = {
     return apiFetch(`/admin/teachers/${teacherId}/verify`, { method: 'PUT' });
   },
 
-  async sendAdminChat(message: string) {
+  async sendAdminChat(message: string, sessionId?: string | null) {
     const res = await apiFetch<{ session_id: string; response: string }>('/admin/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, session_id: sessionId || undefined }),
     });
     requestTokenBalanceRefresh();
     return res;
