@@ -16,6 +16,9 @@ export default function robots(): MetadataRoute.Robots {
           '/tools',
           '/blog',
           '/use-cases',
+          '/manifest.webmanifest',
+          '/favicon.ico',
+          '/og-image.png',
         ],
         disallow: [
           '/admin',
@@ -28,6 +31,7 @@ export default function robots(): MetadataRoute.Robots {
           '/reference-viewer',
           '/calendar-callback',
           '/api',
+          '/_next/server',
         ],
       },
     ],
