@@ -217,7 +217,7 @@ export async function apiFetchEventStream<TResult = unknown>(
 
       options.onEvent?.(parsed);
 
-      if (parsed.event === 'final' || parsed.event === 'done' || parsed.event === 'review') {
+      if (parsed.event === 'final' || parsed.event === 'review') {
         return parsed.data as TResult;
       }
       if (parsed.event === 'error') {
