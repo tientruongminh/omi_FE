@@ -22,7 +22,7 @@ declare global {
 }
 
 const GOOGLE_CLIENT_ID =
-  '998872753408-khd6tel30rr8bbkj8ajpjhd7s2f40gm3.apps.googleusercontent.com';
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || '';
 
 function normalizeInternalRedirectPath(rawPath: string | null, fallback = '/project') {
   if (!rawPath) return fallback;
@@ -91,6 +91,13 @@ function LoginContent() {
   );
 
   useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) {
+      console.warn(
+        'NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Google Sign-In button will not be initialized.',
+      );
+      return;
+    }
+
     // Load Google Identity Services script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';

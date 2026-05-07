@@ -111,6 +111,12 @@ function createStageSnapshot(): ProgressStageState[] {
   }));
 }
 
+const MAX_TOTAL_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+function formatFileSizeMB(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export function CreateProjectModal({ onClose }: Props) {
   const router = useRouter();
   const addProject = useOmiLearnStore((s) => s.addProject);
@@ -131,6 +137,7 @@ export function CreateProjectModal({ onClose }: Props) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [roadmapPercent, setRoadmapPercent] = useState(0);
   const [roadmapStatusMessage, setRoadmapStatusMessage] = useState<string | null>(null);
@@ -157,6 +164,27 @@ export function CreateProjectModal({ onClose }: Props) {
     const unselected = all.filter(r => !selectedDocs.has(r.id));
     return [...selected, ...unselected];
   }, [allSearchResults, selectedDocs]);
+
+  const totalUploadedBytes = useMemo(
+    () => uploadedFiles.reduce((sum, file) => sum + file.size, 0),
+    [uploadedFiles],
+  );
+
+  useEffect(() => {
+    if (step !== 1) {
+      setUploadError(null);
+      return;
+    }
+
+    if (
+      createError &&
+      (createError.includes('50 MB') ||
+        createError.includes('Tổng dung lượng file') ||
+        createError.includes('File "'))
+    ) {
+      setUploadError(createError);
+    }
+  }, [createError, step]);
 
   const addEmptyResource = () => {
     setResources((prev) => [...prev, { id: `res-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, type: 'youtube' as ResourceType, url: '', title: '' }]);
@@ -192,19 +220,34 @@ export function CreateProjectModal({ onClose }: Props) {
     }
   }, [step, step2Initialized, projectName, projectDesc, uploadedFiles, resources]);
 
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB per file
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
     const valid: File[] = [];
+    let nextTotalBytes = totalUploadedBytes;
+    let nextUploadError: string | null = null;
     for (const f of Array.from(files)) {
       if (f.size > MAX_FILE_SIZE) {
+        nextUploadError = `File "${f.name}" vượt quá 50 MB (${(f.size / 1024 / 1024).toFixed(1)} MB).`;
         setCreateError(`File "${f.name}" vượt quá 50 MB (${(f.size / 1024 / 1024).toFixed(1)} MB)`);
         continue;
       }
+      if (nextTotalBytes + f.size > MAX_TOTAL_UPLOAD_BYTES) {
+        nextUploadError = `Tổng dung lượng file vượt quá 50 MB. Hiện tại đã chọn ${formatFileSizeMB(totalUploadedBytes)}, thêm "${f.name}" sẽ thành ${formatFileSizeMB(nextTotalBytes + f.size)}.`;
+        setCreateError(
+          `Tổng dung lượng file vượt quá 50 MB. Hiện tại đã chọn ${formatFileSizeMB(totalUploadedBytes)}, thêm "${f.name}" sẽ thành ${formatFileSizeMB(nextTotalBytes + f.size)}.`,
+        );
+        continue;
+      }
       valid.push(f);
+      nextTotalBytes += f.size;
     }
-    setUploadedFiles((prev) => [...prev, ...valid]);
+    setUploadError(nextUploadError);
+    if (valid.length > 0) {
+      setCreateError(null);
+      setUploadedFiles((prev) => [...prev, ...valid]);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -352,6 +395,13 @@ export function CreateProjectModal({ onClose }: Props) {
   };
 
   const handleCreateProject = async () => {
+    if (totalUploadedBytes > MAX_TOTAL_UPLOAD_BYTES) {
+      setCreateError(
+        `Tổng dung lượng file đang là ${formatFileSizeMB(totalUploadedBytes)}, vượt quá giới hạn 50 MB.`,
+      );
+      return;
+    }
+
     const startedAt = Date.now();
     setIsCreating(true);
     setCreateStartedAt(startedAt);
@@ -360,6 +410,7 @@ export function CreateProjectModal({ onClose }: Props) {
     totalElapsedMsRef.current = 0;
     uploadElapsedMsRef.current = 0;
     setCreateError(null);
+    setUploadError(null);
     setUploadProgress(null);
     setUploadPercent(0);
     uploadProgressRef.current = null;
@@ -524,12 +575,24 @@ export function CreateProjectModal({ onClose }: Props) {
                     <p className="text-xs text-[#9CA3AF] mt-1">PDF, DOCX, MP4, MP3...</p>
                     <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
                   </div>
+                  <p className={`mt-2 text-xs ${totalUploadedBytes > MAX_TOTAL_UPLOAD_BYTES ? 'text-red-600' : 'text-[#9CA3AF]'}`}>
+                    Tổng dung lượng file tối đa là 50 MB. Hiện tại: {formatFileSizeMB(totalUploadedBytes)} / {formatFileSizeMB(MAX_TOTAL_UPLOAD_BYTES)}
+                  </p>
+                  {uploadError && (
+                    <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                      {uploadError}
+                    </p>
+                  )}
                   {uploadedFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {uploadedFiles.map((f, i) => (
                         <span key={i} className="flex items-center gap-1.5 px-3 py-1 bg-[#2D2D2D] text-white text-xs rounded-full">
                           <span>{fileTypeIcon(f.name)}</span>{f.name} <span className="text-[#9CA3AF]">({(f.size / 1024 / 1024).toFixed(1)} MB)</span>
-                          <button onClick={() => setUploadedFiles((prev) => prev.filter((_, j) => j !== i))}><X size={10} /></button>
+                          <button onClick={() => {
+                            setUploadedFiles((prev) => prev.filter((_, j) => j !== i));
+                            setCreateError(null);
+                            setUploadError(null);
+                          }}><X size={10} /></button>
                         </span>
                       ))}
                     </div>
