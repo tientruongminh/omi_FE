@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays } from 'lucide-react';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
@@ -51,6 +51,7 @@ interface PlanSurveyModalProps {
 export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   const router = useRouter();
   const setPlanComplete = useOmiLearnStore((s) => s.setPlanComplete);
+  const popupPollRef = useRef<number | null>(null);
 
   const [screen, setScreen]     = useState<Screen>('survey');
   const [answers, setAnswers]   = useState(['', '', '']);
@@ -61,29 +62,67 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   const [planText, setPlanText]         = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const browserTimeZone =
+    typeof window !== 'undefined'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : undefined;
+
+  const refreshCalendarStatus = useCallback(async (targetProjectId?: string) => {
+    if (!targetProjectId) {
+      setCalendarConnected(false);
+      return false;
+    }
+
+    const query = new URLSearchParams({ project_id: targetProjectId }).toString();
+    try {
+      const res = await apiFetch<{ connected: boolean }>(`/learning/calendar/status?${query}`);
+      const isConnected = Boolean(res.connected);
+      setCalendarConnected(isConnected);
+      return isConnected;
+    } catch {
+      setCalendarConnected(false);
+      return false;
+    }
+  }, []);
 
   // ─── Check Google Calendar connection status on mount ─────
   useEffect(() => {
-    apiFetch<{ connected: boolean }>('/learning/calendar/status')
-      .then((res) => {
-        if (res.connected) setCalendarConnected(true);
-      })
-      .catch(() => {}); // ignore if not connected
-  }, []);
+    if (!projectId) {
+      setCalendarConnected(false);
+      setCalendarConnecting(false);
+      return;
+    }
+    void refreshCalendarStatus(projectId);
+  }, [projectId, refreshCalendarStatus]);
 
   // ─── Listen for Google Calendar OAuth callback ────────────
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (
         event.origin === window.location.origin &&
-        event.data?.type === 'google-calendar-connected'
+        event.data?.type === 'google-calendar-connected' &&
+        event.data?.projectId === projectId
       ) {
-        setCalendarConnected(true);
+        if (popupPollRef.current) {
+          window.clearInterval(popupPollRef.current);
+          popupPollRef.current = null;
+        }
+        setCalendarConnected(event.data?.status === 'success');
         setCalendarConnecting(false);
+        void refreshCalendarStatus(projectId);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
+  }, [projectId, refreshCalendarStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (popupPollRef.current) {
+        window.clearInterval(popupPollRef.current);
+        popupPollRef.current = null;
+      }
+    };
   }, []);
 
   const unlockedUpTo = answers.reduce((acc, a, i) => {
@@ -116,6 +155,7 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
           study_duration_days: answers[0],
           target_mastery: answers[1],
           wishes_text: answers[2],
+          time_zone: browserTimeZone,
         }),
       });
 
@@ -129,15 +169,38 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   };
 
   const handleConnectCalendar = async () => {
+    if (!projectId) {
+      setError('Project ID is missing');
+      return;
+    }
+
     setCalendarConnecting(true);
     try {
-      const { url } = await apiFetch<{ url: string }>('/learning/calendar/auth-url');
+      const query = new URLSearchParams({ project_id: projectId }).toString();
+      const { url } = await apiFetch<{ url: string }>(`/learning/calendar/auth-url?${query}`);
       // Open Google OAuth consent in popup
       const popup = window.open(url, 'google-calendar-auth', 'width=500,height=700,popup=yes');
       // If popup blocked, fall back to redirect
       if (!popup) {
         window.location.href = url;
+        return;
       }
+
+      if (popupPollRef.current) {
+        window.clearInterval(popupPollRef.current);
+      }
+
+      popupPollRef.current = window.setInterval(() => {
+        if (!popup.closed) return;
+
+        if (popupPollRef.current) {
+          window.clearInterval(popupPollRef.current);
+          popupPollRef.current = null;
+        }
+
+        setCalendarConnecting(false);
+        void refreshCalendarStatus(projectId);
+      }, 600);
     } catch {
       setCalendarConnecting(false);
       setError('Failed to connect Google Calendar. Please try again.');
@@ -158,6 +221,7 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
           study_duration_days: answers[0],
           target_mastery: answers[1],
           wishes_text: `${answers[2]}\n\nAdditional request: ${mod}`,
+          time_zone: browserTimeZone,
         }),
       });
 

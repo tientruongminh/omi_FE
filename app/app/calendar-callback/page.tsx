@@ -9,17 +9,22 @@ import { useSearchParams } from 'next/navigation';
 function CalendarCallbackContent() {
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
+  const projectId = searchParams.get('project_id');
 
   useEffect(() => {
     // Notify opener (PlanSurveyModal) that calendar was connected
     if (window.opener) {
       window.opener.postMessage(
-        { type: 'google-calendar-connected', status: status || 'success' },
+        {
+          type: 'google-calendar-connected',
+          status: status || 'success',
+          projectId,
+        },
         window.location.origin,
       );
       window.close();
     }
-  }, [status]);
+  }, [projectId, status]);
 
   return (
     <div className="text-center space-y-4">
