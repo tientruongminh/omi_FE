@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/entities/auth';
@@ -24,6 +24,13 @@ declare global {
 const GOOGLE_CLIENT_ID =
   '998872753408-khd6tel30rr8bbkj8ajpjhd7s2f40gm3.apps.googleusercontent.com';
 
+function normalizeInternalRedirectPath(rawPath: string | null, fallback = '/project') {
+  if (!rawPath) return fallback;
+  if (!rawPath.startsWith('/')) return fallback;
+  if (rawPath.startsWith('//')) return fallback;
+  return rawPath;
+}
+
 export default function LoginPage() {
   return (
     <Suspense>
@@ -33,12 +40,11 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { login, googleLogin, isAuthenticated, isLoading } = useAuthStore();
 
   // Redirect target: where the user came from, or /project
-  const redirectTo = searchParams.get('from') || '/project';
+  const redirectTo = normalizeInternalRedirectPath(searchParams.get('from'));
   const hasRedirectedRef = useRef(false);
 
   const [email, setEmail] = useState('');
@@ -51,9 +57,13 @@ function LoginContent() {
   const navigateAfterAuth = useCallback(() => {
     if (hasRedirectedRef.current) return;
     hasRedirectedRef.current = true;
-    router.replace(redirectTo);
-    router.refresh();
-  }, [redirectTo, router]);
+    // Auth in this app is cookie-driven at the proxy/server boundary.
+    // A hard navigation is more reliable than a client-side route replace
+    // here because it guarantees the new access_token cookie participates in
+    // the next request immediately, which prevents the "URL changed but login
+    // screen stayed until F5" race we were seeing after Google sign-in.
+    window.location.replace(redirectTo);
+  }, [redirectTo]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {

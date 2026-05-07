@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuthStore, authApi } from '@/entities/auth';
@@ -10,7 +9,6 @@ import { useAuthStore, authApi } from '@/entities/auth';
 type Step = 'email' | 'otp' | 'details';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { register, isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
   const hasRedirectedRef = useRef(false);
 
@@ -30,9 +28,10 @@ export default function RegisterPage() {
   const navigateAfterAuth = useCallback(() => {
     if (hasRedirectedRef.current) return;
     hasRedirectedRef.current = true;
-    router.replace('/project');
-    router.refresh();
-  }, [router]);
+    // Use a full navigation so the freshly written auth cookies are applied
+    // immediately by the proxy/server on the next page load.
+    window.location.replace('/project');
+  }, []);
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
