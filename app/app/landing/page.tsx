@@ -1738,7 +1738,7 @@ export default function LandingPage() {
             {["Chính sách bảo mật", "Điều khoản", "Liên hệ"].map((link) => (
               <a
                 key={link}
-                href="#"
+                href="/privacy"
                 className="text-xs transition-colors hover:text-[#1a1a1a]"
                 style={{ color: "#9ca3af" }}
               >
