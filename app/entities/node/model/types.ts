@@ -52,6 +52,8 @@ export interface CanvasNode {
   customBorder?: string;
   synthSourceIds?: string[];
   questionCount?: number;
+  noteVersions?: Array<{ id: string; title: string; content: string; createdAt: string }>;
+  activeNoteVersionId?: string;
 }
 
 export interface CanvasEdge {

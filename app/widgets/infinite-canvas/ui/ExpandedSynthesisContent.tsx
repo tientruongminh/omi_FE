@@ -12,7 +12,7 @@ interface Props {
   allNodes: CanvasNode[];
   edges: { from: string; to: string }[];
   onClose: () => void;
-  onUpdateContent?: (nodeId: string, content: string) => void;
+  onUpdateContent?: (nodeId: string, content: string, title?: string) => void;
 }
 
 export default function ExpandedSynthesisContent({ node, allNodes, edges, onClose, onUpdateContent }: Props) {
@@ -44,7 +44,8 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
         context: sourceTexts,
       });
       const synthesizedContent = res.content;
-      onUpdateContent?.(node.id, synthesizedContent);
+      const nextTitle = node.title === 'AI Tổng hợp' || node.title === 'Tổng hợp' ? (synthesizedContent.split('\n').find((line) => line.trim()) || node.title).replace(/^[-#*\d.\s]+/, '').slice(0, 48) : node.title;
+      onUpdateContent?.(node.id, synthesizedContent, nextTitle);
       setSynthesized(true);
       setTimeout(() => setSynthesized(false), 3000);
     } catch {
@@ -59,7 +60,8 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
           const text = s.content ?? s.summary ?? '';
           return `Nguồn ${s.title}: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`;
         }).join('\n\n');
-      onUpdateContent?.(node.id, synthesizedContent);
+      const nextTitle = node.title === 'AI Tổng hợp' || node.title === 'Tổng hợp' ? (synthesizedContent.split('\n').find((line) => line.trim()) || node.title).replace(/^[-#*\d.\s]+/, '').slice(0, 48) : node.title;
+      onUpdateContent?.(node.id, synthesizedContent, nextTitle);
       setSynthesized(true);
       setTimeout(() => setSynthesized(false), 3000);
     } finally {
