@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bug, Loader2, MessageSquareReply, RefreshCw } from 'lucide-react';
 import { adminApi, type FeedbackReport } from '@/entities/admin/api';
+import { normalizeUploadUrl } from '@/shared/lib/uploadUrls';
 
 const STATUS_LABEL: Record<FeedbackReport['status'], string> = {
   open: 'Open',
@@ -132,11 +133,14 @@ export default function AdminFeedbackPage() {
                 <div className="mb-4">
                   <p className="mb-2 text-xs font-bold text-[#5A5C58]">Ảnh đính kèm</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {selected.attachment_urls.map((url) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]">
-                        <img src={url} alt="Feedback attachment" className="h-28 w-full object-cover" />
-                      </a>
-                    ))}
+                    {selected.attachment_urls.map((url) => {
+                      const publicUrl = normalizeUploadUrl(url);
+                      return (
+                        <a key={url} href={publicUrl} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]">
+                          <img src={publicUrl} alt="Feedback attachment" className="h-28 w-full object-cover" />
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}

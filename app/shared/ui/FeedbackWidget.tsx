@@ -5,6 +5,7 @@ import { Bug, Camera, CheckCircle2, Lightbulb, Loader2, MessageCircle, Send, X }
 import { adminApi, type FeedbackReport } from '@/entities/admin/api';
 import { apiUpload } from '@/shared/api/client';
 import { useAuthStore } from '@/entities/auth';
+import { normalizeUploadUrl } from '@/shared/lib/uploadUrls';
 
 const STATUS_LABEL: Record<FeedbackReport['status'], string> = {
   open: 'Đã nhận',
@@ -48,7 +49,7 @@ export default function FeedbackWidget() {
       const attachmentUrls: string[] = [];
       for (const file of files.slice(0, 3)) {
         const uploaded = await apiUpload(file);
-        attachmentUrls.push(uploaded.url || `/api/upload/${uploaded.object_name}`);
+        attachmentUrls.push(normalizeUploadUrl(uploaded.url || `/api/upload/${uploaded.object_name}`));
       }
       const res = await adminApi.createFeedback({
         type,
