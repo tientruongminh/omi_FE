@@ -125,6 +125,28 @@ export interface FeedbackListResponse {
   feedback: FeedbackReport[];
 }
 
+export interface AdminChatSessionSummary {
+  id: string;
+  title: string;
+  admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message_at: string | null;
+}
+
+export interface AdminChatHistoryMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export interface AdminChatSessionDetail {
+  session: AdminChatSessionSummary;
+  messages: AdminChatHistoryMessage[];
+}
+
 // ─── API ─────────────────────────────────────────────────────
 
 export const adminApi = {
@@ -166,10 +188,18 @@ export const adminApi = {
     return apiFetch(`/admin/teachers/${teacherId}/verify`, { method: 'PUT' });
   },
 
-  async sendAdminChat(message: string) {
+  getAdminChatSessions(limit = 30) {
+    return apiFetch<{ sessions: AdminChatSessionSummary[] }>(`/admin/ai/chat/sessions?limit=${limit}`);
+  },
+
+  getAdminChatSession(sessionId: string) {
+    return apiFetch<AdminChatSessionDetail>(`/admin/ai/chat/sessions/${sessionId}`);
+  },
+
+  async sendAdminChat(message: string, sessionId?: string | null) {
     const res = await apiFetch<{ session_id: string; response: string }>('/admin/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, session_id: sessionId || undefined }),
     });
     requestTokenBalanceRefresh();
     return res;

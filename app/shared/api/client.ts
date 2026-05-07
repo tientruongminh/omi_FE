@@ -217,7 +217,7 @@ export async function apiFetchEventStream<TResult = unknown>(
 
       options.onEvent?.(parsed);
 
-      if (parsed.event === 'final') {
+      if (parsed.event === 'final' || parsed.event === 'review') {
         return parsed.data as TResult;
       }
       if (parsed.event === 'error') {
@@ -232,5 +232,5 @@ export async function apiFetchEventStream<TResult = unknown>(
     if (done) break;
   }
 
-  throw { error: 'Streaming request ended without a final payload.', status: 500 } as ApiError;
+  return {} as TResult;
 }

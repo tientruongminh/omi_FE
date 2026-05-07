@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bug, Camera, CheckCircle2, Lightbulb, Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Bug, Camera, CheckCircle2, Clipboard, Lightbulb, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { adminApi, type FeedbackReport } from '@/entities/admin/api';
 import { apiUpload } from '@/shared/api/client';
 import { useAuthStore } from '@/entities/auth';
@@ -41,6 +41,40 @@ export default function FeedbackWidget() {
   useEffect(() => {
     if (open) loadMine();
   }, [open, isAuthenticated]);
+
+  const addFiles = (incoming: File[]) => {
+    const imageFiles = incoming.filter((file) => file.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+    setFiles((prev) => {
+      const seen = new Set(prev.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+      const merged = [...prev];
+      for (const file of imageFiles) {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (!seen.has(key)) {
+          merged.push(file);
+          seen.add(key);
+        }
+      }
+      return merged.slice(0, 3);
+    });
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const pastedFiles = Array.from(event.clipboardData?.files || []);
+    const itemFiles = Array.from(event.clipboardData?.items || [])
+      .filter((item) => item.kind === 'file')
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file));
+    addFiles([...pastedFiles, ...itemFiles]);
+  };
+
+  const filePreviews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file) })), [files]);
+
+  useEffect(() => {
+    return () => {
+      filePreviews.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [filePreviews]);
 
   const submit = async () => {
     if (!title.trim() || !message.trim() || !isAuthenticated) return;
@@ -84,7 +118,7 @@ export default function FeedbackWidget() {
 
       {open && (
         <div className="fixed inset-0 z-[90] flex items-end justify-end bg-black/25 p-4 sm:p-6" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-[430px] overflow-hidden rounded-3xl border-2 border-[#1A1A1A] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-[430px] overflow-hidden rounded-3xl border-2 border-[#1A1A1A] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()} onPaste={handlePaste}>
             <div className="flex items-start justify-between bg-[#111827] px-5 py-4 text-white">
               <div>
                 <p className="text-sm font-black">Report bug / Feedback</p>
@@ -116,9 +150,22 @@ export default function FeedbackWidget() {
                 <div className="rounded-xl border-2 border-dashed border-[#E5E7EB] bg-[#FAFAF8] p-3">
                   <label className="flex cursor-pointer items-center justify-center gap-2 text-xs font-black text-[#6B2D3E]">
                     <Camera size={14} /> Thêm ảnh lỗi / screenshot
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 3))} />
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addFiles(Array.from(e.target.files || []))} />
                   </label>
-                  {files.length > 0 && <p className="mt-2 text-center text-[11px] text-[#6B7280]">{files.length} ảnh đã chọn</p>}
+                  <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-white px-2 py-1.5 text-[10px] font-bold text-[#6B7280]">
+                    <Clipboard size={12} /> Có thể Ctrl+V / Cmd+V ảnh screenshot trực tiếp vào form
+                  </div>
+                  {files.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {filePreviews.map(({ file, url }, index) => (
+                        <div key={`${file.name}-${file.size}-${index}`} className="relative overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
+                          <img src={url} alt={`Screenshot ${index + 1}`} className="h-16 w-full object-cover" />
+                          <button type="button" onClick={() => setFiles((prev) => prev.filter((_, i) => i !== index))} className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-black text-white">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {files.length > 0 && <p className="mt-2 text-center text-[11px] text-[#6B7280]">{files.length}/3 ảnh đã chọn</p>}
                   <p className="mt-1 text-center text-[10px] text-[#9CA3AF]">Tự kèm trang hiện tại để admin biết bạn gặp lỗi ở đâu.</p>
                 </div>
                 <button onClick={submit} disabled={sending || !title.trim() || !message.trim()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6B2D3E] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
