@@ -64,8 +64,24 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
           flashcard_count: 15,
         }, (event) => {
           if (event.event === 'progress') {
-            const data = event.data as { step?: number; total?: number; message?: string };
-            if (!cancelled) setProgress({ step: data.step || 0, total: data.total || 4, message: data.message || 'Đang tạo' });
+            const data = event.data as { step?: number; total?: number; done?: number; message?: string };
+            if (!cancelled) setProgress({ step: data.done ?? data.step ?? 0, total: data.total || 4, message: data.message || 'Đang tạo' });
+          }
+          if (event.event === 'quiz_batch') {
+            const data = event.data as { items?: GeneratedReview['quiz'] };
+            if (!cancelled && data.items?.length) setGenerated((prev) => ({ quiz: [...(prev?.quiz || []), ...data.items!], flashcards: prev?.flashcards || [], essay: prev?.essay || { prompt: '', rubric: [] }, teach: prev?.teach || { prompt: '' } }));
+          }
+          if (event.event === 'flashcard_batch') {
+            const data = event.data as { items?: GeneratedReview['flashcards'] };
+            if (!cancelled && data.items?.length) setGenerated((prev) => ({ quiz: prev?.quiz || [], flashcards: [...(prev?.flashcards || []), ...data.items!], essay: prev?.essay || { prompt: '', rubric: [] }, teach: prev?.teach || { prompt: '' } }));
+          }
+          if (event.event === 'essay') {
+            const data = event.data as GeneratedReview['essay'];
+            if (!cancelled) setGenerated((prev) => ({ quiz: prev?.quiz || [], flashcards: prev?.flashcards || [], essay: data, teach: prev?.teach || { prompt: '' } }));
+          }
+          if (event.event === 'teach') {
+            const data = event.data as GeneratedReview['teach'];
+            if (!cancelled) setGenerated((prev) => ({ quiz: prev?.quiz || [], flashcards: prev?.flashcards || [], essay: prev?.essay || { prompt: '', rubric: [] }, teach: data }));
           }
         });
         if (!cancelled) setGenerated(res);
@@ -179,10 +195,18 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
             <button onClick={async () => {
               setGenerating(true); setProgress({ step: 1, total: 4, message: `Đang tạo thêm ${moreCount} câu` });
               try {
+                const beforeQuiz = generated?.quiz?.length || 0;
+                const beforeCards = generated?.flashcards?.length || 0;
                 const res = await aiApi.streamStudyReview({ message: `Tạo thêm ${moreCount} câu ôn tập mới, tránh trùng với bộ hiện tại.`, canvas_node_id: node.id, node_id: node.nodeId, source_id: node.sourceId, source_type: node.sourceType, passage_ids: node.passageIds ?? [], context: node.content, selected_text: node.summary, quiz_count: moreCount, flashcard_count: moreCount, append: true }, (event) => {
-                  if (event.event === 'progress') { const data = event.data as { step?: number; total?: number; message?: string }; setProgress({ step: data.step || 0, total: data.total || 4, message: data.message || 'Đang tạo' }); }
+                  if (event.event === 'progress') { const data = event.data as { step?: number; total?: number; done?: number; message?: string }; setProgress({ step: data.done ?? data.step ?? 0, total: data.total || 4, message: data.message || 'Đang tạo' }); }
+                  if (event.event === 'quiz_batch') { const data = event.data as { items?: GeneratedReview['quiz'] }; if (data.items?.length) setGenerated((prev) => ({ quiz: [...(prev?.quiz || []), ...data.items!], flashcards: prev?.flashcards || [], essay: prev?.essay || { prompt: '', rubric: [] }, teach: prev?.teach || { prompt: '' } })); }
+                  if (event.event === 'flashcard_batch') { const data = event.data as { items?: GeneratedReview['flashcards'] }; if (data.items?.length) setGenerated((prev) => ({ quiz: prev?.quiz || [], flashcards: [...(prev?.flashcards || []), ...data.items!], essay: prev?.essay || { prompt: '', rubric: [] }, teach: prev?.teach || { prompt: '' } })); }
                 });
-                setGenerated((prev) => ({ quiz: [...(prev?.quiz || []), ...(res.quiz || [])], flashcards: [...(prev?.flashcards || []), ...(res.flashcards || [])], essay: res.essay || prev?.essay || { prompt: '', rubric: [] }, teach: res.teach || prev?.teach || { prompt: '' } }));
+                setGenerated((prev) => {
+                  const hasStreamed = (prev?.quiz?.length || 0) > beforeQuiz || (prev?.flashcards?.length || 0) > beforeCards;
+                  if (hasStreamed) return prev;
+                  return { quiz: [...(prev?.quiz || []), ...(res.quiz || [])], flashcards: [...(prev?.flashcards || []), ...(res.flashcards || [])], essay: res.essay || prev?.essay || { prompt: '', rubric: [] }, teach: res.teach || prev?.teach || { prompt: '' } };
+                });
               } finally { setGenerating(false); }
             }} className="flex items-center gap-1 rounded-lg bg-[#991B1B] px-3 py-1.5 text-[11px] font-bold text-white"><Plus size={12} /> câu</button>
           </div>
