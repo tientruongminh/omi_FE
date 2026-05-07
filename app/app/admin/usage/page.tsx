@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { apiFetch } from '@/shared/api/client';
+import { adminApi, type AdminUser } from '@/entities/admin/api';
 
 type UsageSummary = {
   summary: { total_tokens: number; today_tokens: number; month_tokens: number; request_count: number };
@@ -31,6 +32,7 @@ function fmt(n: number) {
 export default function AdminUsagePage() {
   const [data, setData] = useState<UsageSummary | null>(null);
   const [wallets, setWallets] = useState<WalletUser[]>([]);
+  const [userDirectory, setUserDirectory] = useState<Record<string, AdminUser>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { quota: string; bonus: string }>>({});
@@ -38,12 +40,14 @@ export default function AdminUsagePage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [summary, walletData] = await Promise.all([
+      const [summary, walletData, usersData] = await Promise.all([
         apiFetch<UsageSummary>('/tokens/admin/summary'),
         apiFetch<WalletResponse>('/tokens/admin/users'),
+        adminApi.getUsers(500, 0),
       ]);
       setData(summary);
       setWallets(walletData.users ?? []);
+      setUserDirectory(Object.fromEntries((usersData.users ?? []).map((u) => [u.user_id, u])));
       setDrafts(Object.fromEntries((walletData.users ?? []).map((u) => [u.user_id, {
         quota: String(u.monthly_quota_tokens),
         bonus: String(u.bonus_tokens),
@@ -71,6 +75,17 @@ export default function AdminUsagePage() {
     } finally {
       setSavingId(null);
     }
+  };
+
+  const getUserLabel = (userId: string) => {
+    if (userId === 'anonymous') return { title: 'Anonymous request', subtitle: 'Không có user_id trong request', role: 'unknown' };
+    const user = userDirectory[userId];
+    if (!user) return { title: 'Unknown user', subtitle: userId, role: 'unknown' };
+    return {
+      title: user.name || user.email || userId,
+      subtitle: `${user.email} • ${userId}`,
+      role: user.role,
+    };
   };
 
   return (
@@ -133,7 +148,20 @@ export default function AdminUsagePage() {
                       const draft = drafts[u.user_id] || { quota: String(u.monthly_quota_tokens), bonus: String(u.bonus_tokens) };
                       return (
                         <tr key={u.user_id}>
-                          <td className="max-w-[240px] truncate px-5 py-4 font-bold text-[#111827]">{u.user_id}</td>
+                          <td className="max-w-[320px] px-5 py-4">
+                            {(() => {
+                              const label = getUserLabel(u.user_id);
+                              return (
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="truncate font-bold text-[#111827]">{label.title}</p>
+                                    <span className="rounded-full bg-[#EEF2FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#4338CA]">{label.role}</span>
+                                  </div>
+                                  <p className="mt-0.5 truncate text-xs text-[#6B7280]">{label.subtitle}</p>
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td className="px-5 py-4 text-[#6B7280]">{fmt(u.used_tokens)}</td>
                           <td className="px-5 py-4 font-black text-[#6B2D3E]">{fmt(u.remaining_tokens)}</td>
                           <td className="px-5 py-4">
@@ -158,7 +186,10 @@ export default function AdminUsagePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <UsageTable title="Top users" rows={data.by_user.map((r) => ({ name: r.user_id, tokens: r.total_tokens, requests: r.requests }))} />
+            <UsageTable title="Top users" rows={data.by_user.map((r) => {
+              const label = getUserLabel(r.user_id);
+              return { name: label.title, subtitle: label.subtitle, role: label.role, tokens: r.total_tokens, requests: r.requests };
+            })} />
             <UsageTable title="Top features" rows={data.by_feature.map((r) => ({ name: r.feature, tokens: r.total_tokens, requests: r.requests }))} />
           </div>
         </div>
@@ -167,7 +198,7 @@ export default function AdminUsagePage() {
   );
 }
 
-function UsageTable({ title, rows }: { title: string; rows: Array<{ name: string; tokens: number; requests: number }> }) {
+function UsageTable({ title, rows }: { title: string; rows: Array<{ name: string; subtitle?: string; role?: string; tokens: number; requests: number }> }) {
   return (
     <div className="overflow-hidden rounded-2xl border-2 border-[#E5E7EB] bg-white">
       <div className="border-b border-[#E5E7EB] px-5 py-4">
@@ -180,7 +211,11 @@ function UsageTable({ title, rows }: { title: string; rows: Array<{ name: string
           {rows.map((row) => (
             <div key={row.name} className="flex items-center justify-between gap-4 px-5 py-4">
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-[#111827]">{row.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-bold text-[#111827]">{row.name}</p>
+                  {row.role && <span className="rounded-full bg-[#EEF2FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#4338CA]">{row.role}</span>}
+                </div>
+                {row.subtitle && <p className="truncate text-xs text-[#6B7280]">{row.subtitle}</p>}
                 <p className="text-xs text-[#6B7280]">{fmt(row.requests)} requests</p>
               </div>
               <p className="shrink-0 text-sm font-black text-[#6B2D3E]">{fmt(row.tokens)} tokens</p>
