@@ -3,8 +3,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock3, FileClock, X } from 'lucide-react';
 import {
-  type RoadmapCreationReport,
+  calculateOverallRoadmapProgress,
   formatElapsed,
+  type RoadmapCreationReport,
 } from '@/features/create-project/model/roadmapCreationReport';
 
 interface Props {
@@ -13,6 +14,12 @@ interface Props {
 }
 
 export function RoadmapCreationReportModal({ report, onClose }: Props) {
+  const overallRoadmapProgress = calculateOverallRoadmapProgress(
+    report.uploadPercent,
+    report.roadmapPercent,
+    report.uploadPercent > 0 || Boolean(report.uploadElapsedMs),
+  );
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -48,7 +55,7 @@ export function RoadmapCreationReportModal({ report, onClose }: Props) {
           </div>
 
           <div className="overflow-y-auto p-6" style={{ maxHeight: 'calc(90vh - 88px)' }}>
-            <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <div className="hidden mb-5 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border-2 border-[#333333] bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-[#5A5C58]">
                   <Clock3 size={14} />
@@ -85,24 +92,24 @@ export function RoadmapCreationReportModal({ report, onClose }: Props) {
 
             <div className="mb-4 rounded-xl border-2 border-[#333333] bg-white p-4">
               <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
-                <span>Tao roadmap realtime</span>
-                <span>{report.roadmapPercent}%</span>
+                <span>Tao roadmap</span>
+                <span>{overallRoadmapProgress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[#E5E5DF]">
                 <div
                   className="h-full rounded-full bg-[#4CD964] transition-all duration-300"
-                  style={{ width: `${report.roadmapPercent}%` }}
+                  style={{ width: `${overallRoadmapProgress}%` }}
                 />
               </div>
-              {report.roadmapStatusMessage ? (
-                <p className="mt-1.5 text-[11px] text-[#2D2D2D]">{report.roadmapStatusMessage}</p>
-              ) : null}
+              <p className="mt-2 text-[11px] text-[#5A5C58]">
+                He thong da xu ly tai lieu va tao roadmap cho ban.
+              </p>
               {report.errorMessage ? (
                 <p className="mt-1.5 text-[11px] text-red-600">{report.errorMessage}</p>
               ) : null}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="hidden space-y-1.5">
               {report.progressStages.map((stage) => (
                 <div
                   key={stage.key}

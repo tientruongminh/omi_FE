@@ -67,6 +67,23 @@ export function formatElapsed(ms?: number): string | null {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
+export function calculateOverallRoadmapProgress(
+  uploadPercent: number,
+  roadmapPercent: number,
+  hasUploadStage: boolean,
+): number {
+  const safeUploadPercent = Math.max(0, Math.min(100, uploadPercent));
+  const safeRoadmapPercent = Math.max(0, Math.min(100, roadmapPercent));
+
+  // We keep upload as a smaller portion of the total bar so the roadmap phase
+  // still visually represents most of the journey without exposing internals.
+  if (!hasUploadStage) {
+    return safeRoadmapPercent;
+  }
+
+  return Math.round(safeUploadPercent * 0.35 + safeRoadmapPercent * 0.65);
+}
+
 export function saveRoadmapCreationReport(report: RoadmapCreationReport): void {
   if (typeof window === 'undefined' || !report.projectId) return;
   window.sessionStorage.setItem(

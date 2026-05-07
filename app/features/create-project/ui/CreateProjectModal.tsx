@@ -8,6 +8,7 @@ import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
 import { apiFetch, apiFetchEventStream, apiUpload, type SseEventPayload } from '@/shared/api/client';
 import {
+  calculateOverallRoadmapProgress,
   type RoadmapCreationReport,
   saveRoadmapCreationReport,
 } from '@/features/create-project/model/roadmapCreationReport';
@@ -168,6 +169,11 @@ export function CreateProjectModal({ onClose }: Props) {
   const totalUploadedBytes = useMemo(
     () => uploadedFiles.reduce((sum, file) => sum + file.size, 0),
     [uploadedFiles],
+  );
+
+  const overallRoadmapProgress = useMemo(
+    () => calculateOverallRoadmapProgress(uploadPercent, roadmapPercent, uploadedFiles.length > 0),
+    [roadmapPercent, uploadPercent, uploadedFiles.length],
   );
 
   useEffect(() => {
@@ -762,7 +768,23 @@ export function CreateProjectModal({ onClose }: Props) {
                 </div>
                 {isCreating && (
                   <div className="space-y-3 rounded-xl border-2 border-[#333333] bg-white p-4">
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
+                        <span>Tao roadmap</span>
+                        <span>{overallRoadmapProgress}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[#E5E5DF]">
+                        <div
+                          className="h-full rounded-full bg-[#4CD964] transition-all duration-300"
+                          style={{ width: `${overallRoadmapProgress}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-[11px] text-[#5A5C58]">
+                        He thong dang xu ly tai lieu va tao roadmap cho ban...
+                      </p>
+                    </div>
+
+                    <div className="hidden grid gap-2 sm:grid-cols-2">
                       <div className="rounded-lg border border-[#E5E5DF] bg-[#F9F8F5] px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5C58]">
                           Tong thoi gian
@@ -781,7 +803,7 @@ export function CreateProjectModal({ onClose }: Props) {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="hidden">
                       <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
                         <span>Upload tài liệu</span>
                         <span>{uploadPercent}%</span>
@@ -797,7 +819,7 @@ export function CreateProjectModal({ onClose }: Props) {
                       )}
                     </div>
 
-                    <div>
+                    <div className="hidden">
                       <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#5A5C58]">
                         <span>Tạo roadmap realtime</span>
                         <span>{roadmapPercent}%</span>
@@ -813,7 +835,7 @@ export function CreateProjectModal({ onClose }: Props) {
                       )}
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="hidden space-y-1.5">
                       {progressStages.map((stage) => (
                         <div
                           key={stage.key}
@@ -850,7 +872,7 @@ export function CreateProjectModal({ onClose }: Props) {
                   </div>
                 )}
                 <button onClick={handleCreateProject} disabled={isCreating || !hasSourceMaterial} className="w-full py-3.5 rounded-full bg-[#4CD964] text-[#2D2D2D] font-bold text-base hover:bg-[#3bc453] transition-colors shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                  {isCreating ? (roadmapStatusMessage || uploadProgress || 'Đang tạo roadmap...') : 'Tạo dự án 🎉'}
+                  {isCreating ? 'Đang tạo roadmap...' : 'Tạo dự án 🎉'}
                 </button>
                 {!hasSourceMaterial && !isCreating && <p className="text-xs text-amber-600 text-center">Vui lòng tải lên ít nhất 1 file, thêm 1 URL, hoặc chọn tài liệu từ tìm kiếm.</p>}
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
