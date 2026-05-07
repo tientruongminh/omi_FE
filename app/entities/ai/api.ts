@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/client';
+import { requestTokenBalanceRefresh } from '@/shared/lib/tokenBalanceEvents';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -67,29 +68,35 @@ export interface StudyPayload {
 // ─── API ─────────────────────────────────────────────────────
 
 export const aiApi = {
-  studyChat(payload: StudyPayload) {
-    return apiFetch<StudyChatResponse>('/study/chat', {
+  async studyChat(payload: StudyPayload) {
+    const res = await apiFetch<StudyChatResponse>('/study/chat', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
-  generateStudyNotes(payload: StudyPayload) {
-    return apiFetch<{ content: string; citations: StudyCitation[] }>('/study/notes/generate', {
+  async generateStudyNotes(payload: StudyPayload) {
+    const res = await apiFetch<{ content: string; citations: StudyCitation[] }>('/study/notes/generate', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
-  generateStudySummary(payload: StudyPayload) {
-    return apiFetch<{ content: string; citations: StudyCitation[] }>('/study/summary/generate', {
+  async generateStudySummary(payload: StudyPayload) {
+    const res = await apiFetch<{ content: string; citations: StudyCitation[] }>('/study/summary/generate', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
-  generateStudyReview(payload: StudyPayload) {
-    return apiFetch<{
+  async generateStudyReview(payload: StudyPayload) {
+    const res = await apiFetch<{
       quiz: Array<{ question: string; options: string[]; correct_index: number; explanation: string }>;
       flashcards: Array<{ front: string; back: string }>;
       essay: { prompt: string; rubric: string[] };
@@ -99,14 +106,16 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
    * Chat with DeepTutor AI.
    * session_id is optional — omit for new conversation, pass to continue.
    */
-  chat(message: string, options?: { session_id?: string; node_id?: string; context?: string }) {
-    return apiFetch<AIChatResponse>('/ai/chat', {
+  async chat(message: string, options?: { session_id?: string; node_id?: string; context?: string }) {
+    const res = await apiFetch<AIChatResponse>('/ai/chat', {
       method: 'POST',
       body: JSON.stringify({
         message,
@@ -115,36 +124,44 @@ export const aiApi = {
         context: options?.context ?? null,
       }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
    * Generate quiz questions from content.
    */
-  generateQuiz(content: string, numQuestions = 5, difficulty = 'medium') {
-    return apiFetch<AIQuizResponse>('/ai/quiz/generate', {
+  async generateQuiz(content: string, numQuestions = 5, difficulty = 'medium') {
+    const res = await apiFetch<AIQuizResponse>('/ai/quiz/generate', {
       method: 'POST',
       body: JSON.stringify({ content, num_questions: numQuestions, difficulty }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
    * Evaluate student work (essay, code, etc).
    */
-  evaluate(content: string, criteria?: string) {
-    return apiFetch<AIEvaluateResponse>('/ai/evaluate', {
+  async evaluate(content: string, criteria?: string) {
+    const res = await apiFetch<AIEvaluateResponse>('/ai/evaluate', {
       method: 'POST',
       body: JSON.stringify({ content, criteria: criteria ?? null }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
    * AI research report on a topic.
    */
-  research(topic: string, depth = 'standard') {
-    return apiFetch<AIResearchResponse>('/ai/research', {
+  async research(topic: string, depth = 'standard') {
+    const res = await apiFetch<AIResearchResponse>('/ai/research', {
       method: 'POST',
       body: JSON.stringify({ topic, depth }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
@@ -157,11 +174,13 @@ export const aiApi = {
   /**
    * Send chat message in context of a specific node.
    */
-  sendNodeChat(nodeId: string, message: string) {
-    return apiFetch<AIChatResponse>('/ai/chat', {
+  async sendNodeChat(nodeId: string, message: string) {
+    const res = await apiFetch<AIChatResponse>('/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message, node_id: nodeId }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   /**
