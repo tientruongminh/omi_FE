@@ -508,6 +508,11 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     });
   }, [nodes]);
 
+  const guessTitleFromText = useCallback((text: string, fallback: string) => {
+    const firstLine = text.split('\n').map((line) => line.trim()).find(Boolean) || fallback;
+    return firstLine.replace(/^[-#*\d.\s]+/, '').slice(0, 48) || fallback;
+  }, []);
+
   const handleCreateAINode = useCallback((
     parentNodeId: string,
     type: 'ai-chat' | 'ai-review',
@@ -522,7 +527,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     const newNode: CanvasNode = {
       id: nodeId,
       type,
-      title: buildAINodeTitle(type),
+      title: `${type === 'ai-chat' ? 'Hỏi đáp' : 'Ôn tập'}: ${guessTitleFromText(seedText, parentNode.title)}`,
       content: seedText,
       summary: selectedText?.trim(),
       metaSubtitle: selectedText ? 'Tao tu doan van da chon' : `Lien ket tu ${parentNode.title}`,
@@ -543,7 +548,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     setEdges((prev) => [...prev, { from: parentNode.id, to: nodeId }]);
     setFocusedNodeId(nodeId);
     openPreviewNode(newNode);
-  }, [nodes, openPreviewNode]);
+  }, [guessTitleFromText, nodes, openPreviewNode]);
 
   const createCanvasNodeAt = useCallback((type: 'ai-chat' | 'ai-review' | 'synthesis', x: number, y: number, parentNode?: CanvasNode) => {
     const nodeId = `${type}-${parentNode?.id ?? 'canvas'}-${Date.now()}`;
@@ -551,7 +556,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     const newNode: CanvasNode = {
       id: nodeId,
       type,
-      title: buildAINodeTitle(type),
+      title: type === 'synthesis' ? buildAINodeTitle(type) : `${type === 'ai-chat' ? 'Hỏi đáp' : 'Ôn tập'}: ${guessTitleFromText(seedText, buildAINodeTitle(type))}`,
       content: seedText,
       metaSubtitle: parentNode ? `Tao tu ${parentNode.title}` : 'Tao tu canvas',
       nodeId: parentNode?.nodeId ?? workspaceData?.roadmapNode.id,
@@ -572,7 +577,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     }
     setFocusedNodeId(nodeId);
     if (type === 'synthesis') openPreviewNode(newNode);
-  }, [openPreviewNode, workspaceData]);
+  }, [guessTitleFromText, openPreviewNode, workspaceData]);
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -594,12 +599,28 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     });
   }, [nodes]);
 
+  const updateNodeContentAndTitle = useCallback((nodeId: string, content: string, title?: string) => {
+    setNodes((prev) => prev.map((node) => node.id === nodeId ? { ...node, content, ...(title ? { title } : {}) } : node));
+    setSidebarNode((prev) => prev && prev.id === nodeId ? { ...prev, content, ...(title ? { title } : {}) } : prev);
+    setPreviewNodes((prev) => prev.map((node) => node.id === nodeId ? { ...node, content, ...(title ? { title } : {}) } : node));
+  }, []);
+
   const handleContextMenuAction = useCallback((action: string, nodeId?: string) => {
     const parentNode = nodeId ? nodes.find((node) => node.id === nodeId) : undefined;
     const x = parentNode ? parentNode.x + parentNode.width + 90 : (contextMenu?.canvasX ?? 520);
     const y = parentNode ? parentNode.y + nodes.filter((node) => node.parentId === parentNode.id).length * 72 : (contextMenu?.canvasY ?? 340);
 
     switch (action) {
+      case 'rename-node': {
+        if (!parentNode) break;
+        const nextTitle = window.prompt('Tên node mới', parentNode.title)?.trim();
+        if (nextTitle) {
+          setNodes((prev) => prev.map((node) => node.id === parentNode.id ? { ...node, title: nextTitle } : node));
+          setSidebarNode((prev) => prev?.id === parentNode.id ? { ...prev, title: nextTitle } : prev);
+          setPreviewNodes((prev) => prev.map((node) => node.id === parentNode.id ? { ...node, title: nextTitle } : node));
+        }
+        break;
+      }
       case 'ai-chat':
       case 'add-ai-chat':
         if (parentNode) handleCreateAINode(parentNode.id, 'ai-chat');
@@ -910,7 +931,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
                   edges={edges}
                   onClose={() => setPreviewNodes((prev) => prev.filter((item) => item.id !== node.id))}
                   onCreateAINode={handleCreateAINode}
-                  onUpdateContent={() => {}}
+                  onUpdateContent={(nodeId, content, title) => updateNodeContentAndTitle(nodeId, content, title)}
                   isPopup
                 />
               ))}
@@ -924,9 +945,9 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
           <ExpandedNoteContent
             node={sidebarNode}
             onClose={() => setSidebarNode(null)}
-            onUpdateContent={(nodeId, content) => {
-              setNodes((prev) => prev.map((node) => node.id === nodeId ? { ...node, content } : node));
-              setSidebarNode((prev) => prev && prev.id === nodeId ? { ...prev, content } : prev);
+            onUpdateContent={(nodeId, content, title, patch) => {
+              setNodes((prev) => prev.map((node) => node.id === nodeId ? { ...node, content, ...(title ? { title } : {}), ...(patch || {}) } : node));
+              setSidebarNode((prev) => prev && prev.id === nodeId ? { ...prev, content, ...(title ? { title } : {}), ...(patch || {}) } : prev);
             }}
           />
         </div>

@@ -32,7 +32,9 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
         { label: 'AI tổng hợp', action: 'add-synthesis' },
       ];
     }
-    const base: { label: string; action: string; danger?: boolean; hasSubmenu?: boolean }[] = [];
+    const base: { label: string; action: string; danger?: boolean; hasSubmenu?: boolean }[] = [
+      { label: 'Đổi tên node', action: 'rename-node' },
+    ];
     switch (menu.nodeType) {
       case 'topic': case 'chapter':
         base.push(

@@ -14,7 +14,7 @@ interface Props {
   edges: CanvasEdge[];
   onClose: () => void;
   onCreateAINode: (nodeId: string, type: 'ai-chat' | 'ai-review', selectedText?: string) => void;
-  onUpdateContent?: (nodeId: string, content: string) => void;
+  onUpdateContent?: (nodeId: string, content: string, title?: string, patch?: Partial<CanvasNode>) => void;
   isPopup?: boolean;
 }
 

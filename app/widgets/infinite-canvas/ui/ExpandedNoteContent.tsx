@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2, Link2, Check } from 'lucide-react';
+import { Sparkles, Loader2, Link2, Check, Plus } from 'lucide-react';
 import { CanvasNode } from '../model/types';
 import ExpandedHeader from './ExpandedHeader';
 import { aiApi } from '@/entities/ai';
@@ -11,13 +11,17 @@ import { useAuthStore } from '@/entities/auth/store';
 interface Props {
   node: CanvasNode;
   onClose: () => void;
-  onUpdateContent?: (nodeId: string, content: string) => void;
+  onUpdateContent?: (nodeId: string, content: string, title?: string, patch?: Partial<CanvasNode>) => void;
 }
 
 export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: Props) {
   const user = useAuthStore((s) => s.user);
-  const [content, setContent] = useState(node.content ?? '');
-  const [title, setTitle] = useState(node.title);
+  const initialVersions = node.noteVersions?.length ? node.noteVersions : [{ id: 'default', title: node.title, content: node.content ?? '', createdAt: new Date().toISOString() }];
+  const [versions, setVersions] = useState(initialVersions);
+  const [activeVersionId, setActiveVersionId] = useState(node.activeNoteVersionId || initialVersions[0]?.id || 'default');
+  const activeVersion = versions.find((version) => version.id === activeVersionId) || versions[0];
+  const [content, setContent] = useState(activeVersion?.content ?? node.content ?? '');
+  const [title, setTitle] = useState(activeVersion?.title ?? node.title);
   const [isPolishing, setIsPolishing] = useState(false);
   const [polished, setPolished] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -26,10 +30,15 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setContent(node.content ?? '');
-    setTitle(node.title);
+    const nextVersions = node.noteVersions?.length ? node.noteVersions : [{ id: 'default', title: node.title, content: node.content ?? '', createdAt: new Date().toISOString() }];
+    const nextActiveId = node.activeNoteVersionId || nextVersions[0]?.id || 'default';
+    const nextActive = nextVersions.find((version) => version.id === nextActiveId) || nextVersions[0];
+    setVersions(nextVersions);
+    setActiveVersionId(nextActiveId);
+    setContent(nextActive?.content ?? node.content ?? '');
+    setTitle(nextActive?.title ?? node.title);
     setPolished(false);
-  }, [node.id, node.content, node.title]);
+  }, [node.id, node.content, node.title, node.noteVersions, node.activeNoteVersionId]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -62,11 +71,13 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
+    const nextVersions = versions.map((version) => version.id === activeVersionId ? { ...version, content: newContent, title } : version);
     setContent(newContent);
+    setVersions(nextVersions);
     setPolished(false);
-    onUpdateContent?.(node.id, newContent);
+    onUpdateContent?.(node.id, newContent, title, { noteVersions: nextVersions, activeNoteVersionId: activeVersionId });
     saveToBackend(newContent);
-  }, [node.id, onUpdateContent, saveToBackend]);
+  }, [activeVersionId, node.id, onUpdateContent, saveToBackend, title, versions]);
 
   const handleAIPolish = useCallback(async () => {
     if (!content.trim() || isPolishing) return;
@@ -84,8 +95,12 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
         selected_text: node.summary,
       });
       const polishedText = res.content;
+      const nextTitle = title === node.title || title === 'Ghi chu' || title === 'Ghi chú' ? (polishedText.split('\n').find((line) => line.trim()) || title).replace(/^[-#*\d.\s]+/, '').slice(0, 48) : title;
+      const nextVersions = versions.map((version) => version.id === activeVersionId ? { ...version, content: polishedText, title: nextTitle } : version);
       setContent(polishedText);
-      onUpdateContent?.(node.id, polishedText);
+      setTitle(nextTitle);
+      setVersions(nextVersions);
+      onUpdateContent?.(node.id, polishedText, nextTitle, { noteVersions: nextVersions, activeNoteVersionId: activeVersionId });
       saveToBackend(polishedText);
       setPolished(true);
       setTimeout(() => setPolished(false), 3000);
@@ -99,14 +114,16 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
         return l;
       });
       const polishedText = polishedLines.join('\n');
+      const nextVersions = versions.map((version) => version.id === activeVersionId ? { ...version, content: polishedText, title } : version);
       setContent(polishedText);
-      onUpdateContent?.(node.id, polishedText);
+      setVersions(nextVersions);
+      onUpdateContent?.(node.id, polishedText, title, { noteVersions: nextVersions, activeNoteVersionId: activeVersionId });
       setPolished(true);
       setTimeout(() => setPolished(false), 3000);
     } finally {
       setIsPolishing(false);
     }
-  }, [content, isPolishing, node.id, onUpdateContent, user, saveToBackend]);
+  }, [activeVersionId, content, isPolishing, node.id, node.nodeId, node.passageIds, node.sourceId, node.sourceType, node.summary, node.title, onUpdateContent, title, user, saveToBackend, versions]);
 
   return (
     <div className="flex flex-col h-full bg-[#FFFDE7]">
@@ -121,6 +138,40 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
           className="w-full bg-transparent text-[16px] font-bold text-[#78350F] outline-none border-b border-[#F59E0B]/30 pb-2 placeholder:text-[#C4A35A]/40"
           placeholder="Tiêu đề ghi chú..."
         />
+      </div>
+
+      {/* Note versions */}
+      <div className="px-6 pt-3 flex items-center gap-2 overflow-x-auto">
+        {versions.map((version, index) => (
+          <button
+            key={version.id}
+            onClick={() => {
+              const nextActive = versions.find((item) => item.id === version.id) || version;
+              setActiveVersionId(version.id);
+              setContent(nextActive.content);
+              setTitle(nextActive.title);
+              onUpdateContent?.(node.id, nextActive.content, nextActive.title, { noteVersions: versions, activeNoteVersionId: version.id });
+            }}
+            className={`px-3 py-1.5 rounded-full border text-[11px] font-bold whitespace-nowrap ${version.id === activeVersionId ? 'bg-[#F59E0B] border-[#D97706] text-white' : 'bg-white/70 border-[#F59E0B]/30 text-[#92400E]'}`}
+          >
+            Bản {index + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => {
+            const newVersion = { id: `note-version-${Date.now()}`, title: `Ghi chú ${versions.length + 1}`, content: '', createdAt: new Date().toISOString() };
+            const nextVersions = [...versions, newVersion];
+            setVersions(nextVersions);
+            setActiveVersionId(newVersion.id);
+            setContent('');
+            setTitle(newVersion.title);
+            onUpdateContent?.(node.id, '', newVersion.title, { noteVersions: nextVersions, activeNoteVersionId: newVersion.id });
+          }}
+          className="w-7 h-7 rounded-full bg-white border border-[#F59E0B] text-[#92400E] flex items-center justify-center flex-shrink-0"
+          title="Tạo bản ghi chú mới trong node này"
+        >
+          <Plus size={13} />
+        </button>
       </div>
 
       {/* Editable content */}
