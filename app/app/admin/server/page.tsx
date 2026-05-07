@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { adminApi, type RuntimeEnvResponse, type ServerStatusResponse } from '@/entities/admin/api';
 
-const SERVICES = ['gateway', 'auth', 'admin', 'learning', 'teacher', 'ai', 'postgres', 'minio', 'omilearn-fe'];
+const SERVICES = ['gateway', 'auth', 'admin', 'learning', 'teacher', 'ai', 'postgres', 'minio', 'omilearn-fe', 'nginx'];
 const ENV_KEYS = [
   'OPENAI_API_KEY',
   'OPENAI_BASE_URL',
@@ -64,6 +64,8 @@ export default function AdminServerPage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(true);
+  const [lastLogRefresh, setLastLogRefresh] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [showSecretInputs, setShowSecretInputs] = useState(false);
   const [updates, setUpdates] = useState<Record<string, string>>({});
@@ -72,7 +74,7 @@ export default function AdminServerPage() {
   const [error, setError] = useState<string | null>(null);
 
   const services = useMemo(() => {
-    return [...(status?.services ?? []), status?.frontend].filter(Boolean) as Array<{ name: string; status: string; ports?: string }>;
+    return [...(status?.services ?? []), status?.frontend, ...(status?.hostServices ?? [])].filter(Boolean) as Array<{ name: string; status: string; ports?: string }>;
   }, [status]);
 
   const healthyCount = services.filter((svc) => isHealthy(svc.status)).length;
@@ -98,8 +100,9 @@ export default function AdminServerPage() {
   const loadLogs = async (service = selectedService) => {
     setLogsLoading(true);
     try {
-      const res = await adminApi.getServerLogs(service, 300);
+      const res = await adminApi.getServerLogs(service, 500);
       setLogs(res.logs || '(empty logs)');
+      setLastLogRefresh(new Date());
     } catch (e: unknown) {
       const err = e as { error?: string };
       setLogs(err?.error || 'Không tải được logs');
@@ -118,6 +121,14 @@ export default function AdminServerPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!autoRefreshLogs || activeTab !== 'logs') return;
+    const timer = window.setInterval(() => {
+      loadLogs(selectedService);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [autoRefreshLogs, activeTab, selectedService]);
 
   const saveEnv = async () => {
     const extraKey = newSecretKey.trim().toUpperCase();
@@ -266,7 +277,10 @@ export default function AdminServerPage() {
       {activeTab === 'logs' && (
         <div className="overflow-hidden rounded-2xl border-2 border-[#111827] bg-[#0B1020] shadow-xl">
           <div className="flex flex-col gap-3 border-b border-white/10 bg-[#111827] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2 text-white"><Terminal size={18} /><h2 className="font-black">Live logs</h2></div>
+            <div className="flex flex-col gap-1 text-white">
+              <div className="flex items-center gap-2"><Terminal size={18} /><h2 className="font-black">Real server logs</h2></div>
+              <p className="text-[11px] text-slate-400">Docker logs cho backend, journalctl cho FE, nginx access/error log cho web traffic.</p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -275,9 +289,16 @@ export default function AdminServerPage() {
               <select value={selectedService} onChange={(e) => { setSelectedService(e.target.value); loadLogs(e.target.value); }} className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white outline-none">
                 {SERVICES.map((s) => <option key={s} value={s} className="bg-[#111827]">{s}</option>)}
               </select>
+              <button onClick={() => setAutoRefreshLogs((v) => !v)} className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-black ${autoRefreshLogs ? 'bg-emerald-400 text-[#052e1a]' : 'border border-white/10 bg-white/10 text-white'}`}>
+                <span className={`h-2 w-2 rounded-full ${autoRefreshLogs ? 'bg-[#052e1a]' : 'bg-slate-400'}`} /> {autoRefreshLogs ? 'Realtime on' : 'Realtime off'}
+              </button>
               <button onClick={copyLogs} className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white"><Copy size={13} /> Copy</button>
               <button onClick={() => loadLogs()} className="inline-flex items-center gap-1 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-[#052e1a]"><RefreshCw size={13} /> Reload</button>
             </div>
+          </div>
+          <div className="border-b border-white/10 bg-black/20 px-5 py-2 text-[11px] text-slate-400">
+            Service: <span className="font-bold text-emerald-200">{selectedService}</span>
+            {lastLogRefresh && <span className="ml-3">Last refresh: {lastLogRefresh.toLocaleTimeString()}</span>}
           </div>
           <pre className="h-[560px] overflow-auto p-5 font-mono text-[11px] leading-relaxed text-emerald-100 whitespace-pre-wrap">
             {logsLoading ? 'Loading logs...' : filteredLogs || '(no matching logs)'}

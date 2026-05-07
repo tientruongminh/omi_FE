@@ -90,10 +90,12 @@ export interface AdminTeachersResponse {
 export interface ServerStatusResponse {
   services: Array<{ name: string; status: string; ports?: string }>;
   frontend: { name: string; status: string };
+  hostServices?: Array<{ name: string; status: string; ports?: string }>;
 }
 
 export interface ServerLogsResponse {
   service: string;
+  source?: string;
   logs: string;
 }
 
