@@ -51,6 +51,7 @@ export interface CanvasNode {
   customBg?: string;
   customBorder?: string;
   synthSourceIds?: string[];
+  questionCount?: number;
 }
 
 export interface CanvasEdge {

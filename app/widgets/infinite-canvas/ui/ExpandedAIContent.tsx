@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageCircle, ClipboardList } from 'lucide-react';
+import { Send, MessageCircle, ClipboardList, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AIStreamText from '@/shared/ui/AIStreamText';
 import { CanvasNode } from '../model/types';
@@ -26,6 +26,7 @@ interface FloatingMenu {
 export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Props) {
   const user = useAuthStore((s) => s.user);
   const [input, setInput] = useState('');
+  const [questionCount, setQuestionCount] = useState(node.questionCount ?? 15);
   const [msgs, setMsgs] = useState<ChatMsg[]>([{ id: 'init', role: 'ai', text: node.content ?? node.title }]);
   const [streaming, setStreaming] = useState(false);
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
@@ -59,8 +60,8 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
         source_id: node.sourceId,
         source_type: node.sourceType,
         passage_ids: node.passageIds ?? [],
-        context: node.content,
         selected_text: node.summary,
+        context: `${node.content ?? ''}\n\n[Question count preference]\nNếu người dùng yêu cầu tạo/gợi ý câu hỏi, hãy tạo khoảng ${questionCount} câu hỏi.`,
       });
       setMsgs((prev) =>
         prev.map((m) => m.id === aiMsgId ? { ...m, text: res.answer, citations: res.citations } : m)
@@ -205,6 +206,35 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
 
       {/* Chat input */}
       <div className="px-5 py-3 border-t bg-white/40 flex-shrink-0" style={{ borderColor: `${borderColor}33` }}>
+        {isChat && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-white/70 border border-[#E5E5DF] px-3 py-2">
+            <span className="text-[11px] font-bold text-[#5A5C58]">Số câu hỏi/gợi ý</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setQuestionCount((value) => Math.max(1, value - 1))}
+                className="w-6 h-6 rounded-lg border border-[#E5E5DF] flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer"
+                title="Giảm số câu"
+              >
+                <Minus size={12} />
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={questionCount}
+                onChange={(e) => setQuestionCount(Math.max(1, Math.min(50, Number(e.target.value) || 15)))}
+                className="w-14 text-center text-[12px] font-black text-[#2D2D2D] bg-white border border-[#E5E5DF] rounded-lg py-1 outline-none focus:border-[#6B2D3E]"
+              />
+              <button
+                onClick={() => setQuestionCount((value) => Math.min(50, value + 1))}
+                className="w-6 h-6 rounded-lg border border-[#E5E5DF] flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer"
+                title="Tăng số câu"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex gap-2 items-center bg-white border-2 rounded-full px-4 py-2 focus-within:border-[#6B2D3E] transition-colors" style={{ borderColor: '#E5E5DF' }}>
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
             placeholder="Hỏi tiếp..." className="flex-1 text-[13px] text-[#2D2D2D] bg-transparent outline-none placeholder-[#9CA3AF]" />
