@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, Sparkles, Database } from 'lucide-react';
+import { Send, User, Sparkles, Database, History } from 'lucide-react';
 import { adminApi } from '@/entities/admin/api';
 
 interface Message {
@@ -24,11 +24,13 @@ export default function AdminChatPage() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<Array<{ id: string; title: string; message_count: number; updated_at: string }>>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('omilearn_admin_chat_session_id');
     if (stored) setSessionId(stored);
+    adminApi.getAdminChatSessions().then((res) => setSessions(res.sessions)).catch(() => setSessions([]));
   }, []);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function AdminChatPage() {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiMsg]);
+      adminApi.getAdminChatSessions().then((r) => setSessions(r.sessions)).catch(() => {});
     } catch {
       const errMsg: Message = {
         id: String(Date.now() + 1),
@@ -86,6 +89,26 @@ export default function AdminChatPage() {
         <h1 className="text-[28px] font-black text-[#1A1A1A]" style={{ fontFamily: 'Georgia, serif' }}>Chat AI</h1>
         <p className="text-[13px] text-[#5A5C58]">Admin-only: đọc DB theo whitelist để phân tích users, usage, feedback, learning data</p>
       </div>
+
+      {/* Chat history */}
+      {sessions.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[#E5E7EB] bg-white p-3">
+          <div className="mb-2 flex items-center gap-2 text-[12px] font-black text-[#2D2D2D]"><History size={14} /> Conversation đã lưu</div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {sessions.map((s) => (
+              <button key={s.id} onClick={async () => {
+                const detail = await adminApi.getAdminChatSession(s.id);
+                setSessionId(s.id);
+                window.localStorage.setItem('omilearn_admin_chat_session_id', s.id);
+                setMessages(detail.messages.map((m) => ({ id: m.id, role: m.role, content: m.content, timestamp: new Date(m.created_at) })));
+              }} className={`min-w-[220px] rounded-xl border px-3 py-2 text-left text-[11px] ${sessionId === s.id ? 'border-[#6B2D3E] bg-[#F5F0EB]' : 'border-[#E5E7EB] bg-white hover:bg-[#F9FAFB]'}`}>
+                <div className="truncate font-bold text-[#2D2D2D]">{s.title || 'Untitled session'}</div>
+                <div className="mt-1 text-[#6B7280]">{s.message_count} tin nhắn · {new Date(s.updated_at).toLocaleString('vi-VN')}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick questions */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">

@@ -6,6 +6,7 @@ import ExpandedDocContent from './ExpandedDocContent';
 import ExpandedAIContent from './ExpandedAIContent';
 import ExpandedReviewContent from './ExpandedReviewContent';
 import ExpandedSynthesisContent from './ExpandedSynthesisContent';
+import ExpandedNoteContent from './ExpandedNoteContent';
 
 interface Props {
   node: CanvasNode;
@@ -46,9 +47,7 @@ export default function ExpandedNodeView({ node, allNodes, edges, onClose, onCre
         <ExpandedDocContent node={node} onClose={onClose} onCreateAINode={onCreateAINode} />
       )}
       {node.type === 'note' && (
-        <div className="flex items-center justify-center h-full text-sm text-[#5A5C58]">
-          Ghi chú mở ở sidebar bên phải
-        </div>
+        <ExpandedNoteContent node={node} onClose={onClose} onUpdateContent={onUpdateContent} />
       )}
     </motion.div>
   );
