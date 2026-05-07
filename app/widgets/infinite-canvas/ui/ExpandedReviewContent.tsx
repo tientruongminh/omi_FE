@@ -12,6 +12,13 @@ import { useAuthStore } from '@/entities/auth/store';
 
 type ReviewTab = 'quiz' | 'flashcard' | 'essay' | 'teach';
 
+type GeneratedReview = {
+  quiz: Array<{ question: string; options: string[]; correct_index: number; explanation: string }>;
+  flashcards: Array<{ front: string; back: string }>;
+  essay: { prompt: string; rubric: string[] };
+  teach: { prompt: string };
+};
+
 interface FloatingMenu {
   x: number;
   y: number;
@@ -34,7 +41,35 @@ const TABS: { key: ReviewTab; label: string; icon: string }[] = [
 export default function ExpandedReviewContent({ node, onClose, onCreateAINode }: Props) {
   const [activeTab, setActiveTab] = useState<ReviewTab>('quiz');
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
+  const [generated, setGenerated] = useState<GeneratedReview | null>(null);
+  const [generating, setGenerating] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setGenerating(true);
+      try {
+        const res = await aiApi.generateStudyReview({
+          message: 'Tạo bộ ôn tập từ node canvas này.',
+          canvas_node_id: node.id,
+          node_id: node.nodeId,
+          source_id: node.sourceId,
+          source_type: node.sourceType,
+          passage_ids: node.passageIds ?? [],
+          context: node.content,
+          selected_text: node.summary,
+        });
+        if (!cancelled) setGenerated(res);
+      } catch {
+        if (!cancelled) setGenerated(null);
+      } finally {
+        if (!cancelled) setGenerating(false);
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [node.id, node.nodeId, node.sourceId, node.sourceType, node.content, node.summary, node.passageIds]);
 
   // Right-click handler
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -123,10 +158,11 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
         onContextMenu={handleContextMenu}
         onMouseUp={handleMouseUp}
       >
-        {activeTab === 'quiz' && <QuizTab />}
-        {activeTab === 'flashcard' && <FlashcardTab />}
-        {activeTab === 'essay' && <EssayTab />}
-        {activeTab === 'teach' && <TeachAITab />}
+        {generating && <div className="flex items-center justify-center gap-2 p-4 text-xs font-bold text-[#991B1B]"><Loader2 size={14} className="animate-spin" /> AI đang tạo bộ ôn tập thật...</div>}
+        {activeTab === 'quiz' && <QuizTab generated={generated?.quiz} />}
+        {activeTab === 'flashcard' && <FlashcardTab generated={generated?.flashcards} />}
+        {activeTab === 'essay' && <EssayTab generated={generated?.essay} />}
+        {activeTab === 'teach' && <TeachAITab generated={generated?.teach} />}
 
         {/* Floating AI menu on selection/right-click */}
         <AnimatePresence>
@@ -185,14 +221,21 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
 
 // ─── Quiz Tab ────────────────────────────────────────────────
 
-function QuizTab() {
+function QuizTab({ generated }: { generated?: GeneratedReview['quiz'] }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(0);
 
-  const q = quizQuestions[currentQ];
+  const generatedQuestions = generated?.map((q, idx) => ({
+    id: `ai-${idx}`,
+    question: q.question,
+    options: q.options.map((text, i) => ({ label: String.fromCharCode(65 + i), text, correct: i === q.correct_index })),
+    explanation: q.explanation,
+  }));
+  const questions = generatedQuestions?.length ? generatedQuestions : quizQuestions;
+  const q = questions[currentQ];
   if (!q) return null;
 
   const handleSelect = (label: string) => {
@@ -205,7 +248,7 @@ function QuizTab() {
   };
 
   const handleNext = () => {
-    if (currentQ < quizQuestions.length - 1) {
+    if (currentQ < questions.length - 1) {
       setCurrentQ((c) => c + 1);
       setSelected(null);
       setShowExplanation(false);
@@ -225,7 +268,7 @@ function QuizTab() {
       {/* Progress */}
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold text-[#991B1B]">
-          Câu {currentQ + 1}/{quizQuestions.length}
+          Câu {currentQ + 1}/{questions.length}
         </span>
         <span className="text-[11px] font-semibold text-[#5A5C58]">
           Điểm: {score}/{answered}
@@ -234,7 +277,7 @@ function QuizTab() {
       <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
         <motion.div
           className="h-full bg-[#991B1B] rounded-full"
-          animate={{ width: `${((currentQ + 1) / quizQuestions.length) * 100}%` }}
+          animate={{ width: `${((currentQ + 1) / questions.length) * 100}%` }}
         />
       </div>
 
@@ -289,7 +332,7 @@ function QuizTab() {
 
       {/* Navigation */}
       <div className="flex gap-2 pt-2">
-        {currentQ < quizQuestions.length - 1 ? (
+        {currentQ < questions.length - 1 ? (
           <button
             onClick={handleNext}
             disabled={!selected}
@@ -301,7 +344,7 @@ function QuizTab() {
           <div className="flex-1 space-y-2">
             <div className="text-center py-3 bg-white rounded-xl border border-[#E5E5DF]">
               <p className="text-[14px] font-bold text-[#2D2D2D]">🎉 Hoàn thành!</p>
-              <p className="text-[12px] text-[#5A5C58] mt-1">Điểm: {score}/{quizQuestions.length}</p>
+              <p className="text-[12px] text-[#5A5C58] mt-1">Điểm: {score}/{questions.length}</p>
             </div>
             <button
               onClick={handleReset}
@@ -318,16 +361,17 @@ function QuizTab() {
 
 // ─── Flashcard Tab ───────────────────────────────────────────
 
-function FlashcardTab() {
+function FlashcardTab({ generated }: { generated?: GeneratedReview['flashcards'] }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<string>>(new Set());
 
-  const card = flashcards[currentIdx];
+  const cards = generated?.map((c, idx) => ({ id: `ai-${idx}`, front: c.front, back: c.back })) ?? flashcards;
+  const card = cards[currentIdx];
   if (!card) return null;
 
   const handleFlip = () => setFlipped(!flipped);
-  const handleNext = () => { setCurrentIdx((i) => Math.min(i + 1, flashcards.length - 1)); setFlipped(false); };
+  const handleNext = () => { setCurrentIdx((i) => Math.min(i + 1, cards.length - 1)); setFlipped(false); };
   const handlePrev = () => { setCurrentIdx((i) => Math.max(i - 1, 0)); setFlipped(false); };
   const handleKnown = () => {
     setKnown((s) => { const n = new Set(s); n.add(card.id); return n; });
@@ -339,7 +383,7 @@ function FlashcardTab() {
       {/* Progress */}
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold text-[#991B1B]">
-          {currentIdx + 1}/{flashcards.length}
+          {currentIdx + 1}/{cards.length}
         </span>
         <span className="text-[11px] font-semibold text-[#065F46]">
           ✓ Đã thuộc: {known.size}
@@ -404,7 +448,7 @@ function FlashcardTab() {
         </button>
         <button
           onClick={handleNext}
-          disabled={currentIdx === flashcards.length - 1}
+          disabled={currentIdx === cards.length - 1}
           className="w-10 h-10 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#F5F0EB] disabled:opacity-30 transition-all cursor-pointer"
         >
           <ChevronRight size={16} />
@@ -416,7 +460,7 @@ function FlashcardTab() {
 
 // ─── Essay Tab ───────────────────────────────────────────────
 
-function EssayTab() {
+function EssayTab({ generated }: { generated?: GeneratedReview['essay'] }) {
   const user = useAuthStore((s) => s.user);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -427,7 +471,7 @@ function EssayTab() {
     if (!answer.trim()) return;
     setSubmitting(true);
     try {
-      const content = `Câu hỏi: ${essayQuestion.question}\n\nBài làm: ${answer}`;
+      const content = `Câu hỏi: ${generated?.prompt || essayQuestion.question}\n\nRubric: ${generated?.rubric?.join('; ') || 'Đánh giá bài viết của học sinh'}\n\nBài làm: ${answer}`;
       const res = await aiApi.evaluate(content, 'Đánh giá bài viết của học sinh');
       const feedbackText = `${res.feedback}\n\nĐiểm: ${res.score}/100 (${res.grade})\n${res.suggestions?.length ? '\nGợi ý: ' + res.suggestions.join('; ') : ''}`;
       setFeedback(feedbackText);
@@ -451,7 +495,7 @@ function EssayTab() {
       {/* Question */}
       <div className="bg-white rounded-xl border border-[#E5E5DF] p-4">
         <p className="text-[9px] font-bold text-[#991B1B] uppercase tracking-widest mb-2">CÂU HỎI TỰ LUẬN</p>
-        <p className="text-[13px] font-semibold text-[#2D2D2D] leading-relaxed">{essayQuestion.question}</p>
+        <p className="text-[13px] font-semibold text-[#2D2D2D] leading-relaxed">{generated?.prompt || essayQuestion.question}</p>
       </div>
 
       {/* Answer area */}
@@ -503,7 +547,7 @@ function EssayTab() {
 
 // ─── Teach AI Tab ────────────────────────────────────────────
 
-function TeachAITab() {
+function TeachAITab({ generated }: { generated?: GeneratedReview['teach'] }) {
   const user = useAuthStore((s) => s.user);
   const [teaching, setTeaching] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -515,7 +559,7 @@ function TeachAITab() {
     if (!teaching.trim()) return;
     setSubmitting(true);
     try {
-      const content = `Chủ đề: ${teachAIPrompt.topic}\nCâu hỏi AI: ${teachAIPrompt.aiQuestion}\n\nGiải thích của học sinh: ${teaching}`;
+      const content = `Câu hỏi AI: ${generated?.prompt || teachAIPrompt.aiQuestion}\n\nGiải thích của học sinh: ${teaching}`;
       const res = await aiApi.evaluate(content, 'Đánh giá khả năng giải thích kiến thức');
       setScore(res.score); // score is /100
       const responseText = `Cảm ơn bạn đã giải thích!\n\n${res.feedback}${res.suggestions?.length ? '\n\n💡 Gợi ý: ' + res.suggestions.join('; ') : ''}\n\nĐộ chính xác giải thích: ${res.score}%`;
@@ -547,7 +591,7 @@ function TeachAITab() {
           </div>
           <p className="text-[9px] font-bold text-[#4338CA] uppercase tracking-widest">AI HỎI BẠN</p>
         </div>
-        <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{teachAIPrompt.aiQuestion}</p>
+        <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{generated?.prompt || teachAIPrompt.aiQuestion}</p>
       </div>
 
       <div className="bg-[#FFFDE7] rounded-lg px-3 py-2 border border-[#F59E0B]/30">
@@ -561,7 +605,7 @@ function TeachAITab() {
           <textarea
             value={teaching}
             onChange={(e) => setTeaching(e.target.value)}
-            placeholder={`Giải thích cho AI về ${teachAIPrompt.topic}...`}
+            placeholder="Giải thích lại nội dung vừa học cho AI..."
             className="w-full h-44 p-4 bg-white border-2 border-[#E5E5DF] rounded-xl text-[13px] text-[#2D2D2D] leading-relaxed resize-none focus:border-[#4338CA] outline-none placeholder-[#9CA3AF] transition-colors"
           />
           <div className="flex items-center justify-between">

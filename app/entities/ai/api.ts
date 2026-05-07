@@ -52,21 +52,50 @@ export interface NodeChatsResponse {
   chats: NodeChatMessage[];
 }
 
+export interface StudyPayload {
+  message: string;
+  canvas_node_id?: string;
+  project_id?: string;
+  node_id?: string;
+  source_id?: string;
+  source_type?: string;
+  passage_ids?: string[];
+  context?: string;
+  selected_text?: string;
+}
+
 // ─── API ─────────────────────────────────────────────────────
 
 export const aiApi = {
-  studyChat(payload: {
-    message: string;
-    canvas_node_id?: string;
-    project_id?: string;
-    node_id?: string;
-    source_id?: string;
-    source_type?: string;
-    passage_ids?: string[];
-    context?: string;
-    selected_text?: string;
-  }) {
+  studyChat(payload: StudyPayload) {
     return apiFetch<StudyChatResponse>('/study/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  generateStudyNotes(payload: StudyPayload) {
+    return apiFetch<{ content: string; citations: StudyCitation[] }>('/study/notes/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  generateStudySummary(payload: StudyPayload) {
+    return apiFetch<{ content: string; citations: StudyCitation[] }>('/study/summary/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  generateStudyReview(payload: StudyPayload) {
+    return apiFetch<{
+      quiz: Array<{ question: string; options: string[]; correct_index: number; explanation: string }>;
+      flashcards: Array<{ front: string; back: string }>;
+      essay: { prompt: string; rubric: string[] };
+      teach: { prompt: string };
+      citations: StudyCitation[];
+    }>('/study/review/generate', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
