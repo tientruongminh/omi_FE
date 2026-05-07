@@ -34,8 +34,8 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
     setSynthesizing(true);
 
     try {
-      const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
-      const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
+      const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${(s.content ?? s.summary ?? '(không có nội dung)').slice(0, 8000)}`).join('\n\n');
+      const prompt = `${userPrompt.trim() || 'Tổng hợp các nội dung chính'}\n\nYêu cầu định dạng: plain text thuần, không Markdown, không heading #, không **bold**, không bảng markdown.`;
       const passageIds = sourceDocs.flatMap((s) => s.passageIds ?? []);
       const res = await aiApi.generateStudySummary({
         message: prompt,
@@ -51,13 +51,13 @@ export default function ExpandedSynthesisContent({ node, allNodes, edges, onClos
       // Fallback: local synthesis
       const sourceTexts = sourceDocs.map((s) => `[${s.title}]: ${s.content ?? s.summary ?? '(không có nội dung)'}`).join('\n\n');
       const prompt = userPrompt.trim() || 'Tổng hợp các nội dung chính';
-      const synthesizedContent = `📋 **${prompt}**\n\n` +
+      const synthesizedContent = `${prompt}\n\n` +
         `Dựa trên ${sourceDocs.length} nguồn:\n` +
         sourceDocs.map((s, i) => `${i + 1}. ${s.title}`).join('\n') +
         `\n\n---\n\n` +
         sourceDocs.map((s) => {
           const text = s.content ?? s.summary ?? '';
-          return `▸ **${s.title}**: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`;
+          return `Nguồn ${s.title}: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`;
         }).join('\n\n');
       onUpdateContent?.(node.id, synthesizedContent);
       setSynthesized(true);

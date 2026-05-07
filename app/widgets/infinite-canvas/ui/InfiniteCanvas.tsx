@@ -11,6 +11,7 @@ import ZoomIndicator from './ZoomIndicator';
 import CanvasHint from './CanvasHint';
 import DocumentSidebar from './DocumentSidebar';
 import ExpandedNodeView from './ExpandedNodeView';
+import ExpandedNoteContent from './ExpandedNoteContent';
 import ContextMenu from './ContextMenu';
 import { ContextMenuState } from '../model/types';
 import {
@@ -163,6 +164,8 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
   const [previewNodes, setPreviewNodes] = useState<CanvasNode[]>([]);
   const [sidebarContext, setSidebarContext] = useState<SidebarContext | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [sidebarNode, setSidebarNode] = useState<CanvasNode | null>(null);
+  const [edgeDraft, setEdgeDraft] = useState<{ from: string; x: number; y: number; toX: number; toY: number } | null>(null);
 
   const [sourceCache, setSourceCache] = useState<Record<string, LearningUnitSource[]>>({});
   const [passageCache, setPassageCache] = useState<Record<string, LearningUnitPassage[]>>({});
@@ -243,6 +246,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     setFocusedNodeId(null);
     setPreviewNodes([]);
     setSidebarContext(null);
+    setSidebarNode(null);
     setSelectedSourceIdsByContext({});
     setApplyingSourcesFor(null);
   }, [workspaceData]);
@@ -483,6 +487,20 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     }
   }, [edges, findParentCanvasNode, getSourcePayloadForContext, nodes, selectedSourceIds, sidebarContext]);
 
+  const handleStartEdge = useCallback((nodeId: string, _side: 'left' | 'right' | 'top' | 'bottom', x: number, y: number) => {
+    setEdgeDraft({ from: nodeId, x, y, toX: x, toY: y });
+  }, []);
+
+  const completeEdgeToNode = useCallback((toNodeId: string) => {
+    setEdgeDraft((draft) => {
+      if (!draft || draft.from === toNodeId) return null;
+      setEdges((prev) => prev.some((edge) => edge.from === draft.from && edge.to === toNodeId)
+        ? prev
+        : [...prev, { from: draft.from, to: toNodeId }]);
+      return null;
+    });
+  }, []);
+
   const handleCreateAINode = useCallback((
     parentNodeId: string,
     type: 'ai-chat' | 'ai-review',
@@ -498,9 +516,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       id: nodeId,
       type,
       title: buildAINodeTitle(type),
-      content: type === 'ai-chat'
-        ? `Ban dang hoc tu node "${parentNode.title}".\n\nNgu canh:\n${seedText}`
-        : `Hay on tap dua tren noi dung sau:\n${seedText}`,
+      content: seedText,
       summary: selectedText?.trim(),
       metaSubtitle: selectedText ? 'Tao tu doan van da chon' : `Lien ket tu ${parentNode.title}`,
       nodeId: parentNode.nodeId,
@@ -513,7 +529,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       width: 196,
       height: 48,
       parentId: parentNode.id,
-      questionCount: type === 'ai-chat' ? 15 : undefined,
+      questionCount: type === 'ai-review' ? 15 : undefined,
     };
 
     setNodes((prev) => [...prev, newNode]);
@@ -529,11 +545,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       id: nodeId,
       type,
       title: buildAINodeTitle(type),
-      content: type === 'ai-chat'
-        ? `Ban dang hoc tu workspace${parentNode ? `, node "${parentNode.title}"` : ''}.\n\nNgu canh:\n${seedText}`
-        : type === 'ai-review'
-          ? `Hay on tap dua tren noi dung sau:\n${seedText}`
-          : `Tong hop cac node/tai lieu lien quan trong workspace.\n\nNgu canh ban dau:\n${seedText}`,
+      content: seedText,
       metaSubtitle: parentNode ? `Tao tu ${parentNode.title}` : 'Tao tu canvas',
       nodeId: parentNode?.nodeId ?? workspaceData?.roadmapNode.id,
       sourceId: parentNode?.sourceId,
@@ -545,7 +557,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       width: type === 'synthesis' ? 220 : 196,
       height: type === 'synthesis' ? 52 : 48,
       parentId: parentNode?.id,
-      questionCount: type === 'ai-chat' ? 15 : undefined,
+      questionCount: type === 'ai-review' ? 15 : undefined,
     };
     setNodes((prev) => [...prev, newNode]);
     if (parentNode) {
@@ -681,20 +693,33 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
       return;
     }
 
+    if (edgeDraft) {
+      completeEdgeToNode(id);
+      setFocusedNodeId(id);
+      return;
+    }
+
+    if (node.type === 'note') {
+      setFocusedNodeId(id);
+      setSidebarContext(null);
+      setSidebarNode(node);
+      return;
+    }
+
     if (node.type === 'document' && node.sourceId) {
       setFocusedNodeId(id);
       openPreviewNode(node);
       return;
     }
 
-    if (node.type === 'ai-chat' || node.type === 'ai-review') {
+    if (node.type === 'ai-chat' || node.type === 'ai-review' || node.type === 'synthesis') {
       setFocusedNodeId(id);
       openPreviewNode(node);
       return;
     }
 
     setFocusedNodeId(id);
-  }, [ensureSourcesLoaded, ensureWorkspaceSourcesLoaded, nodes, openPreviewNode, workspaceData]);
+  }, [completeEdgeToNode, edgeDraft, ensureSourcesLoaded, ensureWorkspaceSourcesLoaded, nodes, openPreviewNode, workspaceData]);
 
   const handleNodeDrag = useCallback((id: string, dx: number, dy: number) => {
     setNodes((prev) => prev.map((node) => (
@@ -725,22 +750,30 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (edgeDraft) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const toX = rect ? (e.clientX - rect.left - transform.x) / transform.scale : edgeDraft.x;
+      const toY = rect ? (e.clientY - rect.top - transform.y) / transform.scale : edgeDraft.y;
+      setEdgeDraft((draft) => draft ? { ...draft, toX, toY } : null);
+      return;
+    }
     if (!isPanning.current) return;
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
     panStart.current = { x: e.clientX, y: e.clientY };
     setTransform((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-  }, []);
+  }, [edgeDraft, transform]);
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
+    setEdgeDraft(null);
   }, []);
 
   const zoomIn = () => setTransform((prev) => ({ ...prev, scale: Math.min(2.5, prev.scale * 1.2) }));
   const zoomOut = () => setTransform((prev) => ({ ...prev, scale: Math.max(0.3, prev.scale / 1.2) }));
   const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
-  const hasSidebar = sidebarContext !== null;
+  const hasSidebar = sidebarContext !== null || sidebarNode !== null;
   const hasExpanded = previewNodes.length > 0;
 
   return (
@@ -796,6 +829,11 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
           }}
         >
           <EdgeLayer edges={edges} nodes={nodes} isNodeHidden={() => false} width={CANVAS_W} height={CANVAS_H} />
+          {edgeDraft && (
+            <svg width={CANVAS_W} height={CANVAS_H} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible' }}>
+              <path d={`M ${edgeDraft.x} ${edgeDraft.y} C ${(edgeDraft.x + edgeDraft.toX) / 2} ${edgeDraft.y}, ${(edgeDraft.x + edgeDraft.toX) / 2} ${edgeDraft.toY}, ${edgeDraft.toX} ${edgeDraft.toY}`} stroke="#6B2D3E" strokeWidth={2} fill="none" strokeDasharray="5 5" />
+            </svg>
+          )}
 
           <AnimatePresence>
             {nodes.map((node) => (
@@ -807,7 +845,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
                 onDrag={handleNodeDrag}
                 onClick={handleNodeClick}
                 onContextMenu={handleNodeContextMenu}
-                onStartEdge={() => {}}
+                onStartEdge={handleStartEdge}
                 scale={transform.scale}
                 collapsedChildCount={0}
               />
@@ -862,8 +900,21 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
         )}
       </AnimatePresence>
 
+      {sidebarNode && (
+        <div className="w-[400px] flex-shrink-0 h-full">
+          <ExpandedNoteContent
+            node={sidebarNode}
+            onClose={() => setSidebarNode(null)}
+            onUpdateContent={(nodeId, content) => {
+              setNodes((prev) => prev.map((node) => node.id === nodeId ? { ...node, content } : node));
+              setSidebarNode((prev) => prev && prev.id === nodeId ? { ...prev, content } : prev);
+            }}
+          />
+        </div>
+      )}
+
       <DocumentSidebar
-        context={sidebarContext}
+        context={sidebarNode ? null : sidebarContext}
         sources={currentSources}
         loading={loadingSourcesFor === sidebarContext?.id}
         applying={applyingSourcesFor === sidebarContext?.id}
