@@ -1,4 +1,4 @@
-import { apiFetch } from '@/shared/api/client';
+import { apiFetch, apiFetchEventStream, SseEventPayload } from '@/shared/api/client';
 import { requestTokenBalanceRefresh } from '@/shared/lib/tokenBalanceEvents';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -63,7 +63,12 @@ export interface StudyPayload {
   passage_ids?: string[];
   context?: string;
   selected_text?: string;
+  quiz_count?: number;
+  flashcard_count?: number;
+  append?: boolean;
 }
+
+export type StudyStreamEvent = SseEventPayload;
 
 // ─── API ─────────────────────────────────────────────────────
 
@@ -93,6 +98,44 @@ export const aiApi = {
     });
     requestTokenBalanceRefresh();
     return res;
+  },
+
+  streamStudyChat(payload: StudyPayload, onEvent: (event: StudyStreamEvent) => void) {
+    return apiFetchEventStream<{ text?: string }>('/study/chat/stream', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      onEvent,
+    }).finally(() => requestTokenBalanceRefresh());
+  },
+
+  streamStudyNotes(payload: StudyPayload, onEvent: (event: StudyStreamEvent) => void) {
+    return apiFetchEventStream<{ text?: string }>('/study/notes/generate/stream', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      onEvent,
+    }).finally(() => requestTokenBalanceRefresh());
+  },
+
+  streamStudySummary(payload: StudyPayload, onEvent: (event: StudyStreamEvent) => void) {
+    return apiFetchEventStream<{ text?: string }>('/study/summary/generate/stream', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      onEvent,
+    }).finally(() => requestTokenBalanceRefresh());
+  },
+
+  streamStudyReview(payload: StudyPayload, onEvent: (event: StudyStreamEvent) => void) {
+    return apiFetchEventStream<{
+      quiz: Array<{ question: string; options: string[]; correct_index: number; explanation: string }>;
+      flashcards: Array<{ front: string; back: string }>;
+      essay: { prompt: string; rubric: string[] };
+      teach: { prompt: string };
+      citations: StudyCitation[];
+    }>('/study/review/generate/stream', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      onEvent,
+    }).finally(() => requestTokenBalanceRefresh());
   },
 
   async generateStudyReview(payload: StudyPayload) {

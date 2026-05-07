@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageCircle, ClipboardList, Plus, Minus } from 'lucide-react';
+import { Send, MessageCircle, ClipboardList } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AIStreamText from '@/shared/ui/AIStreamText';
 import { CanvasNode } from '../model/types';
@@ -26,9 +26,12 @@ interface FloatingMenu {
 export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Props) {
   const user = useAuthStore((s) => s.user);
   const [input, setInput] = useState('');
-  const [questionCount, setQuestionCount] = useState(node.questionCount ?? 15);
-  const [msgs, setMsgs] = useState<ChatMsg[]>([{ id: 'init', role: 'ai', text: node.content ?? node.title }]);
+  const initialText = node.summary
+    ? `Mình đang xem đúng đoạn bạn bôi đen:\n\n“${node.summary.slice(0, 500)}${node.summary.length > 500 ? '...' : ''}”\n\nBạn muốn hỏi gì về đoạn này?`
+    : 'Bạn muốn hỏi gì về nội dung này?';
+  const [msgs, setMsgs] = useState<ChatMsg[]>([{ id: 'init', role: 'ai', text: initialText }]);
   const [streaming, setStreaming] = useState(false);
+  const [statusText, setStatusText] = useState('');
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -53,7 +56,7 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
     setInput('');
     setStreaming(true);
     try {
-      const res = await aiApi.studyChat({
+      await aiApi.streamStudyChat({
         message: query,
         canvas_node_id: node.id,
         node_id: node.nodeId,
@@ -61,16 +64,27 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
         source_type: node.sourceType,
         passage_ids: node.passageIds ?? [],
         selected_text: node.summary,
-        context: `${node.content ?? ''}\n\n[Question count preference]\nNếu người dùng yêu cầu tạo/gợi ý câu hỏi, hãy tạo khoảng ${questionCount} câu hỏi.`,
+        context: node.summary ? undefined : node.content,
+      }, (event) => {
+        if (event.event === 'status' || event.event === 'progress') {
+          const data = event.data as { message?: string };
+          setStatusText(data.message || 'Đang nghĩ');
+        }
+        if (event.event === 'citations') {
+          const data = event.data as { citations?: Array<{ source_title: string; quote: string }> };
+          setMsgs((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, citations: data.citations || [] } : m));
+        }
+        if (event.event === 'delta') {
+          const data = event.data as { text?: string };
+          setMsgs((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, text: m.text + (data.text || '') } : m));
+        }
       });
-      setMsgs((prev) =>
-        prev.map((m) => m.id === aiMsgId ? { ...m, text: res.answer, citations: res.citations } : m)
-      );
     } catch {
       setMsgs((prev) =>
         prev.map((m) => m.id === aiMsgId ? { ...m, text: 'Xin lỗi, không thể kết nối AI lúc này.' } : m)
       );
     } finally {
+      setStatusText('');
       setStreaming(false);
     }
   };
@@ -206,33 +220,9 @@ export default function ExpandedAIContent({ node, onClose, onCreateAINode }: Pro
 
       {/* Chat input */}
       <div className="px-5 py-3 border-t bg-white/40 flex-shrink-0" style={{ borderColor: `${borderColor}33` }}>
-        {isChat && (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-white/70 border border-[#E5E5DF] px-3 py-2">
-            <span className="text-[11px] font-bold text-[#5A5C58]">Số câu hỏi/gợi ý</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setQuestionCount((value) => Math.max(1, value - 1))}
-                className="w-6 h-6 rounded-lg border border-[#E5E5DF] flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer"
-                title="Giảm số câu"
-              >
-                <Minus size={12} />
-              </button>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={questionCount}
-                onChange={(e) => setQuestionCount(Math.max(1, Math.min(50, Number(e.target.value) || 15)))}
-                className="w-14 text-center text-[12px] font-black text-[#2D2D2D] bg-white border border-[#E5E5DF] rounded-lg py-1 outline-none focus:border-[#6B2D3E]"
-              />
-              <button
-                onClick={() => setQuestionCount((value) => Math.min(50, value + 1))}
-                className="w-6 h-6 rounded-lg border border-[#E5E5DF] flex items-center justify-center hover:bg-[#F5F0EB] cursor-pointer"
-                title="Tăng số câu"
-              >
-                <Plus size={12} />
-              </button>
-            </div>
+        {streaming && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/70 border border-[#E5E5DF] px-3 py-2 text-[11px] font-bold text-[#5A5C58]">
+            <span>{statusText || 'Đang nghĩ'}</span><span className="animate-pulse">...</span>
           </div>
         )}
         <div className="flex gap-2 items-center bg-white border-2 rounded-full px-4 py-2 focus-within:border-[#6B2D3E] transition-colors" style={{ borderColor: '#E5E5DF' }}>

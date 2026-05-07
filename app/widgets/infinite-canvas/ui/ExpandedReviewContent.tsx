@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, RotateCw, Send, ChevronLeft, ChevronRight, MessageCircle, ClipboardList, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCw, Send, ChevronLeft, ChevronRight, MessageCircle, ClipboardList, Loader2, Plus, Mic, Square } from 'lucide-react';
 import { CanvasNode } from '../model/types';
-import { quizQuestions, flashcards, essayQuestion, teachAIPrompt } from '@/entities/learning-content';
 import ExpandedHeader from './ExpandedHeader';
 import AIStreamText from '@/shared/ui/AIStreamText';
 import { aiApi } from '@/entities/ai/api';
@@ -43,6 +42,8 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
   const [floatingMenu, setFloatingMenu] = useState<FloatingMenu | null>(null);
   const [generated, setGenerated] = useState<GeneratedReview | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState({ step: 0, total: 4, message: '' });
+  const [moreCount, setMoreCount] = useState(5);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
     const run = async () => {
       setGenerating(true);
       try {
-        const res = await aiApi.generateStudyReview({
+        const res = await aiApi.streamStudyReview({
           message: 'Tạo bộ ôn tập từ node canvas này.',
           canvas_node_id: node.id,
           node_id: node.nodeId,
@@ -59,6 +60,13 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
           passage_ids: node.passageIds ?? [],
           context: node.content,
           selected_text: node.summary,
+          quiz_count: 15,
+          flashcard_count: 15,
+        }, (event) => {
+          if (event.event === 'progress') {
+            const data = event.data as { step?: number; total?: number; message?: string };
+            if (!cancelled) setProgress({ step: data.step || 0, total: data.total || 4, message: data.message || 'Đang tạo' });
+          }
         });
         if (!cancelled) setGenerated(res);
       } catch {
@@ -158,9 +166,29 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
         onContextMenu={handleContextMenu}
         onMouseUp={handleMouseUp}
       >
-        {generating && <div className="flex items-center justify-center gap-2 p-4 text-xs font-bold text-[#991B1B]"><Loader2 size={14} className="animate-spin" /> AI đang tạo bộ ôn tập thật...</div>}
-        {activeTab === 'quiz' && <QuizTab generated={generated?.quiz} />}
-        {activeTab === 'flashcard' && <FlashcardTab generated={generated?.flashcards} />}
+        {generating && (
+          <div className="p-4 space-y-2 text-xs font-bold text-[#991B1B]">
+            <div className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> {progress.message || 'AI đang tạo bộ ôn tập thật'}<span className="animate-pulse">...</span></div>
+            <div className="h-2 rounded-full bg-white/70 overflow-hidden"><div className="h-full bg-[#991B1B] transition-all" style={{ width: `${Math.min(100, ((progress.step || 1) / (progress.total || 4)) * 100)}%` }} /></div>
+          </div>
+        )}
+        {!generating && (
+          <div className="px-4 py-3 flex items-center gap-2 border-b border-[#F87171]/20 bg-white/30">
+            <span className="text-[11px] font-bold text-[#991B1B]">Tạo thêm</span>
+            <input type="number" min={1} max={50} value={moreCount} onChange={(e) => setMoreCount(Math.max(1, Math.min(50, Number(e.target.value) || 5)))} className="w-16 rounded-lg border border-[#E5E5DF] px-2 py-1 text-xs font-bold outline-none" />
+            <button onClick={async () => {
+              setGenerating(true); setProgress({ step: 1, total: 4, message: `Đang tạo thêm ${moreCount} câu` });
+              try {
+                const res = await aiApi.streamStudyReview({ message: `Tạo thêm ${moreCount} câu ôn tập mới, tránh trùng với bộ hiện tại.`, canvas_node_id: node.id, node_id: node.nodeId, source_id: node.sourceId, source_type: node.sourceType, passage_ids: node.passageIds ?? [], context: node.content, selected_text: node.summary, quiz_count: moreCount, flashcard_count: moreCount, append: true }, (event) => {
+                  if (event.event === 'progress') { const data = event.data as { step?: number; total?: number; message?: string }; setProgress({ step: data.step || 0, total: data.total || 4, message: data.message || 'Đang tạo' }); }
+                });
+                setGenerated((prev) => ({ quiz: [...(prev?.quiz || []), ...(res.quiz || [])], flashcards: [...(prev?.flashcards || []), ...(res.flashcards || [])], essay: res.essay || prev?.essay || { prompt: '', rubric: [] }, teach: res.teach || prev?.teach || { prompt: '' } }));
+              } finally { setGenerating(false); }
+            }} className="flex items-center gap-1 rounded-lg bg-[#991B1B] px-3 py-1.5 text-[11px] font-bold text-white"><Plus size={12} /> câu</button>
+          </div>
+        )}
+        {activeTab === 'quiz' && <QuizTab generated={generated?.quiz} loading={generating} />}
+        {activeTab === 'flashcard' && <FlashcardTab generated={generated?.flashcards} loading={generating} />}
         {activeTab === 'essay' && <EssayTab generated={generated?.essay} />}
         {activeTab === 'teach' && <TeachAITab generated={generated?.teach} />}
 
@@ -221,7 +249,7 @@ export default function ExpandedReviewContent({ node, onClose, onCreateAINode }:
 
 // ─── Quiz Tab ────────────────────────────────────────────────
 
-function QuizTab({ generated }: { generated?: GeneratedReview['quiz'] }) {
+function QuizTab({ generated, loading }: { generated?: GeneratedReview['quiz']; loading?: boolean }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -234,9 +262,9 @@ function QuizTab({ generated }: { generated?: GeneratedReview['quiz'] }) {
     options: q.options.map((text, i) => ({ label: String.fromCharCode(65 + i), text, correct: i === q.correct_index })),
     explanation: q.explanation,
   }));
-  const questions = generatedQuestions?.length ? generatedQuestions : quizQuestions;
+  const questions = generatedQuestions ?? [];
   const q = questions[currentQ];
-  if (!q) return null;
+  if (!q) return <div className="p-4 text-xs font-bold text-[#991B1B]">{loading ? 'Đang tạo quiz thật...' : 'Chưa có quiz. Bấm tạo thêm để sinh câu hỏi.'}</div>;
 
   const handleSelect = (label: string) => {
     if (selected) return; // already answered
@@ -361,14 +389,14 @@ function QuizTab({ generated }: { generated?: GeneratedReview['quiz'] }) {
 
 // ─── Flashcard Tab ───────────────────────────────────────────
 
-function FlashcardTab({ generated }: { generated?: GeneratedReview['flashcards'] }) {
+function FlashcardTab({ generated, loading }: { generated?: GeneratedReview['flashcards']; loading?: boolean }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<string>>(new Set());
 
-  const cards = generated?.map((c, idx) => ({ id: `ai-${idx}`, front: c.front, back: c.back })) ?? flashcards;
+  const cards = generated?.map((c, idx) => ({ id: `ai-${idx}`, front: c.front, back: c.back })) ?? [];
   const card = cards[currentIdx];
-  if (!card) return null;
+  if (!card) return <div className="p-4 text-xs font-bold text-[#991B1B]">{loading ? 'Đang tạo flashcard thật...' : 'Chưa có flashcard. Bấm tạo thêm để sinh thẻ.'}</div>;
 
   const handleFlip = () => setFlipped(!flipped);
   const handleNext = () => { setCurrentIdx((i) => Math.min(i + 1, cards.length - 1)); setFlipped(false); };
@@ -471,7 +499,7 @@ function EssayTab({ generated }: { generated?: GeneratedReview['essay'] }) {
     if (!answer.trim()) return;
     setSubmitting(true);
     try {
-      const content = `Câu hỏi: ${generated?.prompt || essayQuestion.question}\n\nRubric: ${generated?.rubric?.join('; ') || 'Đánh giá bài viết của học sinh'}\n\nBài làm: ${answer}`;
+      const content = `Câu hỏi: ${generated?.prompt || 'Viết một đoạn tự luận giải thích nội dung vừa học.'}\n\nRubric: ${generated?.rubric?.join('; ') || 'Đánh giá bài viết của học sinh'}\n\nBài làm: ${answer}`;
       const res = await aiApi.evaluate(content, 'Đánh giá bài viết của học sinh');
       const feedbackText = `${res.feedback}\n\nĐiểm: ${res.score}/100 (${res.grade})\n${res.suggestions?.length ? '\nGợi ý: ' + res.suggestions.join('; ') : ''}`;
       setFeedback(feedbackText);
@@ -495,7 +523,7 @@ function EssayTab({ generated }: { generated?: GeneratedReview['essay'] }) {
       {/* Question */}
       <div className="bg-white rounded-xl border border-[#E5E5DF] p-4">
         <p className="text-[9px] font-bold text-[#991B1B] uppercase tracking-widest mb-2">CÂU HỎI TỰ LUẬN</p>
-        <p className="text-[13px] font-semibold text-[#2D2D2D] leading-relaxed">{generated?.prompt || essayQuestion.question}</p>
+        <p className="text-[13px] font-semibold text-[#2D2D2D] leading-relaxed">{generated?.prompt || 'AI đang chuẩn bị câu tự luận từ ngữ cảnh...'}</p>
       </div>
 
       {/* Answer area */}
@@ -548,110 +576,75 @@ function EssayTab({ generated }: { generated?: GeneratedReview['essay'] }) {
 // ─── Teach AI Tab ────────────────────────────────────────────
 
 function TeachAITab({ generated }: { generated?: GeneratedReview['teach'] }) {
-  const user = useAuthStore((s) => s.user);
   const [teaching, setTeaching] = useState('');
-  const [submitted, setSubmitted] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
-  const handleSubmit = async () => {
+  const startVoice = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'vi-VN';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event: any) => {
+      let text = '';
+      for (let i = 0; i < event.results.length; i++) text += event.results[i][0].transcript;
+      setTeaching(text);
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
+
+  const stopVoice = () => { recognitionRef.current?.stop?.(); setListening(false); };
+
+  const askChildQuestion = async () => {
     if (!teaching.trim()) return;
-    setSubmitting(true);
+    setSubmitting(true); setAiResponse('');
     try {
-      const content = `Câu hỏi AI: ${generated?.prompt || teachAIPrompt.aiQuestion}\n\nGiải thích của học sinh: ${teaching}`;
-      const res = await aiApi.evaluate(content, 'Đánh giá khả năng giải thích kiến thức');
-      setScore(res.score); // score is /100
-      const responseText = `Cảm ơn bạn đã giải thích!\n\n${res.feedback}${res.suggestions?.length ? '\n\n💡 Gợi ý: ' + res.suggestions.join('; ') : ''}\n\nĐộ chính xác giải thích: ${res.score}%`;
-      setAiResponse(responseText);
-    } catch {
-      setScore(75);
-      setAiResponse(`Cảm ơn bạn đã giải thích về ${teachAIPrompt.topic}! Bài giải thích khá tốt. Hãy thử lại để nhận phản hồi chi tiết hơn từ AI.`);
-    } finally {
-      setSubmitting(false);
-      setSubmitted(true);
-    }
+      const content = `Bạn đóng vai một đứa trẻ thông minh nhưng chưa hiểu bài. Người dùng vừa dạy bạn nội dung sau:\n${teaching}\n\nHãy hỏi lại 1-2 câu thật ngây thơ nhưng lắt léo, buộc người dạy giải thích sâu hơn. Nói bạn đang hiểu khoảng bao nhiêu phần trăm, nhưng chưa chấm điểm cuối cùng.`;
+      const res = await aiApi.evaluate(content, 'Đóng vai học trò nhỏ hỏi lại để kiểm tra khả năng giảng dạy');
+      setAiResponse(`${res.feedback}\n\nMức hiểu tạm thời: ${Math.max(10, Math.min(95, res.score))}%`);
+    } catch { setAiResponse('Em nghe hơi hiểu rồi, nhưng tại sao chỗ đó lại đúng? Nếu đổi ví dụ khác thì còn đúng không ạ?'); }
+    finally { setSubmitting(false); }
   };
 
-  const handleReset = () => {
-    setTeaching('');
-    setSubmitted(false);
-    setAiResponse('');
-    setScore(0);
-    setSubmitting(false);
+  const stopSession = async () => {
+    if (!teaching.trim()) return;
+    setStopped(true); setSubmitting(true);
+    try {
+      const content = `Buổi dạy đã kết thúc. Prompt ban đầu: ${generated?.prompt || 'Dạy lại nội dung vừa học'}\n\nBài giảng của người dùng:\n${teaching}\n\nHãy chấm điểm khả năng dạy lại theo góc nhìn một đứa trẻ: hiểu được bao nhiêu %, phần nào rõ, phần nào còn mơ hồ, câu hỏi lắt léo nào người dạy cần trả lời thêm.`;
+      const res = await aiApi.evaluate(content, 'Chấm điểm buổi dạy lại kiến thức');
+      setScore(res.score);
+      setAiResponse(`${res.feedback}${res.suggestions?.length ? '\n\nGợi ý cải thiện: ' + res.suggestions.join('; ') : ''}\n\nĐiểm buổi dạy: ${res.score}%`);
+    } catch { setScore(70); setAiResponse('Em hiểu khoảng 70%. Bài giảng ổn nhưng cần thêm ví dụ cụ thể và giải thích vì sao từng bước đúng.'); }
+    finally { setSubmitting(false); }
   };
+
+  const reset = () => { setTeaching(''); setAiResponse(''); setScore(null); setSubmitting(false); setStopped(false); stopVoice(); };
 
   return (
     <div className="px-4 py-4 space-y-4">
-      {/* AI's question */}
       <div className="bg-white rounded-xl border border-[#E5E5DF] p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-full bg-[#EEF2FF] border border-[#818CF8] flex items-center justify-center text-[10px]">
-            🤖
-          </div>
-          <p className="text-[9px] font-bold text-[#4338CA] uppercase tracking-widest">AI HỎI BẠN</p>
-        </div>
-        <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{generated?.prompt || teachAIPrompt.aiQuestion}</p>
+        <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded-full bg-[#EEF2FF] border border-[#818CF8] flex items-center justify-center text-[10px]">🧒</div><p className="text-[9px] font-bold text-[#4338CA] uppercase tracking-widest">ĐỨA TRẺ HỎI BẠN</p></div>
+        <p className="text-[13px] text-[#2D2D2D] leading-relaxed">{generated?.prompt || 'Bạn thử dạy lại nội dung này cho mình nghe đi. Mình sẽ hỏi lại đến khi bạn bấm dừng buổi dạy.'}</p>
       </div>
-
-      <div className="bg-[#FFFDE7] rounded-lg px-3 py-2 border border-[#F59E0B]/30">
-        <p className="text-[10px] text-[#92400E] font-medium">
-          💡 Mẹo: Hãy giải thích như đang dạy bạn bè — càng rõ ràng, đơn giản, AI càng cho điểm cao!
-        </p>
+      <textarea value={teaching} onChange={(e) => setTeaching(e.target.value)} placeholder="Dạy bằng chữ hoặc bấm mic để nói..." className="w-full h-44 p-4 bg-white border-2 border-[#E5E5DF] rounded-xl text-[13px] text-[#2D2D2D] leading-relaxed resize-none focus:border-[#4338CA] outline-none placeholder-[#9CA3AF] transition-colors" />
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={listening ? stopVoice : startVoice} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border-2 border-[#818CF8] text-[#4338CA] text-[12px] font-bold"><Mic size={12} /> {listening ? 'Dừng voice' : 'Dạy bằng voice'}</button>
+        <button onClick={askChildQuestion} disabled={teaching.trim().length < 20 || submitting || stopped} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#4338CA] text-white text-[12px] font-bold disabled:opacity-40">{submitting && !stopped ? <Loader2 size={12} className="animate-spin" /> : null} Hỏi lại như trẻ con</button>
+        <button onClick={stopSession} disabled={teaching.trim().length < 20 || submitting} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#991B1B] text-white text-[12px] font-bold disabled:opacity-40"><Square size={12} /> Dừng buổi dạy & chấm</button>
+        <button onClick={reset} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#E5E5DF] text-[12px] font-bold"><RotateCw size={12} /> Làm lại</button>
       </div>
-
-      {!submitted ? (
-        <>
-          <textarea
-            value={teaching}
-            onChange={(e) => setTeaching(e.target.value)}
-            placeholder="Giải thích lại nội dung vừa học cho AI..."
-            className="w-full h-44 p-4 bg-white border-2 border-[#E5E5DF] rounded-xl text-[13px] text-[#2D2D2D] leading-relaxed resize-none focus:border-[#4338CA] outline-none placeholder-[#9CA3AF] transition-colors"
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[#9CA3AF]">{teaching.length} ký tự</span>
-            <button
-              onClick={handleSubmit}
-              disabled={teaching.trim().length < 30 || submitting}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4338CA] text-white text-[12px] font-bold hover:bg-[#3730A3] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-            >
-              {submitting ? <Loader2 size={12} className="animate-spin" /> : null}
-              {submitting ? 'Đang chấm...' : '🎓 Dạy AI'}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Score */}
-          <div className="flex items-center justify-center py-3">
-            <div className="bg-white rounded-2xl border-2 border-[#333333] px-6 py-3 text-center">
-              <p className="text-[10px] font-bold text-[#5A5C58] uppercase tracking-widest">ĐỘ CHÍNH XÁC</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: score >= 80 ? '#065F46' : score >= 50 ? '#C2410C' : '#991B1B' }}>
-                {score}%
-              </p>
-            </div>
-          </div>
-
-          {/* Your explanation */}
-          <div className="bg-white/60 rounded-xl border border-[#E5E5DF] p-4">
-            <p className="text-[9px] font-bold text-[#5A5C58] uppercase tracking-widest mb-1">BÀI GIẢNG CỦA BẠN</p>
-            <p className="text-[12px] text-[#5A5C58] leading-relaxed italic">{teaching}</p>
-          </div>
-
-          {/* AI response */}
-          <div className="bg-white rounded-xl border-2 border-[#4338CA] p-4">
-            <p className="text-[9px] font-bold text-[#4338CA] uppercase tracking-widest mb-2">PHẢN HỒI TỪ AI</p>
-            <AIStreamText text={aiResponse} speed={15} className="text-[12px] text-[#2D2D2D] leading-relaxed whitespace-pre-line" />
-          </div>
-
-          <button
-            onClick={handleReset}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#4338CA] text-white text-[12px] font-bold hover:bg-[#3730A3] transition-all cursor-pointer"
-          >
-            <RotateCw size={12} /> Dạy lại
-          </button>
-        </>
-      )}
+      {score !== null && <div className="bg-white rounded-2xl border-2 border-[#333333] px-6 py-3 text-center"><p className="text-[10px] font-bold text-[#5A5C58] uppercase tracking-widest">ĐỘ HIỂU CỦA ĐỨA TRẺ</p><p className="text-3xl font-bold mt-1" style={{ color: score >= 80 ? '#065F46' : score >= 50 ? '#C2410C' : '#991B1B' }}>{score}%</p></div>}
+      {aiResponse && <div className="bg-white rounded-xl border-2 border-[#4338CA] p-4"><p className="text-[9px] font-bold text-[#4338CA] uppercase tracking-widest mb-2">PHẢN HỒI / CÂU HỎI CỦA ĐỨA TRẺ</p><AIStreamText text={aiResponse} speed={15} className="text-[12px] text-[#2D2D2D] leading-relaxed whitespace-pre-line" /></div>}
     </div>
   );
 }
