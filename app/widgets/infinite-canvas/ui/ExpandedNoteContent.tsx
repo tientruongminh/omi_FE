@@ -73,10 +73,17 @@ export default function ExpandedNoteContent({ node, onClose, onUpdateContent }: 
     setIsPolishing(true);
 
     try {
-      const res = await aiApi.chat(
-        `Hãy hoàn thiện và cải thiện đoạn ghi chú sau, giữ nguyên ý nghĩa, sửa lỗi chính tả và văn phong. Chỉ trả về nội dung đã hoàn thiện, không thêm chú thích:\n\n${content}`,
-      );
-      const polishedText = res.response;
+      const res = await aiApi.generateStudyNotes({
+        message: 'Hoàn thiện và cải thiện ghi chú này, giữ ý nghĩa, sửa chính tả/văn phong, trả về markdown sạch.',
+        canvas_node_id: node.id,
+        node_id: node.nodeId,
+        source_id: node.sourceId,
+        source_type: node.sourceType,
+        passage_ids: node.passageIds ?? [],
+        context: content || node.content,
+        selected_text: node.summary,
+      });
+      const polishedText = res.content;
       setContent(polishedText);
       onUpdateContent?.(node.id, polishedText);
       saveToBackend(polishedText);
