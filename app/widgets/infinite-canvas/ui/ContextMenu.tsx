@@ -27,7 +27,9 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
       return [
         { label: 'Thêm đơn vị bài học', action: 'add-unit', hasSubmenu: true },
         { label: 'Thêm ghi chú', action: 'add-note' },
-        { label: 'Tạo node tổng hợp', action: 'add-synthesis' },
+        { label: 'AI hỏi đáp', action: 'add-ai-chat' },
+        { label: 'AI ôn tập', action: 'add-ai-review' },
+        { label: 'AI tổng hợp', action: 'add-synthesis' },
       ];
     }
     const base: { label: string; action: string; danger?: boolean; hasSubmenu?: boolean }[] = [];
@@ -36,11 +38,12 @@ export default function ContextMenu({ menu, onAction, onClose, onShowAddUnit, on
         base.push(
           { label: 'AI Hỏi đáp', action: 'ai-chat' },
           { label: 'AI Ôn tập', action: 'ai-review' },
+          { label: 'AI Tổng hợp', action: 'ai-synthesis' },
         );
         break;
-      case 'document': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'Mở đọc', action: 'open-read' }); break;
-      case 'synthesis': base.push({ label: 'Mở tổng hợp', action: 'open-read' }); break;
-      case 'ai-chat': case 'ai-review': case 'note': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }); break;
+      case 'document': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'AI Tổng hợp', action: 'ai-synthesis' }, { label: 'Mở đọc', action: 'open-read' }); break;
+      case 'synthesis': base.push({ label: 'Mở tổng hợp', action: 'open-read' }, { label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }); break;
+      case 'ai-chat': case 'ai-review': case 'note': base.push({ label: 'AI Hỏi đáp', action: 'ai-chat' }, { label: 'AI Ôn tập', action: 'ai-review' }, { label: 'AI Tổng hợp', action: 'ai-synthesis' }); break;
     }
     if (menu.hasChildren) {
       base.push(menu.isCollapsed ? { label: 'Mở rộng', action: 'expand-node' } : { label: 'Thu gọn', action: 'collapse-node' });

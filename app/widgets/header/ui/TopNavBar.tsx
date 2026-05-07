@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/roadmap',    label: 'Roadmap'  },
   { href: '/learn',      label: 'Học tập'  },
   { href: '/workspace',  label: 'Tài liệu' },
+  { href: '/materials',  label: 'Search material' },
 ];
 
 export default function TopNavBar() {
@@ -76,9 +77,10 @@ export default function TopNavBar() {
             <Search size={14} style={{ color: '#9ca3af' }} />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search material..."
               className="bg-transparent text-sm outline-none w-full"
               style={{ color: '#6b7280' }}
+              onFocus={() => router.push('/materials')}
             />
           </div>
 

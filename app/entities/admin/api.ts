@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/client';
+import { requestTokenBalanceRefresh } from '@/shared/lib/tokenBalanceEvents';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -163,11 +164,13 @@ export const adminApi = {
     return apiFetch(`/admin/teachers/${teacherId}/verify`, { method: 'PUT' });
   },
 
-  sendAdminChat(message: string) {
-    return apiFetch<{ session_id: string; response: string }>('/admin/ai/chat', {
+  async sendAdminChat(message: string) {
+    const res = await apiFetch<{ session_id: string; response: string }>('/admin/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message }),
     });
+    requestTokenBalanceRefresh();
+    return res;
   },
 
   heartbeat(sessionId: string, path: string, userName?: string) {
