@@ -67,6 +67,18 @@ export default function AdminUsersPage() {
     setShowModal(true);
   };
 
+  const handleInlineRoleChange = async (u: AdminUser, role: AdminUser['role']) => {
+    if (role === u.role) return;
+    const previousRole = u.role;
+    setUsers(prev => prev.map(item => item.id === u.id ? { ...item, role } : item));
+    try {
+      await adminApi.updateUserRole(u.user_id, role);
+    } catch {
+      setUsers(prev => prev.map(item => item.id === u.id ? { ...item, role: previousRole } : item));
+      setError('Không thể cập nhật role. Vui lòng thử lại.');
+    }
+  };
+
   const handleSave = async () => {
     if (!editUser) return;
     setSaving(true);
@@ -143,10 +155,17 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3 text-[13px] text-[#5A5C58]">{u.email}</td>
-                  <td className="px-5 py-3 text-center">
-                    <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-[#EEF2FF] text-[#4338CA]">
-                      {u.role}
-                    </span>
+                  <td className="px-5 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={u.role}
+                      onChange={(e) => handleInlineRoleChange(u, e.target.value as AdminUser['role'])}
+                      className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-[#EEF2FF] text-[#4338CA] border border-[#C7D2FE] focus:outline-none focus:border-[#4338CA] cursor-pointer"
+                      title="Đổi role nhanh"
+                    >
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </td>
                   <td className="px-5 py-3 text-center">
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
