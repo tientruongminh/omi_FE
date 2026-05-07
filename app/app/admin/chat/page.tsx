@@ -23,8 +23,13 @@ export default function AdminChatPage() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const stored = window.localStorage.getItem('omilearn_admin_chat_session_id');
+    if (stored) setSessionId(stored);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,7 +48,11 @@ export default function AdminChatPage() {
     setIsTyping(true);
 
     try {
-      const res = await adminApi.sendAdminChat(userMsg.content);
+      const res = await adminApi.sendAdminChat(userMsg.content, sessionId);
+      if (res.session_id) {
+        setSessionId(res.session_id);
+        window.localStorage.setItem('omilearn_admin_chat_session_id', res.session_id);
+      }
       const aiMsg: Message = {
         id: String(Date.now() + 1),
         role: 'assistant',
