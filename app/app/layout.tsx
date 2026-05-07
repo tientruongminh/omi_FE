@@ -106,8 +106,19 @@ export default function RootLayout({
                   "@type": "Organization",
                   "@id": "https://omilearn.com/#organization",
                   name: "Omilearn",
+                  alternateName: ["Omi Learn", "OmiLearn"],
                   url: "https://omilearn.com",
                   logo: "https://omilearn.com/favicon.ico",
+                  description:
+                    "Nền tảng AI học tập giúp sinh viên tạo lộ trình học cá nhân hóa, hỏi đáp tài liệu, tạo quiz, flashcard và ghi chú thông minh.",
+                  foundingDate: "2025",
+                  slogan: "AI học tập cá nhân hóa cho sinh viên",
+                  contactPoint: {
+                    "@type": "ContactPoint",
+                    contactType: "customer support",
+                    url: "https://omilearn.com",
+                    availableLanguage: ["vi", "en"],
+                  },
                   sameAs: ["https://omilearn.com"],
                 },
                 {
@@ -115,7 +126,8 @@ export default function RootLayout({
                   "@id": "https://omilearn.com/#website",
                   url: "https://omilearn.com",
                   name: "Omilearn",
-                  description: "Nền tảng AI học tập cá nhân hóa cho sinh viên.",
+                  description:
+                    "Omilearn là nền tảng AI học tập giúp sinh viên tạo lộ trình học cá nhân hóa, hỏi đáp tài liệu, tạo quiz, flashcard, ghi chú và ôn tập thông minh.",
                   inLanguage: "vi-VN",
                   publisher: { "@id": "https://omilearn.com/#organization" },
                   potentialAction: {

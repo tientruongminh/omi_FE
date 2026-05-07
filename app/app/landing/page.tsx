@@ -360,6 +360,21 @@ function TestimonialCarousel() {
 
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
 
+const FAQ_SCHEMA_ITEMS = [
+  {
+    q: "Omilearn là gì?",
+    a: "Omilearn là nền tảng AI học tập giúp sinh viên tạo lộ trình học cá nhân hóa, hỏi đáp tài liệu, tạo quiz, flashcard, ghi chú và ôn tập thông minh.",
+  },
+  {
+    q: "Omilearn giúp học hiệu quả như thế nào?",
+    a: "Omilearn biến mục tiêu học tập thành kế hoạch rõ ràng, gợi ý nội dung cần học, tạo bài ôn tập và giúp bạn kiểm tra kiến thức bằng AI.",
+  },
+  {
+    q: "Omilearn có miễn phí không?",
+    a: "Omilearn có gói dùng thử và gói miễn phí cho các tính năng học tập cơ bản; các tính năng AI nâng cao có thể nằm trong gói trả phí sau beta.",
+  },
+];
+
 const FAQ_ITEMS = [
   {
     q: "AI của Omilearn có giống ChatGPT không?",
@@ -450,11 +465,47 @@ function FAQAccordion() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [...FAQ_SCHEMA_ITEMS, ...FAQ_ITEMS].map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.a,
+      },
+    })),
+  };
+
+  const landingSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": "https://omilearn.com/landing#webpage",
+    url: "https://omilearn.com/landing",
+    name: "Omilearn - AI học tập, lộ trình học và ôn tập thông minh",
+    description:
+      "Omilearn giúp sinh viên tạo lộ trình học cá nhân hóa, hỏi đáp tài liệu, tạo quiz, flashcard, ghi chú và ôn tập thông minh bằng AI.",
+    inLanguage: "vi-VN",
+    isPartOf: { "@id": "https://omilearn.com/#website" },
+    about: { "@id": "https://omilearn.com/#app" },
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: "#faf9f7" }}
     >
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(landingSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       {/* ── Navbar ──────────────────────────────────────────────────────── */}
       <nav
         className="sticky top-0 z-50 w-full border-b"
@@ -542,15 +593,15 @@ export default function LandingPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Học tập thông
+            Tạo lộ trình học
             <br />
-            minh
+            cá nhân hóa
             <br />
             cùng{" "}
             <span style={{ color: "#6B2D3E", fontStyle: "italic" }}>
               AI
               <br />
-              Partner
+              Omilearn
             </span>
           </h1>
 
@@ -559,8 +610,8 @@ export default function LandingPage() {
             className="text-sm mb-8 leading-relaxed"
             style={{ color: "#6b7280", maxWidth: 360 }}
           >
-            Omilearn giúp bạn lập kế hoạch, quản lý tài liệu và bứt phá kết quả
-            học tập với trợ lý AI cá nhân.
+            Omilearn giúp sinh viên tạo lộ trình học bằng AI, hỏi đáp tài liệu,
+            tạo quiz, flashcard, ghi chú và ôn tập thông minh trên một workspace duy nhất.
           </p>
 
           <LaunchCountdown />
@@ -612,6 +663,22 @@ export default function LandingPage() {
         >
           <RobotIllustration />
         </motion.div>
+      </section>
+
+      {/* SEO intro content for crawlers and readers */}
+      <section className="px-5 sm:px-8 lg:px-12 pb-10" aria-label="Giới thiệu Omilearn cho SEO">
+        <div className="max-w-5xl mx-auto rounded-3xl bg-white/75 p-6 sm:p-8 border border-[#eadfd7]">
+          <h2 className="text-xl sm:text-2xl font-black text-[#1a1a1a] mb-3">
+            Omilearn là nền tảng AI học tập cho sinh viên Việt Nam
+          </h2>
+          <p className="text-sm sm:text-base leading-7 text-[#4b5563]">
+            Nếu bạn đang tìm một app học tập AI để lập kế hoạch học, tạo lộ trình học cá nhân hóa,
+            hỏi đáp tài liệu, tạo quiz, flashcard và ghi chú thông minh, Omilearn tập trung vào đúng
+            pain point đó: biến mục tiêu học tập mơ hồ thành từng bước học rõ ràng, có thể đo tiến độ
+            và ôn tập lại đúng lúc. Nền tảng phù hợp cho sinh viên đại học, người tự học lập trình,
+            người học ngoại ngữ và bất kỳ ai muốn học nhanh hơn nhưng vẫn nhớ lâu.
+          </p>
+        </div>
       </section>
 
       {/* ══ SECTION 2 — PAIN POINTS (mới) ══ */}
@@ -915,7 +982,7 @@ export default function LandingPage() {
           tag: "Tài Liệu AI",
           title: (
             <>
-              Không còn "ngợp" tài liệu —<br />
+              Không còn &quot;ngợp&quot; tài liệu —<br />
               <span style={{ color: "#6B2D3E", fontStyle: "italic" }}>
                 AI tìm &amp; chọn lọc giúp bạn
               </span>
@@ -1213,8 +1280,8 @@ export default function LandingPage() {
                   color: "#374151",
                 }}
               >
-                "Định luật Ohm phát biểu rằng: cường độ dòng điện I tỉ lệ thuận
-                với hiệu điện thế U và tỉ lệ nghịch với điện trở R…"
+                &ldquo;Định luật Ohm phát biểu rằng: cường độ dòng điện I tỉ lệ thuận
+                với hiệu điện thế U và tỉ lệ nghịch với điện trở R…&rdquo;
               </div>
               <div className="flex items-center gap-2">
                 <div
