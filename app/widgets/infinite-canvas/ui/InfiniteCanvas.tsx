@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CanvasNode, CanvasEdge } from '../model/types';
 import { CANVAS_W, CANVAS_H } from '../model/constants';
+import { useCanvasPersistence } from '../lib/useCanvasPersistence';
 import CanvasNodeComponent from '@/entities/node/ui/CanvasNode';
 import { EdgeLayer } from './CanvasEdge';
 import ZoomControls from './ZoomControls';
@@ -160,6 +161,7 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
 
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<CanvasEdge[]>([]);
+  const [canvasRestoredFromDB, setCanvasRestoredFromDB] = useState(false);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [previewNodes, setPreviewNodes] = useState<CanvasNode[]>([]);
   const [sidebarContext, setSidebarContext] = useState<SidebarContext | null>(null);
@@ -236,10 +238,13 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
 
   useEffect(() => {
     if (!workspaceData) {
-      setNodes([]);
-      setEdges([]);
+      if (!canvasRestoredFromDB) {
+        setNodes([]);
+        setEdges([]);
+      }
       return;
     }
+    if (canvasRestoredFromDB) return;
     const layout = buildWorkspaceLayout(workspaceData);
     setNodes(layout.nodes);
     setEdges(layout.edges);
@@ -249,7 +254,18 @@ export default function InfiniteCanvas({ unitId, projectId }: Props) {
     setSidebarNode(null);
     setSelectedSourceIdsByContext({});
     setApplyingSourcesFor(null);
-  }, [workspaceData]);
+  }, [workspaceData, canvasRestoredFromDB]);
+
+  // Persist canvas state to backend (load on mount, debounced save on change)
+  useCanvasPersistence(nodes, edges, {
+    projectId,
+    unitId,
+    onLoaded: (savedNodes, savedEdges) => {
+      setNodes(savedNodes);
+      setEdges(savedEdges);
+      setCanvasRestoredFromDB(true);
+    },
+  });
 
   const currentSources = useMemo(
     () => (sidebarContext ? (sidebarSourceCache[sidebarContext.id] ?? []) : []),

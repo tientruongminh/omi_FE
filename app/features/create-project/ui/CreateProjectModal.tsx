@@ -270,31 +270,37 @@ export function CreateProjectModal({ onClose }: Props) {
     setIsStreaming(true);
 
     try {
-      // Send raw query + context separately — let AI extract keywords
       const context = [projectName, projectDesc].filter(Boolean).join(' — ');
 
       const res = await apiFetch<{
-        results: SearchResult[];
+        results: { title: string; url: string; snippet: string; source: string }[];
         ai_summary: string;
-      }>('/ai/search', {
+      }>('/ai/search/web', {
         method: 'POST',
-        body: JSON.stringify({ query, limit: 8, source: 'all', context }),
+        body: JSON.stringify({ query, context, limit: 10 }),
       });
 
-      // ACCUMULATE results instead of replacing
       setAllSearchResults((prev) => {
         const next = new Map(prev);
         for (const r of res.results) {
-          // Dedupe by URL (more reliable than id)
-          const key = r.url || r.id;
+          const key = r.url;
           if (!next.has(key)) {
-            next.set(key, { ...r, id: key });
+            next.set(key, {
+              id: key,
+              title: r.title,
+              authors: '',
+              year: null,
+              cited_by: 0,
+              abstract: r.snippet,
+              url: r.url,
+              source: r.source || 'web_search',
+            });
           }
         }
         return next;
       });
 
-      setShowDocs(true); // Always show docs after search
+      setShowDocs(true);
 
       setChatMessages((prev) => [
         ...prev,
@@ -678,8 +684,8 @@ export function CreateProjectModal({ onClose }: Props) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${doc.source === 'openalex' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                                {doc.source === 'openalex' ? '📚 Academic' : '🌐 Web'}
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${doc.source === 'openalex' ? 'bg-blue-100 text-blue-700' : doc.source === 'web_search' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                                {doc.source === 'openalex' ? '📚 Academic' : doc.source === 'web_search' ? '🔎 AI Search' : '🌐 Web'}
                               </span>
                               <span className="text-xs text-[#2D2D2D] font-medium truncate group-hover:text-[#6B2D3E] transition-colors">{doc.title}</span>
                             </div>
