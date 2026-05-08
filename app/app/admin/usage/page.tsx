@@ -13,12 +13,13 @@ type UsageSummary = {
 
 type WalletUser = {
   user_id: string;
-  monthly_quota_tokens: number;
+  lifetime_quota_tokens: number;
+  monthly_quota_tokens?: number;
   bonus_tokens: number;
   used_tokens: number;
   reserved_tokens: number;
   remaining_tokens: number;
-  reset_at: string;
+  reset_at?: string;
   updated_at: string;
   requests: number;
 };
@@ -35,6 +36,8 @@ export default function AdminUsagePage() {
   const [userDirectory, setUserDirectory] = useState<Record<string, AdminUser>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkQuota, setBulkQuota] = useState('500000');
   const [drafts, setDrafts] = useState<Record<string, { quota: string; bonus: string }>>({});
 
   const load = async () => {
@@ -49,7 +52,7 @@ export default function AdminUsagePage() {
       setWallets(walletData.users ?? []);
       setUserDirectory(Object.fromEntries((usersData.users ?? []).map((u) => [u.user_id, u])));
       setDrafts(Object.fromEntries((walletData.users ?? []).map((u) => [u.user_id, {
-        quota: String(u.monthly_quota_tokens),
+        quota: String(u.lifetime_quota_tokens ?? u.monthly_quota_tokens ?? 500000),
         bonus: String(u.bonus_tokens),
       }])));
     } finally {
@@ -67,13 +70,29 @@ export default function AdminUsagePage() {
       const res = await apiFetch<{ user: WalletUser }>(`/tokens/admin/users/${userId}`, {
         method: 'PUT',
         body: JSON.stringify({
-          monthly_quota_tokens: Number(draft.quota || 0),
+          lifetime_quota_tokens: Number(draft.quota || 0),
           bonus_tokens: Number(draft.bonus || 0),
         }),
       });
       setWallets((prev) => prev.map((u) => u.user_id === userId ? { ...u, ...res.user } : u));
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const bulkUpdate = async () => {
+    const quota = Number(bulkQuota);
+    if (!quota || quota < 0) return;
+    if (!confirm(`Bạn có chắc muốn đặt quota = ${fmt(quota)} tokens cho TẤT CẢ user?`)) return;
+    setBulkSaving(true);
+    try {
+      await apiFetch('/tokens/admin/users-bulk', {
+        method: 'PUT',
+        body: JSON.stringify({ lifetime_quota_tokens: quota }),
+      });
+      await load();
+    } finally {
+      setBulkSaving(false);
     }
   };
 
@@ -125,7 +144,14 @@ export default function AdminUsagePage() {
           <div className="rounded-2xl border-2 border-[#E5E7EB] bg-white">
             <div className="border-b border-[#E5E7EB] px-5 py-4">
               <p className="font-black text-[#111827]">Quản lý token từng user</p>
-              <p className="mt-1 text-xs text-[#6B7280]">Mặc định mỗi user mới: 20,000,000 tokens/tháng. Có thể chỉnh quota hoặc bonus token tại đây.</p>
+              <p className="mt-1 text-xs text-[#6B7280]">Lifetime quota mặc định: 500,000 tokens. Chỉnh quota/bonus cho từng user hoặc áp dụng tất cả.</p>
+              <div className="mt-3 flex items-center gap-3">
+                <label className="text-xs font-bold text-[#374151]">Đặt quota tất cả:</label>
+                <input value={bulkQuota} onChange={(e) => setBulkQuota(e.target.value)} className="w-40 rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-sm" placeholder="500000" />
+                <button onClick={bulkUpdate} disabled={bulkSaving} className="flex items-center gap-1.5 rounded-lg bg-[#1D4ED8] px-4 py-1.5 text-xs font-black text-white disabled:opacity-50">
+                  {bulkSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Áp dụng tất cả
+                </button>
+              </div>
             </div>
             {wallets.length === 0 ? (
               <div className="p-8 text-center text-sm text-[#999]">Chưa có wallet. User sẽ có wallet sau khi gọi AI hoặc mở token badge.</div>
@@ -137,7 +163,7 @@ export default function AdminUsagePage() {
                       <th className="px-5 py-3">User</th>
                       <th className="px-5 py-3">Used</th>
                       <th className="px-5 py-3">Remaining</th>
-                      <th className="px-5 py-3">Monthly quota</th>
+                      <th className="px-5 py-3">Lifetime quota</th>
                       <th className="px-5 py-3">Bonus</th>
                       <th className="px-5 py-3">Requests</th>
                       <th className="px-5 py-3">Action</th>
@@ -145,7 +171,7 @@ export default function AdminUsagePage() {
                   </thead>
                   <tbody className="divide-y divide-[#F3F4F6]">
                     {wallets.map((u) => {
-                      const draft = drafts[u.user_id] || { quota: String(u.monthly_quota_tokens), bonus: String(u.bonus_tokens) };
+                      const draft = drafts[u.user_id] || { quota: String(u.lifetime_quota_tokens ?? u.monthly_quota_tokens ?? 500000), bonus: String(u.bonus_tokens) };
                       return (
                         <tr key={u.user_id}>
                           <td className="max-w-[320px] px-5 py-4">
