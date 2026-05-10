@@ -17,7 +17,7 @@ export default function StatCard({ stat, index, accentColor }: Props) {
       animate={{ opacity: 1, y: 0 }}  // Animate to original position and full opacity
       transition={{ delay: index * 0.1, // 
          duration: 0.4 }}  // Stagger the animation based on index
-      className="bg-[#F1F1EC] border-2 border-[#333333] rounded-2xl p-4 flex flex-col gap-3 overflow-hidden relative hover:border-[#6B2D3E]/40 hover:shadow-md transition-all" 
+      className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-[#2D2D2D]/12 bg-[#F1F1EC] p-4 shadow-[0_2px_10px_rgba(45,45,45,0.06)] ring-1 ring-white/70 transition-all hover:border-[#6B2D3E]/25 hover:shadow-[0_8px_18px_rgba(45,45,45,0.12)]" 
     >
       <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: accentColor }} />
       <div className="flex items-center justify-between mt-1">

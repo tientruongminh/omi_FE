@@ -381,6 +381,7 @@ export function CreateProjectModal({ onClose }: Props) {
     errorMessage: errorMessage ?? null,
   });
 
+  // Hàm dùng để áp dụng các cập nhật tiến độ % tạo roadmap nhận được từ server-sent events
   const applyRoadmapProgressEvent = (payload: SseEventPayload) => {
     if (payload.event !== 'progress') return;
     const data = payload.data as RoadmapStreamProgressEvent;
@@ -488,7 +489,7 @@ export function CreateProjectModal({ onClose }: Props) {
           uploaded_files: uploadedFilePayloads,
         }),
         onEvent: applyRoadmapProgressEvent,
-      });
+      });   
       roadmapPercentRef.current = 100;
       roadmapStatusMessageRef.current = 'Da tao xong roadmap.';
       setRoadmapPercent(100);
@@ -537,18 +538,18 @@ export function CreateProjectModal({ onClose }: Props) {
   const stepVariants = { enter: { opacity: 0, x: 30 }, center: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 } };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] overflow-y-auto p-4 md:p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative w-full max-w-2xl bg-[#F5F0EB] border-2 border-[#333333] rounded-2xl overflow-hidden shadow-2xl"
-        style={{ maxHeight: '90vh' }}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-dashed border-[#CCCCCC]">
-          <div>
+      <div className="relative grid min-h-full place-items-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="relative my-auto flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border-2 border-[#333333] bg-[#F5F0EB] shadow-2xl md:max-h-[calc(100vh-3rem)]"
+        >
+          <div className="flex items-center justify-between px-6 py-4 border-b-2 border-dashed border-[#CCCCCC] flex-shrink-0">
+            <div>
             <p className="text-xs text-[#5A5C58] uppercase tracking-widest mb-0.5">Tạo dự án mới</p>
             <div className="flex items-center gap-2">
               {[1, 2, 3].map((s) => (
@@ -560,15 +561,15 @@ export function CreateProjectModal({ onClose }: Props) {
                 </div>
               ))}
             </div>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors cursor-pointer">
+              <X size={14} />
+            </button>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full border-2 border-[#333333] flex items-center justify-center hover:bg-[#2D2D2D] hover:text-white transition-colors cursor-pointer">
-            <X size={14} />
-          </button>
-        </div>
 
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 100px)' }}>
-          <AnimatePresence mode="wait">
-            {step === 1 && (
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <AnimatePresence mode="wait">
+              {step === 1 && (
               <motion.div key="step1" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }} className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-[#2D2D2D]">Thông tin dự án</h2>
                 <div>
@@ -884,10 +885,11 @@ export function CreateProjectModal({ onClose }: Props) {
                 {createError && <p className="text-xs text-red-500 text-center">{createError}</p>}
                 <button onClick={() => setStep(2)} className="w-full py-2 text-sm text-[#5A5C58] hover:text-[#2D2D2D] transition-colors cursor-pointer">← Quay lại</button>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

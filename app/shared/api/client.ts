@@ -122,6 +122,7 @@ export async function apiFetch<T = unknown>(
   return data as T;
 }
 
+// Hàm chuyên biệt để xử lý các API trả về stream sự kiện (Server-Sent Events) như tiến độ tạo roadmap, chat admin AI, v.v.
 export async function apiFetchEventStream<TResult = unknown>(
   path: string,
   options: RequestInit & {
@@ -129,13 +130,14 @@ export async function apiFetchEventStream<TResult = unknown>(
   } = {},
 ): Promise<TResult> {
   const url = `${API_BASE}${path}`;
-
+  // Đọc token từ cookie để gửi cùng yêu cầu (nếu có)
   let token = '';
   if (typeof document !== 'undefined') {
     const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]*)/);
     token = match ? decodeURIComponent(match[1]) : '';
   }
 
+  // Thiết lập headers cho yêu cầu stream, bao gồm token nếu có và đảm bảo chấp nhận định dạng text/event-stream
   const headers: Record<string, string> = {
     Accept: 'text/event-stream',
     'Content-Type': 'application/json',
@@ -146,6 +148,7 @@ export async function apiFetchEventStream<TResult = unknown>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Gửi yêu cầu fetch và xử lý phản hồi stream sự kiện
   const res = await fetch(url, {
     ...options,
     headers,
@@ -168,6 +171,8 @@ export async function apiFetchEventStream<TResult = unknown>(
     throw { error: 'Streaming response body is empty.', status: 500 } as ApiError;
   }
 
+  // Sử dụng ReadableStream để đọc dữ liệu sự kiện từng phần một cách hiệu quả, giải mã và phân tích cú pháp theo định dạng Server-Sent Events
+  // Thay vì dùng EventSource, chúng ta tự xử lý stream để có thể dễ dàng tích hợp với token và các tùy chỉnh khác của fetch
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
