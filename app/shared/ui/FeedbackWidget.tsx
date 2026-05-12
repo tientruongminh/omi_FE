@@ -46,10 +46,10 @@ export default function FeedbackWidget() {
     const imageFiles = incoming.filter((file) => file.type.startsWith('image/'));
     if (!imageFiles.length) return;
     setFiles((prev) => {
-      const seen = new Set(prev.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+      const seen = new Set(prev.map((file) => `${file.name}:${file.size}:${file.type}`));
       const merged = [...prev];
       for (const file of imageFiles) {
-        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        const key = `${file.name}:${file.size}:${file.type}`;
         if (!seen.has(key)) {
           merged.push(file);
           seen.add(key);
@@ -61,10 +61,12 @@ export default function FeedbackWidget() {
 
   const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     const pastedFiles = Array.from(event.clipboardData?.files || []);
-    const itemFiles = Array.from(event.clipboardData?.items || [])
-      .filter((item) => item.kind === 'file')
-      .map((item) => item.getAsFile())
-      .filter((file): file is File => Boolean(file));
+    const itemFiles = pastedFiles.length > 0
+      ? []
+      : Array.from(event.clipboardData?.items || [])
+          .filter((item) => item.kind === 'file')
+          .map((item) => item.getAsFile())
+          .filter((file): file is File => Boolean(file));
     addFiles([...pastedFiles, ...itemFiles]);
   };
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Send, Check, Youtube, Globe, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
 import { apiFetch, apiFetchEventStream, apiUpload, type SseEventPayload } from '@/shared/api/client';
@@ -122,6 +123,7 @@ export function CreateProjectModal({ onClose }: Props) {
   const router = useRouter();
   const addProject = useOmiLearnStore((s) => s.addProject);
 
+  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState(1);
   const [projectName, setProjectName] = useState('');
   const [projectDesc, setProjectDesc] = useState('');
@@ -156,6 +158,18 @@ export function CreateProjectModal({ onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [step2Initialized, setStep2Initialized] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   // Sorted search results list (selected first, then by order added)
   const searchResultsList = useMemo(() => {
@@ -537,8 +551,8 @@ export function CreateProjectModal({ onClose }: Props) {
 
   const stepVariants = { enter: { opacity: 0, x: 30 }, center: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 } };
 
-  return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto p-4 md:p-6">
+  const modal = (
+    <div className="fixed inset-0 z-[100] overflow-y-auto p-4 md:p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative grid min-h-full place-items-center">
         <motion.div
@@ -892,6 +906,8 @@ export function CreateProjectModal({ onClose }: Props) {
       </div>
     </div>
   );
+
+  return mounted ? createPortal(modal, document.body) : null;
 }
 
 export default CreateProjectModal;

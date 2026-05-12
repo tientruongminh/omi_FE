@@ -234,8 +234,9 @@ export default function ProjectPage() {
                   </div>
                 ) : (
                   <h3
-                    className="font-black text-[#1a1a1a] mb-2 leading-snug pr-8"
-                    style={{ fontSize: '20px' }}
+                    className="min-w-0 break-words font-black text-[#1a1a1a] mb-2 leading-snug pr-8"
+                    style={{ fontSize: '20px', overflowWrap: 'anywhere' }}
+                    title={project.title}
                   >
                     {project.title}
                   </h3>

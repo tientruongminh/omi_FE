@@ -7,6 +7,7 @@ import { AIStreamText } from '@/shared/ui/AIStreamText';
 import { useOmiLearnStore } from '@/entities/project';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/shared/api/client';
+import { createPortal } from 'react-dom';
 
 interface GenerateScheduleResponse {
   plan_summary: string;
@@ -53,6 +54,7 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
   const setPlanComplete = useOmiLearnStore((s) => s.setPlanComplete);
   const popupPollRef = useRef<number | null>(null);
 
+  const [mounted, setMounted] = useState(false);
   const [screen, setScreen]     = useState<Screen>('survey');
   const [answers, setAnswers]   = useState(['', '', '']);
   const [streamKey, setStreamKey] = useState(0);
@@ -66,6 +68,18 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
     typeof window !== 'undefined'
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : undefined;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const refreshCalendarStatus = useCallback(async (targetProjectId?: string) => {
     if (!targetProjectId) {
@@ -247,8 +261,8 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
 
   const streamDone = useCallback(() => {}, []);
 
-  return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -477,6 +491,8 @@ export function PlanSurveyModal({ onClose, projectId }: PlanSurveyModalProps) {
       </motion.div>
     </div>
   );
+
+  return mounted ? createPortal(modal, document.body) : null;
 }
 
 export default PlanSurveyModal;
